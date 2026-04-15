@@ -131,4 +131,4 @@ This project investigates whether standard risk factors explain returns in these
 ## Author
 
 Kai Marsh
-University of Melbourne — Applied Mathematics
+University of Melbourne — Student in BCom (Finance & Statistics)
