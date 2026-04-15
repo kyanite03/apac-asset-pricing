@@ -139,3 +139,10 @@ table(returns_full$bm_group)
 
 head(returns_full)
 
+# NOTE:
+# Due to limited availability of fundamental data for ASX equities via free APIs,
+# book-to-market ratios are approximated using inverse price as a proxy.
+# This preserves cross-sectional ranking but is not a true accounting measure.
+#
+# Future improvement:
+# Replace with Compustat / WRDS data for accurate BE/ME construction.
