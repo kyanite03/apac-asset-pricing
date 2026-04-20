@@ -146,3 +146,10 @@ head(returns_full)
 #
 # Future improvement:
 # Replace with Compustat / WRDS data for accurate BE/ME construction.
+
+portfolios <- returns_full %>%
+  group_by(date, size_group, bm_group) %>%
+  summarise(ret = mean(ret, na.rm = TRUE), .groups = "drop")
+SMB = avg(S/L, S/M, S/H) - avg(B/L, B/M, B/H)
+HML = avg(S/H, B/H) - avg(S/L, B/L)
+lm(excess_ret ~ Rm_excess + SMB + HML)
