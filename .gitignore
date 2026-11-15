@@ -1,0 +1,9 @@
+.Rhistory
+.RData
+.Rproj.user/
+.DS_Store
+__pycache__/
+*:Zone.Identifier
+_freeze/
+*_files/
+.quarto/

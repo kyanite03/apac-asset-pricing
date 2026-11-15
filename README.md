@@ -25,7 +25,7 @@ This project investigates whether standard risk factors explain returns in these
 
 ### 1. Fama-French Three-Factor Model (APAC Replication)
 
-* Replicate  using APAC equity markets
+* Replicate Fama & French (1993) using APAC equity markets
 * Construct:
 
   * Market factor (R_m - R_f)
