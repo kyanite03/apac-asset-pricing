@@ -4,7 +4,17 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 
 **Read online:** [kyanite03.github.io/apac-asset-pricing](https://kyanite03.github.io/apac-asset-pricing/)
 
-## Latest: Module 04, statistical factors
+## Latest: Module 05, cross-market comparison
+
+![Five-factor loadings of the ASX, HKEX and SGX indices](modules/05-cross-market-asx-hk-sg/figures/key_chart.png)
+
+- **Same premium:** 5.4% (ASX), 4.1% (HK) and 5.5% (SG) a year in USD over T-bills. A joint test of equality gives p = 0.89.
+- **Different risks:** in a SUR system, the markets' value and profitability loadings differ sharply (p < 1e-6). The ASX is a profitable/growth market, Hong Kong the reverse, and Singapore a value market. Net of the regional market, ASX and HK residuals correlate −0.64.
+- **One estimated break,** in Singapore (June 2021, beta 0.94 → 0.64). It coincides with Hong Kong's correlation with both other markets falling (with the ASX, 0.67 → 0.37).
+
+[Full write-up](https://kyanite03.github.io/apac-asset-pricing/modules/05-cross-market-asx-hk-sg/) · [source](modules/05-cross-market-asx-hk-sg/index.qmd)
+
+## Module 04, statistical factors
 
 ![Eigenvalues of the 51-stock correlation matrix against two noise benchmarks](modules/04-statistical-factors-apt/figures/key_chart.png)
 
@@ -42,7 +52,7 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 | 02 | Factor construction | Can SMB/HML be built for the ASX from fundamentals? | Planned |
 | 03 | [Testing pricing models](modules/03-testing-pricing-models/) | CAPM vs zero-beta CAPM vs Fama–French: which prices APAC returns? | Done |
 | 04 | [Statistical factors (APT)](modules/04-statistical-factors-apt/) | How many factors drive APAC returns? | Done |
-| 05 | Cross-market comparison | Are factor premia equal across the three markets? | Planned |
+| 05 | [Cross-market comparison](modules/05-cross-market-asx-hk-sg/) | Are factor premia equal across the three markets? | Done |
 | 06 | DCF: Tencent | Does Tencent deserve its valuation premium? | Planned |
 | 07 | Bank valuation, HK & SG | Why do Chinese banks trade at a discount to Singapore's? | Planned |
 | 08 | Oil vs energy equities | Is commodity risk priced, or just held? | Planned |
@@ -50,8 +60,8 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 
 ## Rigour
 
-- Every estimator is written in matrix form in [`R/models_linear.R`](R/models_linear.R): OLS, Newey–West HAC, GLS, general linear hypotheses, the GRS test, and Fama–MacBeth with Shanken errors. Principal components, the Marchenko–Pastur edge, parallel analysis and eigenportfolios are in [`R/models_factor.R`](R/models_factor.R).
-- Each is unit-tested in [`tests/testthat`](tests/testthat) against `lm()`, `sandwich::NeweyWest` and `car::linearHypothesis` (to 1e-8 or better), and against simulations with a known answer (GRS size and power, Fama–MacBeth premium recovery, recovery of a planted 3-factor structure).
+- Every estimator is written in matrix form in [`R/models_linear.R`](R/models_linear.R): OLS, Newey–West HAC, GLS, seemingly unrelated regressions (SUR), general linear hypotheses, the GRS test, and Fama–MacBeth with Shanken errors. Principal components, the Marchenko–Pastur edge, parallel analysis and eigenportfolios are in [`R/models_factor.R`](R/models_factor.R).
+- Each is unit-tested in [`tests/testthat`](tests/testthat) against `lm()`, `sandwich::NeweyWest`, `car::linearHypothesis` and `systemfit` (to 1e-8 or better), and against simulations with a known answer (GRS size and power, Fama–MacBeth premium recovery, recovery of a planted 3-factor structure).
 - Returns and risk-free rates are matched by market and currency. The risk-free rate is lagged one month, so it is known at the start of the month it applies to. p-values are corrected for multiple testing when scanning many stocks.
 
 ## Repository layout

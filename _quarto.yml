@@ -23,6 +23,8 @@ website:
             text: "03 · Testing pricing models"
           - href: modules/04-statistical-factors-apt/index.qmd
             text: "04 · Statistical factors (APT)"
+          - href: modules/05-cross-market-asx-hk-sg/index.qmd
+            text: "05 · Cross-market comparison"
     right:
       - icon: github
         href: "https://github.com/kyanite03/apac-asset-pricing"

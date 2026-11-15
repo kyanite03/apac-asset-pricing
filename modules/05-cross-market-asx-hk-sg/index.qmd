@@ -1,0 +1,279 @@
+---
+title: "05 · Cross-market comparison: ASX vs HKEX vs SGX"
+subtitle: "Same premium, different risks: a SUR system with cross-market linear hypotheses and estimated structural breaks"
+author: "Kai Marsh"
+date: last-modified
+---
+
+```{r}
+#| label: setup
+#| code-summary: "Setup: market returns in USD, regional factors"
+
+suppressPackageStartupMessages({ library(tidyverse); library(knitr); library(sandwich); library(strucchange) })
+source("../../R/models_linear.R")
+source("../../R/data_factors.R")
+source("../../R/plots.R")
+
+data_dir <- "../../data/processed"
+fx  <- read_csv(file.path(data_dir, "fx_monthly.csv"), show_col_types = FALSE)
+mkt <- read_csv(file.path(data_dir, "market_monthly.csv"), show_col_types = FALSE)
+ff  <- get_french_apac("../../data/raw/french")
+
+mk <- names(market_cols)
+w <- mkt |> inner_join(fx, by = c("market", "month")) |> inner_join(ff, by = "month") |>
+  mutate(ex = (1 + mkt) * (1 + fx) - 1 - RF) |>
+  select(month, market, ex) |> pivot_wider(names_from = market, values_from = ex) |>
+  arrange(month) |> inner_join(ff, by = "month")
+R <- as.matrix(w[, mk]); T_ <- nrow(R); months <- w$month
+nw_lag <- 4
+
+# Cross-equation Wald test H0: C b = 0 on a SUR fit (chi-square form)
+wald <- function(fit, C) {
+  d <- C %*% fit$coef
+  W <- drop(t(d) %*% solve(C %*% fit$vcov %*% t(C)) %*% d)
+  c(W = W, df = nrow(C), p = pchisq(W, nrow(C), lower.tail = FALSE))
+}
+# Restriction matrix: coefficient `term` equal in all three equations
+equal_across <- function(fit, term) {
+  sel <- function(m) as.numeric(names(fit$coef) == paste0(m, ":", term))
+  rbind(sel("ASX") - sel("HKEX"), sel("ASX") - sel("SGX"))
+}
+```
+
+```{r}
+#| label: premia
+#| code-summary: "Market premia and a joint HAC test of equality"
+
+mu <- colMeans(R)
+V_mu <- NeweyWest(lm(R ~ 1), lag = nw_lag, prewhite = FALSE)   # 3 x 3 HAC covariance of the means
+C_mu <- rbind(c(1, -1, 0), c(1, 0, -1))
+d_mu <- C_mu %*% mu
+W_mu <- drop(t(d_mu) %*% solve(C_mu %*% V_mu %*% t(C_mu)) %*% d_mu)
+p_mu <- pchisq(W_mu, 2, lower.tail = FALSE)
+se_mu <- sqrt(diag(V_mu))
+cor_R <- cor(R)
+```
+
+```{r}
+#| label: sur
+#| code-summary: "SUR systems: CAPM and five-factor, with cross-market restrictions"
+
+ys <- list(ASX = R[, "ASX"], HKEX = R[, "HKEX"], SGX = R[, "SGX"])
+X1 <- cbind(const = 1, MKT = w$MKT)
+X5 <- cbind(const = 1, as.matrix(w[, c("MKT", "SMB", "HML", "RMW", "CMA")]))
+sur1 <- sur_fit(ys, list(ASX = X1, HKEX = X1, SGX = X1))
+sur5 <- sur_fit(ys, list(ASX = X5, HKEX = X5, SGX = X5))
+
+# Identical regressors: SUR point estimates equal OLS (checked), the gain is the joint covariance
+stopifnot(isTRUE(all.equal(unname(sur1$coef[c("ASX:const", "ASX:MKT")]),
+                           unname(coef(lm(R[, "ASX"] ~ w$MKT))), tolerance = 1e-10)))
+
+resid_cor1 <- cov2cor(sur1$Sigma)
+t_beta1 <- equal_across(sur1, "MKT"); t_alpha1 <- equal_across(sur1, "const")
+w_beta1 <- wald(sur1, t_beta1); w_alpha1 <- wald(sur1, t_alpha1)
+alpha_t1 <- sur1$coef[paste0(mk, ":const")] / sqrt(diag(sur1$vcov))[paste0(mk, ":const")]
+stopifnot(all(abs(alpha_t1) < 1.96))   # text: alphas individually insignificant
+
+f5 <- c("MKT", "SMB", "HML", "RMW", "CMA")
+eq5 <- map_dfr(f5, \(f) { x <- wald(sur5, equal_across(sur5, f)); tibble(term = f, W = x["W"], p = x["p"]) })
+load5 <- tibble(name = names(sur5$coef), est = sur5$coef, se = sqrt(diag(sur5$vcov))) |>
+  separate(name, c("market", "term"), sep = ":") |>
+  mutate(market = factor(market, levels = mk))
+get5 <- function(m, f) load5$est[load5$market == m & load5$term == f]
+t5 <- function(m, f) with(load5[load5$market == m & load5$term == f, ], est / se)
+```
+
+```{r}
+#| label: breaks
+#| code-summary: "Structural breaks: sup-F test and Bai–Perron dating of each market's regional beta"
+
+brk <- map(mk, function(m) {
+  df <- data.frame(y = R[, m], x = w$MKT)
+  fs <- Fstats(y ~ x, data = df, from = 0.15)
+  st <- sctest(fs, type = "supF")
+  bp <- breakpoints(y ~ x, data = df, h = 0.15)
+  idx <- bp$breakpoints[!is.na(bp$breakpoints)]
+  seg <- if (length(idx)) coef(bp) else matrix(coef(lm(y ~ x, df)), 1, dimnames = list(NULL, c("(Intercept)", "x")))
+  list(market = m, supF = unname(st$statistic), p = st$p.value, idx = idx,
+       dates = months[idx], seg_beta = seg[, "x"])
+}) |> set_names(mk)
+n_break_mkts <- sum(map_lgl(brk, \(b) length(b$idx) > 0))
+sg <- brk$SGX
+stopifnot(length(sg$idx) == 1, length(brk$ASX$idx) == 0, length(brk$HKEX$idx) == 0)  # text assumes this pattern
+
+# Rolling 36-month correlations between the markets
+roll_cor <- map_dfr(36:T_, function(k) {
+  i <- (k - 35):k
+  tibble(month = months[k],
+         `ASX–HKEX` = cor(R[i, "ASX"], R[i, "HKEX"]),
+         `ASX–SGX`  = cor(R[i, "ASX"], R[i, "SGX"]),
+         `HKEX–SGX` = cor(R[i, "HKEX"], R[i, "SGX"]))
+})
+# Compare 36-month windows that end before the break with windows lying wholly after it
+post_start <- seq(sg$dates, by = "36 months", length.out = 2)[2]
+rc_pre <- roll_cor |> filter(month < sg$dates) |> summarise(across(-month, mean))
+rc_post <- roll_cor |> filter(month >= post_start) |> summarise(across(-month, mean))
+stopifnot(nrow(filter(roll_cor, month >= post_start)) >= 12)
+```
+
+::: {.callout-tip title="Answer first"}
+- **The three markets have earned statistically indistinguishable premia.** Over `r format(min(months), "%b %Y")`–`r format(max(months), "%b %Y")`, in USD, the ASX returned `r pct(12 * mu["ASX"])` a year over T-bills, Hong Kong `r pct(12 * mu["HKEX"])` and Singapore `r pct(12 * mu["SGX"])`. A joint test of equality gives p = `r num(p_mu)`. Fifteen years of data cannot separate them.
+- **But they carry different risks.** In a five-factor SUR system, the markets' exposures to value (HML) and profitability (RMW) differ sharply (equality p < `r formatC(max(eq5$p[eq5$term %in% c("HML", "RMW")]), format = "e", digits = 0)`). Relative to the region, the ASX tilts to *profitable, growth* stocks (RMW `r sprintf("%+.2f", get5("ASX", "RMW"))`, HML `r sprintf("%+.2f", get5("ASX", "HML"))`), Hong Kong the opposite (RMW `r sprintf("%+.2f", get5("HKEX", "RMW"))`), and Singapore is a value market (HML `r sprintf("%+.2f", get5("SGX", "HML"))`).
+- **Once the regional market is removed, Australia and Hong Kong move against each other** (residual correlation `r num(resid_cor1["ASX", "HKEX"])`). This is the China-vs-Australia factor from Module 04, seen at index level.
+- **Only Singapore's market relationship broke.** A Bai–Perron search finds one break, in `r format(sg$dates, "%B %Y")`, after which Singapore's regional beta fell from `r num(sg$seg_beta[1])` to `r num(sg$seg_beta[2])`. No break is detected for the ASX (p = `r num(brk$ASX$p)`) or Hong Kong (p = `r num(brk$HKEX$p)`).
+- **So what:** for diversification, *which* risks a market carries matters more than its headline premium. Holding the ASX and HKEX together hedges the China/Australia factor. Singapore is value-tilted over the whole sample, and its sensitivity to the regional market dropped after mid-2021.
+:::
+
+## Question
+
+Modules 01–04 pooled the three markets. This module compares them directly. Do the ASX, HKEX and SGX earn the same risk premium? Are they exposed to the same factors in the same amounts? Have those relationships been stable? All returns are in **US dollars** in excess of the US T-bill rate, so that the markets are on a common footing and comparable with the Fama–French *Asia Pacific ex Japan* factors (as in Modules 03 and 04). Each market is represented by its total-return index ETF (STW, 2800.HK, ES3.SI).
+
+## Method
+
+**Equal premia.** The three mean excess returns are tested jointly, $H_0: \mu_{\text{ASX}} = \mu_{\text{HK}} = \mu_{\text{SG}}$, with a Wald statistic using a Newey–West covariance (`r nw_lag` lags) that allows for the markets' strong contemporaneous correlation and for autocorrelation.
+
+**SUR.** Each market's excess return is regressed on the regional factors, and the three equations are estimated as one *seemingly unrelated regression* system,
+
+$$
+\begin{bmatrix}\mathbf y_{\text{ASX}}\\ \mathbf y_{\text{HK}}\\ \mathbf y_{\text{SG}}\end{bmatrix}
+= \begin{bmatrix}\mathbf X & & \\ & \mathbf X & \\ & & \mathbf X\end{bmatrix}
+\begin{bmatrix}\boldsymbol\beta_{\text{ASX}}\\ \boldsymbol\beta_{\text{HK}}\\ \boldsymbol\beta_{\text{SG}}\end{bmatrix} + \boldsymbol\varepsilon,
+\qquad \operatorname{Var}(\boldsymbol\varepsilon) = \boldsymbol\Sigma \otimes \mathbf I_T .
+$$
+
+Because every equation has the same regressors, the SUR point estimates equal OLS equation by equation (a standard result, checked in the code). What SUR adds is the *joint* covariance of all coefficients, including the correlation of errors across markets. That makes cross-market restrictions testable as one general linear hypothesis, $\mathbf C\boldsymbol\beta = \mathbf 0$. For example, "the same market beta everywhere" is
+
+$$
+\mathbf C = \begin{bmatrix} 0 & 1 & 0 & -1 & 0 & 0\\ 0 & 1 & 0 & 0 & 0 & -1\end{bmatrix},
+$$
+
+which is equivalent to an ANCOVA with market dummies and market × factor interactions. The SUR estimator is hand-written ([`sur_fit()`](https://github.com/kyanite03/apac-asset-pricing/blob/main/R/models_linear.R)) and tested against `systemfit`.
+
+**Structural breaks.** Rather than imposing dates such as COVID (2020) or the China tech crackdown (2021), each market's regression on the regional factor is searched for breaks. The Andrews sup-F test asks whether *any* break exists (trimming 15% at each end), and the Bai–Perron procedure dates the breaks, choosing their number by BIC (`strucchange`).
+
+## Results
+
+### Premia: indistinguishable
+
+```{r}
+#| label: tbl-premia
+#| tbl-cap: "Market excess returns over the US T-bill, in USD, annualised. Standard errors are Newey–West."
+
+tibble(Market = mk, `Mean (p.a.)` = pct(12 * mu), `SE (p.a.)` = pct(12 * se_mu),
+       `Volatility (p.a.)` = pct(sqrt(12) * apply(R, 2, sd)),
+       `Sharpe ratio` = num(sqrt(12) * mu / apply(R, 2, sd))) |>
+  kable(align = "lrrrr")
+```
+
+The joint test of equal premia gives χ²(2) = `r num(W_mu)`, p = `r num(p_mu)`. The standard error on each market's annual premium is around `r pct(12 * mean(se_mu), 0)`, so even the `r pct(12 * (max(mu) - min(mu)))`-a-year gap between Singapore and Hong Kong is well within sampling noise. The markets are highly correlated (ASX–SGX `r num(cor_R["ASX", "SGX"])`, HKEX–SGX `r num(cor_R["HKEX", "SGX"])`, ASX–HKEX `r num(cor_R["ASX", "HKEX"])`), which the joint test accounts for.
+
+### Exposures: very different
+
+```{r}
+#| label: fig-loadings
+#| fig-cap: "Five-factor loadings of each market (SUR estimates, 95% intervals). Factors are the Fama–French Asia Pacific ex Japan factors. Markets differ most on value (HML) and profitability (RMW)."
+#| fig-width: 9
+#| fig-height: 4.8
+
+p_load <- load5 |> filter(term != "const") |>
+  mutate(term = factor(term, levels = f5,
+                       labels = c("Market", "Size (SMB)", "Value (HML)", "Profitability (RMW)", "Investment (CMA)"))) |>
+  ggplot(aes(est, fct_rev(market), colour = market)) +
+  geom_vline(xintercept = 0, colour = "#c3c2b7", linewidth = 0.4) +
+  geom_errorbarh(aes(xmin = est - 1.96 * se, xmax = est + 1.96 * se), height = 0, linewidth = 0.8, alpha = 0.6) +
+  geom_point(size = 2.8) +
+  facet_wrap(~ term, nrow = 1, scales = "free_x") +
+  scale_colour_manual(values = market_cols, guide = "none") +
+  labs(title = "Same premium, different risks: the ASX is a quality market, Singapore a value market",
+       subtitle = sprintf("Five-factor loadings of each market index, USD, %s–%s",
+                          format(min(months), "%Y"), format(max(months), "%Y")),
+       x = "Loading (95% CI)", y = NULL,
+       caption = "SUR estimates. Factors: Fama–French Asia Pacific ex Japan (Kenneth French Data Library).") +
+  theme_report() + theme(panel.grid.major.y = element_blank())
+dir.create("figures", showWarnings = FALSE)
+ggsave("figures/key_chart.png", p_load, width = 9, height = 4.8, dpi = 200, bg = "white")
+p_load
+```
+
+```{r}
+#| label: tbl-equal
+#| tbl-cap: "Cross-market tests in the SUR systems: H₀ that a coefficient is equal in all three markets (Wald χ² with 2 degrees of freedom)."
+
+bind_rows(
+  tibble(System = "CAPM", Coefficient = c("Alpha", "Market beta"),
+         W = c(w_alpha1["W"], w_beta1["W"]), p = c(w_alpha1["p"], w_beta1["p"])),
+  eq5 |> transmute(System = "Five-factor",
+                   Coefficient = recode(term, MKT = "Market", SMB = "Size (SMB)", HML = "Value (HML)",
+                                        RMW = "Profitability (RMW)", CMA = "Investment (CMA)"), W, p)
+) |>
+  mutate(`Wald χ²(2)` = num(W), p = formatC(p, format = "g", digits = 2)) |>
+  select(System, Coefficient, `Wald χ²(2)`, p) |>
+  kable(align = "llrr")
+```
+
+- **Alphas** are equal across markets (p = `r num(w_alpha1["p"])`), and each is indistinguishable from zero (|t| ≤ `r num(max(abs(alpha_t1)))`). The regional market factor prices all three indices equally well.
+- **Market betas differ** (p = `r formatC(w_beta1["p"], format = "g", digits = 2)`): `r num(sur1$coef["ASX:MKT"])` for the ASX, `r num(sur1$coef["HKEX:MKT"])` for Hong Kong and `r num(sur1$coef["SGX:MKT"])` for Singapore. Part of this is mechanical. The regional factor is cap-weighted over Australia, Hong Kong, Singapore and New Zealand, so it is partly built *from* the ASX and HKEX. The smallest market, Singapore, has the lowest beta.
+- **Value and profitability loadings differ most.** The ASX loads `r sprintf("%+.2f", get5("ASX", "RMW"))` on profitability (t = `r num(t5("ASX", "RMW"), 1)`) and `r sprintf("%+.2f", get5("ASX", "HML"))` on value (t = `r num(t5("ASX", "HML"), 1)`). Hong Kong loads `r sprintf("%+.2f", get5("HKEX", "RMW"))` on profitability (t = `r num(t5("HKEX", "RMW"), 1)`). Singapore loads `r sprintf("%+.2f", get5("SGX", "HML"))` on value (t = `r num(t5("SGX", "HML"), 1)`). Size and investment loadings are small and similar across markets.
+
+Within the region, then, the ASX index behaves like a portfolio of profitable, expensive companies. Hong Kong's is weighted toward low-profitability, cheap ones (the state banks and property developers seen in Module 04). Singapore's banks, REITs and conglomerates give it a value tilt.
+
+### The residual structure: Australia and Hong Kong move against each other
+
+```{r}
+#| label: tbl-residcor
+#| tbl-cap: "Correlation of the SUR residuals (after removing each market's exposure to the regional market factor)."
+
+kable(round(resid_cor1, 2), align = "rrr")
+```
+
+After each market's exposure to the regional market is removed, the ASX and HKEX residuals are *negatively* correlated (`r num(resid_cor1["ASX", "HKEX"])`). Part of this is again mechanical: the regional factor is a weighted average of these markets, so if one is above it the other tends to be below. But the pattern is also consistent with Module 04's second principal component, which set Hong Kong/China against Australia at the stock level, using individual stocks rather than index weights. These data cannot separate the two explanations, but the stock-level evidence suggests the opposing factor is not only an accounting identity.
+
+### Stability: one break, in Singapore
+
+```{r}
+#| label: tbl-breaks
+#| tbl-cap: "Structural-break tests on each market's regression on the regional market factor. sup-F: Andrews test for a single break at an unknown date (15% trimming). Breaks: Bai–Perron, number chosen by BIC."
+
+map_dfr(brk, \(b) tibble(Market = b$market, `sup-F` = num(b$supF), p = num(b$p, 3),
+                         `Breaks (BIC)` = length(b$idx),
+                         `Break date` = if (length(b$idx)) format(b$dates, "%b %Y") else "–",
+                         `Beta by segment` = paste(num(b$seg_beta), collapse = " → "))) |>
+  kable(align = "lrrrll")
+```
+
+```{r}
+#| label: fig-rollcor
+#| fig-cap: "Rolling 36-month correlations between the three markets' USD excess returns."
+#| fig-width: 8
+#| fig-height: 4
+
+roll_cor |> pivot_longer(-month, names_to = "pair", values_to = "rho") |>
+  ggplot(aes(month, rho, colour = pair)) +
+  geom_line(linewidth = 0.9) +
+  geom_vline(xintercept = sg$dates, linetype = "dashed", colour = "#52514e", linewidth = 0.4) +
+  annotate("text", x = sg$dates, y = 0.25, label = paste("Singapore break,", format(sg$dates, "%b %Y")),
+           hjust = -0.05, size = 3.1, colour = "#52514e") +
+  scale_colour_manual(values = c(`ASX–HKEX` = "#6250d6", `ASX–SGX` = "#1baf7a", `HKEX–SGX` = "#eda100")) +
+  scale_y_continuous(limits = c(0.2, 1)) +
+  labs(x = NULL, y = "36-month correlation") +
+  theme_report()
+```
+
+The rolling correlations add context. Comparing 36-month windows ending before `r format(sg$dates, "%b %Y")` with windows lying entirely after it, Hong Kong's correlation with the ASX fell from `r num(rc_pre$"ASX–HKEX")` to `r num(rc_post$"ASX–HKEX")` and with Singapore from `r num(rc_pre$"HKEX–SGX")` to `r num(rc_post$"HKEX–SGX")`, while ASX–SGX moved from `r num(rc_pre$"ASX–SGX")` to `r num(rc_post$"ASX–SGX")`. Hong Kong drifted away from the other two.
+
+Only Singapore shows a statistically significant break (sup-F p = `r formatC(sg$p, format = "g", digits = 2)`). The break is dated to `r format(sg$dates, "%B %Y")`, and Singapore's beta on the regional market falls from `r num(sg$seg_beta[1])` to `r num(sg$seg_beta[2])` after it. Its timing coincides with the start of the Chinese tech and property sell-off from mid-2021, which weighed on Hong Kong and therefore on the regional factor. Because the regional factor contains Hong Kong, a Hong Kong-specific shock can show up as a change in *Singapore's* beta. That reading fits the correlations above but is not formally tested here. The ASX and Hong Kong relationships show no significant break, even though individual stocks within them shifted (Module 01): the index-level betas are more stable than their constituents.
+
+## Limitations
+
+- **The regional factor contains the markets.** French's Asia Pacific ex Japan market is a cap-weighted portfolio of these same markets (plus New Zealand). This makes market betas partly mechanical and induces some negative residual correlation. A world or US market factor would avoid this, at the cost of measuring something different.
+- **USD returns include currency.** The ASX and SGX results mix equity and currency moves (AUD and SGD against the USD). Hong Kong's are nearly pure equity because of the peg. Module 01 gives the local-currency view.
+- **Index ETFs.** Each market is one ETF tracking a cap-weighted index. The results describe those indices, which are concentrated (banks and miners in Australia, financials and Tencent in Hong Kong, banks in Singapore).
+- **Short sample for premia.** Equal premia "not rejected" reflects low power. Distinguishing a 1.5-point difference in annual premia would need many decades of data.
+
+## References
+
+- Andrews, D. W. K. (1993). Tests for parameter instability and structural change with unknown change point. *Econometrica, 61*(4), 821–856.
+- Bai, J., & Perron, P. (2003). Computation and analysis of multiple structural change models. *Journal of Applied Econometrics, 18*(1), 1–22.
+- Fama, E. F., & French, K. R. (2015). A five-factor asset pricing model. *Journal of Financial Economics, 116*(1), 1–22.
+- Zeileis, A., Kleiber, C., Krämer, W., & Hornik, K. (2003). Testing and dating of structural changes in practice. *Computational Statistics & Data Analysis, 44*(1–2), 109–123.
+- Zellner, A. (1962). An efficient method of estimating seemingly unrelated regressions and tests for aggregation bias. *Journal of the American Statistical Association, 57*(298), 348–368.

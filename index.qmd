@@ -14,7 +14,7 @@ Every model is written in matrix form ($\hat{\boldsymbol\beta} = (\mathbf X'\mat
 | 02 | Factor construction | Can SMB/HML be built for the ASX from fundamentals? | Planned |
 | 03 | [Testing pricing models](modules/03-testing-pricing-models/index.qmd) | CAPM vs zero-beta CAPM vs Fama–French: which prices APAC returns? | Done |
 | 04 | [Statistical factors (APT)](modules/04-statistical-factors-apt/index.qmd) | How many factors drive APAC returns, and are they the Fama–French ones? | Done |
-| 05 | Cross-market comparison | Are factor premia the same on the ASX, HKEX and SGX? | Planned |
+| 05 | [Cross-market comparison](modules/05-cross-market-asx-hk-sg/index.qmd) | Are factor premia the same on the ASX, HKEX and SGX? | Done |
 | 06 | DCF: Tencent | Does Tencent deserve its valuation premium? | Planned |
 | 07 | Bank valuation, HK & SG | Why do Chinese banks trade at a discount to Singapore's? | Planned |
 | 08 | Oil vs energy equities | Is commodity risk priced, or just held? | Planned |

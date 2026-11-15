@@ -155,3 +155,33 @@ fama_macbeth <- function(Y, F, intercept = TRUE, betas = NULL) {
 }
 
 `%||%` <- function(a, b) if (is.null(a)) b else a
+
+#' Seemingly unrelated regressions (Zellner, 1962) by feasible GLS.
+#'
+#' Equations m = 1..M share the same T observations. The system is stacked as
+#' y = X b + e with Var(e) = Sigma (x) I_T, and estimated in two steps:
+#' equation-by-equation OLS gives Sigma_hat (divisor T), then
+#'   b_hat = (X' (Sigma^-1 (x) I) X)^-1 X' (Sigma^-1 (x) I) y.
+#' When every equation has the same regressors, SUR equals OLS equation by
+#' equation, but it still delivers the joint covariance needed for
+#' cross-equation tests.
+#'
+#' @param ys list of M response vectors (length T each).
+#' @param Xs list of M design matrices (T x k_m), named columns.
+#' @return list: coef (named "eq:term"), vcov, Sigma, resid (T x M), df.
+sur_fit <- function(ys, Xs) {
+  M <- length(ys); T_ <- length(ys[[1]])
+  eq <- names(ys) %||% paste0("eq", seq_len(M))
+  E <- sapply(seq_len(M), function(m) ols_matrix(ys[[m]], Xs[[m]])$resid)
+  Sigma <- crossprod(E) / T_
+  dimnames(Sigma) <- list(eq, eq)
+  X <- as.matrix(Matrix::bdiag(lapply(Xs, as.matrix)))
+  colnames(X) <- unlist(lapply(seq_len(M), function(m) paste0(eq[m], ":", colnames(Xs[[m]]))))
+  y <- unlist(ys)
+  Om_inv <- kronecker(solve(Sigma), diag(T_))
+  A <- solve(t(X) %*% Om_inv %*% X)
+  b <- drop(A %*% t(X) %*% Om_inv %*% y)
+  names(b) <- colnames(X)
+  R <- matrix(y - X %*% b, T_, M, dimnames = list(NULL, eq))
+  list(coef = b, vcov = A, Sigma = Sigma, resid = R, df = M * T_ - length(b), X = X)
+}
