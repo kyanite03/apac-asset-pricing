@@ -17,7 +17,7 @@ Every model is written in matrix form ($\hat{\boldsymbol\beta} = (\mathbf X'\mat
 | 05 | [Cross-market comparison](modules/05-cross-market-asx-hk-sg/index.qmd) | Are factor premia the same on the ASX, HKEX and SGX? | Done |
 | 06 | [Valuing Tencent (DCF)](modules/06-dcf-tencent/index.qmd) | What is Tencent worth, and what does its price assume? | Done |
 | 07 | Bank valuation, HK & SG | Why do Chinese banks trade at a discount to Singapore's? | Planned |
-| 08 | Oil vs energy equities | Is commodity risk priced, or just held? | Planned |
+| 08 | [Oil in Asia-Pacific](modules/08-oil-asia-pacific/index.qmd) | Regional oil fundamentals, energy-stock exposure, and whether oil risk is priced | Done |
 | 09 | The David Jones collapse | Who bore the cost of DJ's administration? | Planned |
 
 **Data:** Yahoo Finance total returns, with central-bank risk-free rates (RBA, HKMA, MAS/SingStat) and Fama–French Asia Pacific ex Japan factors (Kenneth French Data Library). The shared monthly dataset is rebuilt by [`scripts/build_data.R`](https://github.com/kyanite03/apac-asset-pricing/blob/main/scripts/build_data.R).

@@ -27,6 +27,8 @@ website:
             text: "05 · Cross-market comparison"
           - href: modules/06-dcf-tencent/index.qmd
             text: "06 · Valuing Tencent (DCF)"
+          - href: modules/08-oil-asia-pacific/index.qmd
+            text: "08 · Oil in Asia-Pacific"
     right:
       - icon: github
         href: "https://github.com/kyanite03/apac-asset-pricing"

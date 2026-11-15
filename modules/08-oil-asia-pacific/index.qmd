@@ -1,0 +1,361 @@
+---
+title: "08 · Oil in Asia-Pacific: regional fundamentals, prices and energy equities"
+subtitle: "Australia's fuel now runs through Asian refineries. How exposed are APAC energy stocks to oil, and is that exposure rewarded?"
+author: "Kai Marsh"
+date: last-modified
+---
+
+```{r}
+#| label: setup
+#| code-summary: "Setup: packages, shared functions, oil and equity data"
+
+suppressPackageStartupMessages({ library(tidyverse); library(knitr); library(sandwich) })
+source("../../R/models_linear.R")
+source("../../R/data_factors.R")
+source("../../R/plots.R")
+
+data_dir <- "../../data/processed"
+o <- read_csv(file.path(data_dir, "oil_monthly.csv"), show_col_types = FALSE) |> arrange(month)
+src <- read_csv(file.path(data_dir, "aus_fuel_imports_by_source.csv"), show_col_types = FALSE)
+u <- read_csv(file.path(data_dir, "universe.csv"), show_col_types = FALSE)
+rr <- read_csv(file.path(data_dir, "returns_monthly.csv"), show_col_types = FALSE)
+extra <- read_csv(file.path(data_dir, "oil_equities_extra_returns.csv"), show_col_types = FALSE)
+mk <- read_csv(file.path(data_dir, "market_monthly.csv"), show_col_types = FALSE)
+rf <- read_csv(file.path(data_dir, "rf_monthly.csv"), show_col_types = FALSE)
+fx <- read_csv(file.path(data_dir, "fx_monthly.csv"), show_col_types = FALSE)
+ff <- get_french_apac("../../data/raw/french")
+nw <- function(m) NeweyWest(m, lag = 4, prewhite = FALSE)
+
+o <- o |> mutate(
+  spread = brent_wb_avg - dubai_wb_avg,                                   # Brent–Dubai, both World Bank averages
+  r_brent = brent_price_end / lag(brent_price_end) - 1,                   # month-end (FRED daily)
+  bunker_yoy = log(sg_bunker_sales_kt / lag(sg_bunker_sales_kt, 12)),     # seasonally neutral growth
+  dcover = aus_iea_days_cover - lag(aus_iea_days_cover),
+  stocks_yoy = log(aus_stocks_total_ml / lag(aus_stocks_total_ml, 12)),
+  dspread = spread - lag(spread))
+```
+
+```{r}
+#| label: australia
+#| code-summary: "Australia's refining, imports, import sources and stock cover"
+
+period_mean <- function(x, a, b) mean(x[o$month >= as.Date(a) & o$month <= as.Date(b)], na.rm = TRUE)
+ref_pre <- period_mean(o$aus_refinery_input_ml, "2015-01-01", "2019-12-01")
+ref_post <- period_mean(o$aus_refinery_input_ml, "2023-01-01", "2026-12-01")
+ref_2011 <- period_mean(o$aus_refinery_input_ml, "2011-01-01", "2011-12-01")
+imp_pre <- period_mean(o$aus_product_imports_ml, "2015-01-01", "2019-12-01")
+imp_post <- period_mean(o$aus_product_imports_ml, "2023-01-01", "2026-12-01")
+cover <- o |> filter(!is.na(aus_iea_days_cover))
+cover_last <- tail(cover, 1)
+n_cover90 <- sum(cover$aus_iea_days_cover >= 90)
+last_full_year <- max(lubridate::year(src$month[lubridate::month(src$month) == 12]))
+
+first_full_year <- min(lubridate::year(src$month[lubridate::month(src$month) == 1]))
+shares <- src |> mutate(year = lubridate::year(month)) |>
+  filter(year >= first_full_year, year <= last_full_year) |>
+  group_by(year, source) |> summarise(ml = sum(products_ml), .groups = "drop") |>
+  group_by(year) |> mutate(share = ml / sum(ml)) |> ungroup()
+top_src <- shares |> filter(year == last_full_year) |> slice_max(share, n = 6) |> pull(source)
+sh <- function(s, y) shares$share[shares$source == s & shares$year == y]
+asia_names <- c("Singapore", "Korea, Republic of (South)", "Malaysia", "Taiwan", "China (excludes SARs and Taiwan)",
+                "India", "Japan", "Brunei Darussalam", "Thailand", "Indonesia", "Philippines", "Viet Nam")
+asia_share <- shares |> filter(year == last_full_year, source %in% asia_names) |> summarise(s = sum(share)) |> pull(s)
+```
+
+```{r}
+#| label: fundamentals
+#| code-summary: "Do regional fundamentals predict oil returns?"
+
+dd <- o |> filter(month >= as.Date("2011-02-01")) |>
+  mutate(bunker_yoy_l1 = lag(bunker_yoy), dcover_l1 = lag(dcover), stocks_yoy_l1 = lag(stocks_yoy))
+pred <- lm(r_brent ~ bunker_yoy_l1 + dcover_l1 + stocks_yoy_l1, dd)
+V_pred <- nw(pred)
+C3 <- cbind(0, diag(3))
+W_pred <- drop(t(C3 %*% coef(pred)) %*% solve(C3 %*% V_pred %*% t(C3)) %*% (C3 %*% coef(pred)))
+p_pred <- pchisq(W_pred, 3, lower.tail = FALSE)
+pred_tbl <- tibble(term = names(coef(pred))[-1], est = coef(pred)[-1], t = coef(pred)[-1] / sqrt(diag(V_pred))[-1])
+spread_stats <- o |> filter(month < as.Date("2026-01-01")) |> summarise(m = mean(spread), s = sd(spread))
+spread_2026 <- o |> filter(month >= as.Date("2026-01-01"))
+spread_max <- spread_2026 |> slice_max(spread, n = 1)
+```
+
+```{r}
+#| label: equities
+#| code-summary: "Energy equities: oil betas, asymmetry, and regional factors beyond price"
+
+eq <- bind_rows(rr, extra) |>
+  mutate(market = case_when(grepl("\\.AX$", symbol) ~ "ASX", grepl("\\.HK$", symbol) ~ "HKEX", TRUE ~ "SGX"))
+names_tbl <- tribble(~symbol, ~name, ~role,
+  "WDS.AX", "Woodside Energy", "Producer", "STO.AX", "Santos", "Producer", "BPT.AX", "Beach Energy", "Producer",
+  "0883.HK", "CNOOC", "Producer", "0857.HK", "PetroChina", "Integrated", "0386.HK", "Sinopec", "Integrated (refining-heavy)",
+  "ALD.AX", "Ampol", "Refiner & fuel distributor", "VEA.AX", "Viva Energy", "Refiner & fuel distributor")
+
+eres <- map_dfr(names_tbl$symbol, function(s) {
+  d <- eq |> filter(symbol == s) |> inner_join(mk, by = c("market", "month")) |> inner_join(rf, by = c("market", "month")) |>
+    inner_join(dd, by = "month") |>
+    mutate(ex = ret - rf, mex = mkt - rf, up = pmax(r_brent, 0), dn = pmin(r_brent, 0)) |>
+    filter(!is.na(bunker_yoy), !is.na(dcover), !is.na(dspread))
+  m1 <- lm(ex ~ mex + r_brent, d); V1 <- nw(m1)
+  m2 <- lm(ex ~ mex + up + dn, d); V2 <- nw(m2)
+  ca <- matrix(c(0, 0, 1, -1), 1); p_asym <- 2 * pnorm(-abs(drop(ca %*% coef(m2)) / sqrt(drop(ca %*% V2 %*% t(ca)))))
+  m3 <- lm(ex ~ mex + r_brent + dspread + bunker_yoy + dcover, d); V3 <- nw(m3)
+  cj <- cbind(matrix(0, 3, 3), diag(3)); dj <- cj %*% coef(m3)
+  p_reg <- pchisq(drop(t(dj) %*% solve(cj %*% V3 %*% t(cj)) %*% dj), 3, lower.tail = FALSE)
+  tibble(symbol = s, months = nrow(d), from = min(d$month),
+         b_oil = coef(m1)[["r_brent"]], se_oil = sqrt(V1["r_brent", "r_brent"]),
+         b_up = coef(m2)[["up"]], b_dn = coef(m2)[["dn"]], p_asym = p_asym, p_regional = p_reg)
+}) |> left_join(names_tbl, by = "symbol") |>
+  mutate(p_regional_bh = p.adjust(p_regional, "BH"), p_asym_bh = p.adjust(p_asym, "BH"))
+
+prod_b <- eres |> filter(role == "Producer")
+
+# Asymmetry robustness: simple vs log oil returns, with and without the two most extreme crash months
+o_log <- o |> mutate(r_brent_log = log(brent_price_end / lag(brent_price_end)))
+asym <- function(s, var, drop_crash) {
+  d <- eq |> filter(symbol == s) |> inner_join(mk, by = c("market", "month")) |> inner_join(rf, by = c("market", "month")) |>
+    inner_join(o_log, by = "month") |> filter(month >= as.Date("2011-02-01")) |>
+    mutate(ex = ret - rf, mex = mkt - rf, x = .data[[var]], up = pmax(x, 0), dn = pmin(x, 0))
+  if (drop_crash) d <- d |> filter(!month %in% as.Date(c("2020-03-01", "2020-04-01")))
+  m <- lm(ex ~ mex + up + dn, d); V <- nw(m); ca <- matrix(c(0, 0, 1, -1), 1)
+  c(up = coef(m)[["up"]], dn = coef(m)[["dn"]],
+    p = 2 * pnorm(-abs(drop(ca %*% coef(m)) / sqrt(drop(ca %*% V %*% t(ca))))))
+}
+specs <- tribble(~spec, ~var, ~drop,
+  "Simple returns", "r_brent", FALSE, "Log returns", "r_brent_log", FALSE,
+  "Simple, excl. Mar–Apr 2020", "r_brent", TRUE, "Log, excl. Mar–Apr 2020", "r_brent_log", TRUE)
+asym_all <- pmap_dfr(specs, function(spec, var, drop) map_dfr(names_tbl$symbol, function(s) {
+  a <- asym(s, var, drop); tibble(spec = spec, symbol = s, up = a[["up"]], dn = a[["dn"]], p = a[["p"]])
+}))
+asym_sum <- asym_all |> group_by(spec) |>
+  summarise(n_up_bigger = sum(up > dn), n_sig = sum(p.adjust(p, "BH") < 0.05), .groups = "drop") |>
+  arrange(match(spec, specs$spec))
+extreme <- o_log |> filter(month >= as.Date("2011-02-01")) |> slice_max(abs(r_brent), n = 3)
+# Overall oil beta under log returns, to check it is robust (unlike the up/down split)
+b_log <- map_dbl(names_tbl$symbol, function(s) {
+  d <- eq |> filter(symbol == s) |> inner_join(mk, by = c("market", "month")) |> inner_join(rf, by = c("market", "month")) |>
+    inner_join(o_log, by = "month") |> filter(month >= as.Date("2011-02-01")) |> mutate(ex = ret - rf, mex = mkt - rf)
+  coef(lm(ex ~ mex + r_brent_log, d))[["r_brent_log"]]
+})
+beta_shift <- max(abs(b_log - eres$b_oil[match(names_tbl$symbol, eres$symbol)]))
+```
+
+```{r}
+#| label: priced
+#| code-summary: "Is oil risk priced? Fama–MacBeth across the 51-stock universe (USD)"
+
+om <- o |> transmute(month, oil = r_brent, iron = ironore_wb_avg / lag(ironore_wb_avg) - 1)
+aud <- fx |> filter(market == "ASX") |> select(month, aud = fx)
+pu <- rr |> inner_join(u, by = c("symbol" = "ticker")) |> inner_join(fx, by = c("market", "month")) |>
+  inner_join(ff, by = "month") |> mutate(ex = (1 + ret) * (1 + fx) - 1 - RF)
+Wd <- pu |> select(month, symbol, ex) |> pivot_wider(names_from = symbol, values_from = ex) |> arrange(month)
+Fm <- ff |> select(month, MKT) |> inner_join(om, by = "month") |> inner_join(aud, by = "month") |>
+  filter(month %in% Wd$month) |> arrange(month)
+Wd <- Wd |> filter(month %in% Fm$month)
+Yp <- as.matrix(Wd[, -1])
+fm2 <- fama_macbeth(Yp, as.matrix(Fm[, c("MKT", "oil")]))
+fm4 <- fama_macbeth(Yp, as.matrix(Fm[, c("MKT", "oil", "iron", "aud")]))
+lam <- function(fm, f) fm[fm$term == f, ]
+B4 <- attr(fm4, "betas")
+oil_lam <- lam(fm4, "oil")
+cor_mkt_aud <- cor(Fm$MKT, Fm$aud)
+```
+
+::: {.callout-tip title="Answer first"}
+- **Australia's fuel supply now runs through Asian refineries.** Domestic refinery throughput halved after the 2021 closures (`r round(ref_pre)` → `r round(ref_post)` megalitres a month, 2015–19 vs 2023–26), and refined-product imports rose `r pct(imp_post / imp_pre - 1, 0)`. In `r last_full_year`, `r pct(asia_share, 0)` of those imports came from Asian refiners: Singapore (`r pct(sh("Singapore", last_full_year), 0)`), South Korea (`r pct(sh("Korea, Republic of (South)", last_full_year), 0)`), Malaysia (`r pct(sh("Malaysia", last_full_year), 0)`) and others. Stock cover has averaged `r round(mean(cover$aus_iea_days_cover))` IEA days, against a 90-day obligation met in only `r n_cover90` of `r nrow(cover)` months.
+- **Asia's crude benchmark broke away from Brent in 2026.** The Brent–Dubai spread, normally `r num(spread_stats$m, 1)` dollars a barrel, reached `r num(spread_max$spread, 1)` dollars in `r format(spread_max$month, "%B %Y")` during the 2026 oil shock.
+- **APAC energy stocks are exposed to oil, in the expected order.** Monthly oil betas (controlling for each home market) run from `r num(max(prod_b$b_oil))` for upstream producers down to `r num(eres$b_oil[eres$symbol == "0386.HK"])` for refining-heavy Sinopec. Whether they react more to oil rises or falls is not robust. The answer flips with how returns are measured and with a few extreme months.
+- **Regional fundamentals add little beyond the price.** Singapore bunker demand, Australian stock cover and the Brent–Dubai spread neither predict oil returns (joint p = `r num(p_pred)`) nor explain energy-stock returns once Brent is controlled for (no stock significant after a multiple-testing correction).
+- **Oil exposure is not rewarded.** Across all 51 stocks, the Fama–MacBeth price of oil risk is `r pct(oil_lam$estimate, 2)` a month (Shanken t = `r num(oil_lam$t_shanken)`). **So what:** in APAC equities, oil is a risk to hedge or diversify, not a source of expected return. Investors are not paid for holding it.
+:::
+
+## Question
+
+Oil matters more to Asia-Pacific than to almost any other region. China, Japan, Korea and India are the world's largest crude importers, Singapore is the region's refining and trading hub, and Australia has become dependent on imported fuel. This module asks four questions:
+
+1. How has the region's oil supply chain changed, using Australia's official petroleum statistics as a lens?
+2. Do regional fundamentals (Singapore marine-fuel demand, Australian stock levels, Asia's Dubai benchmark) carry information about oil prices?
+3. How exposed are APAC energy stocks to oil, and does that exposure differ between producers and refiners, or between rising and falling prices?
+4. Is oil risk *priced*? Do stocks with more oil exposure earn higher average returns?
+
+## Data
+
+```{r}
+#| label: tbl-sources
+#| tbl-cap: "Data sources."
+
+tribble(~Series, ~Source, ~Frequency, ~Licence,
+  "Brent and WTI spot prices", "FRED (US EIA data), via the fredr package", "Daily → month-end", "Public domain (EIA)",
+  "Dubai crude, Brent, iron ore", "World Bank Commodity Price Data (Pink Sheet)", "Monthly average", "CC BY 4.0",
+  "Australian refining, imports by source, stocks, IEA cover, sales", "Australian Petroleum Statistics, DCCEEW (data.gov.au)", "Monthly", "CC BY 3.0 AU",
+  "Singapore bunker (marine fuel) sales", "Maritime and Port Authority of Singapore (data.gov.sg)", "Monthly", "Singapore Open Data Licence",
+  "Equity returns", "Yahoo Finance (as Module 01); Ampol, Viva Energy and Beach Energy added", "Monthly", "–") |>
+  kable()
+```
+
+The two oil price sources were compared before use. Like-for-like monthly averages from FRED and the World Bank agree to within about 50 cents on average. Month-end prices (FRED) are used for returns, because they line up in time with month-end stock returns; averaged prices are smoother and partly lagged. Australia's imports by source were checked against the national total: the country rows sum to the total to within 0.05% in every month. Weekly Singapore onshore oil inventories, the region's most-watched stock data, are published by Enterprise Singapore but were not available in a downloadable form, so Singapore's bunker sales (a physical-volume demand indicator) are used instead.
+
+## Results
+
+### Australia's fuel comes from Asia
+
+```{r}
+#| label: fig-sources
+#| fig-cap: "Source of Australia's refined petroleum product imports, share of annual volume. Asian refiners supply almost all of it; Singapore's dominance has given way to Korea, Malaysia and others."
+#| fig-width: 9
+#| fig-height: 5
+
+pal <- c("#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#6250d6", "#c3c2b7")
+lab <- function(s) recode(s, "Korea, Republic of (South)" = "South Korea", "China (excludes SARs and Taiwan)" = "China")
+sdat <- shares |> mutate(src = if_else(source %in% top_src, lab(source), "Other")) |>
+  group_by(year, src) |> summarise(share = sum(share), .groups = "drop") |>
+  mutate(src = factor(src, levels = c(lab(top_src), "Other")))
+p_src <- ggplot(sdat, aes(year, share, fill = src)) +
+  geom_area(colour = "white", linewidth = 0.3) +
+  scale_fill_manual(values = setNames(pal, levels(sdat$src))) +
+  scale_y_continuous(labels = scales::percent_format(), expand = c(0, 0)) +
+  scale_x_continuous(breaks = seq(first_full_year, last_full_year, 2), expand = c(0, 0)) +
+  labs(title = "Australia's imported fuel comes from Asian refineries, and less of it from Singapore",
+       subtitle = sprintf("Source of refined petroleum product imports, share of annual volume, %d–%d", first_full_year, last_full_year),
+       x = NULL, y = NULL, caption = "Australian Petroleum Statistics (DCCEEW). Refined products only (excludes crude and natural gas).") +
+  theme_report() + theme(legend.position = "right", legend.justification = "center")
+dir.create("figures", showWarnings = FALSE)
+ggsave("figures/key_chart.png", p_src, width = 9, height = 5, dpi = 200, bg = "white")
+p_src
+```
+
+In `r first_full_year`, Singapore supplied `r pct(sh("Singapore", first_full_year), 0)` of Australia's refined-fuel imports. By `r last_full_year` its share was `r pct(sh("Singapore", last_full_year), 0)`. South Korea (`r pct(sh("Korea, Republic of (South)", last_full_year), 0)`), Malaysia (`r pct(sh("Malaysia", last_full_year), 0)`), Taiwan, China and India have grown, so the supply base is more diversified, but it remains almost entirely Asian.
+
+```{r}
+#| label: fig-refining
+#| fig-cap: "Australian refinery input and refined-product imports (megalitres per month, 12-month rolling average); and stock cover in IEA days of net imports against the 90-day obligation."
+#| fig-width: 9
+#| fig-height: 4.2
+
+roll12 <- function(x) as.numeric(stats::filter(x, rep(1 / 12, 12), sides = 1))
+p1 <- o |> filter(!is.na(aus_refinery_input_ml)) |>
+  transmute(month, `Refinery input` = roll12(aus_refinery_input_ml), `Refined-product imports` = roll12(aus_product_imports_ml)) |>
+  pivot_longer(-month) |> filter(!is.na(value)) |> mutate(panel = "Megalitres per month (12-month average)")
+p2 <- cover |> transmute(month, name = "Stock cover (IEA days)", value = aus_iea_days_cover, panel = "IEA days of net import cover")
+ggplot(bind_rows(p1, p2), aes(month, value, colour = name)) +
+  geom_hline(data = tibble(panel = "IEA days of net import cover", y = 90), aes(yintercept = y),
+             linetype = "dashed", colour = "#52514e") +
+  geom_line(linewidth = 0.9) +
+  facet_wrap(~ panel, scales = "free_y") +
+  scale_colour_manual(values = c(`Refinery input` = "#2a78d6", `Refined-product imports` = "#eb6834",
+                                 `Stock cover (IEA days)` = "#1baf7a")) +
+  labs(x = NULL, y = NULL) +
+  theme_report()
+```
+
+The decline came in two waves. Throughput averaged about `r round(ref_2011 / 100) * 100` megalitres a month in 2011, fell to about `r round(ref_pre / 100) * 100` after earlier closures, then to about `r round(ref_post / 100) * 100` after the 2021 closures. Each time, imports filled the gap. Stock cover has sat well below the International Energy Agency's 90-day obligation for most of the period. It was `r cover_last$aus_iea_days_cover` days in `r format(cover_last$month, "%B %Y")`. That is about `r round(cover_last$aus_iea_days_cover / 7)` weeks of net imports as a buffer against a regional supply disruption.
+
+### Asia's benchmark and the 2026 shock
+
+```{r}
+#| label: fig-benchmarks
+#| fig-cap: "Brent and Dubai crude (US$ per barrel, World Bank monthly averages) and the Brent–Dubai spread."
+#| fig-width: 9
+#| fig-height: 4.2
+
+bdat <- bind_rows(
+  o |> transmute(month, name = "Brent", value = brent_wb_avg, panel = "Price (US$/bbl)"),
+  o |> transmute(month, name = "Dubai", value = dubai_wb_avg, panel = "Price (US$/bbl)"),
+  o |> transmute(month, name = "Brent – Dubai", value = spread, panel = "Spread (US$/bbl)"))
+ggplot(bdat, aes(month, value, colour = name)) +
+  geom_hline(data = tibble(panel = "Spread (US$/bbl)", y = 0), aes(yintercept = y), colour = "#c3c2b7") +
+  geom_line(linewidth = 0.8) +
+  facet_wrap(~ panel, scales = "free_y") +
+  scale_colour_manual(values = c(Brent = "#2a78d6", Dubai = "#eb6834", `Brent – Dubai` = "#0b0b0b")) +
+  labs(x = NULL, y = NULL) + theme_report()
+```
+
+Dubai crude, the Middle East grade that supplies most of Asia, normally trades a little below Brent: the spread averaged `r num(spread_stats$m, 1)` dollars a barrel (standard deviation `r num(spread_stats$s, 1)`) before 2026. In 2026 it blew out, reaching `r num(spread_max$spread, 1)` dollars in `r format(spread_max$month, "%B %Y")`, so Asian buyers of Middle East crude and holders of Brent-linked assets had very different experiences of the same shock.
+
+### Do regional fundamentals predict oil?
+
+```{r}
+#| label: tbl-predict
+#| tbl-cap: "Monthly Brent return regressed on last month's regional fundamentals (Newey–West t-statistics)."
+
+pred_tbl |> mutate(Predictor = recode(term, bunker_yoy_l1 = "Singapore bunker sales, year-on-year growth",
+                                      dcover_l1 = "Change in Australian stock cover (IEA days)",
+                                      stocks_yoy_l1 = "Australian total stocks, year-on-year growth"),
+                   Coefficient = num(est, 3), t = num(t)) |>
+  select(Predictor, Coefficient, t) |> kable(align = "lrr")
+```
+
+None of the three predicts next month's oil return, individually or jointly (joint p = `r num(p_pred)`, R² = `r pct(summary(pred)$r.squared, 1)`). This is what an efficient global market implies: Australia and Singapore are price-takers, and their published volumes are already reflected in the price by the time they are released.
+
+### Energy equities: exposure in the expected order
+
+```{r}
+#| label: fig-betas
+#| fig-cap: "Oil beta of each APAC energy stock (monthly excess return on home-market excess return and Brent return), with 95% Newey–West intervals."
+#| fig-width: 9
+#| fig-height: 4.6
+
+bdf <- eres |> mutate(lbl = paste0(name, "  (", role, ")"), lbl = fct_reorder(lbl, b_oil))
+ggplot(bdf, aes(y = lbl)) +
+  geom_vline(xintercept = 0, colour = "#c3c2b7") +
+  geom_errorbarh(aes(xmin = b_oil - 1.96 * se_oil, xmax = b_oil + 1.96 * se_oil), height = 0, colour = "#2a78d6", alpha = 0.5) +
+  geom_point(aes(x = b_oil), colour = "#2a78d6", size = 3) +
+  labs(x = "Oil beta (excess return per unit Brent return, controlling for the home market)", y = NULL) +
+  theme_report() + theme(panel.grid.major.y = element_blank())
+```
+
+```{r}
+#| label: tbl-equities
+#| tbl-cap: "Oil exposure of APAC energy stocks. p (regional): joint test that the Brent–Dubai spread, Singapore bunker growth and Australian stock-cover change add nothing beyond Brent. BH: Benjamini–Hochberg adjusted across the eight stocks."
+
+eres |> arrange(desc(b_oil)) |>
+  transmute(Stock = name, Role = role, From = format(from, "%Y"), `Oil beta` = num(b_oil), t = num(b_oil / se_oil, 1),
+            `p (regional)` = num(p_regional), `p (regional, BH)` = num(p_regional_bh)) |>
+  kable(align = "llrrrrr")
+```
+
+- **Producers are most exposed.** A 10% rise in Brent goes with roughly a `r pct(min(prod_b$b_oil) * 0.1, 1)`–`r pct(max(prod_b$b_oil) * 0.1, 1)` excess return for Woodside, Santos, Beach and CNOOC, after controlling for the home market. Integrated PetroChina is in between, and Sinopec, mostly a refiner and fuel retailer, has almost no exposure (`r num(eres$b_oil[eres$symbol == "0386.HK"])`, t = `r num(with(eres[eres$symbol == "0386.HK", ], b_oil / se_oil), 1)`).
+- **The Australian refiners are exposed too.** Ampol (`r num(eres$b_oil[eres$symbol == "ALD.AX"])`) and Viva Energy (`r num(eres$b_oil[eres$symbol == "VEA.AX"])`) have positive oil betas. Plausibly, higher crude prices come with higher product prices and inventory gains for fuel distributors. Either way, they are not a hedge against oil.
+- **Regional fundamentals add nothing systematic.** Only `r sum(eres$p_regional < 0.05)` stock has a joint p-value below 5%, and none does after adjusting for testing eight stocks (smallest adjusted p = `r num(min(eres$p_regional_bh))`).
+
+#### Do stocks react more to oil rises or falls? Not robustly.
+
+```{r}
+#| label: tbl-asym
+#| tbl-cap: "Separate betas in months when Brent rose and fell, under four reasonable specifications: for how many of the eight stocks is the rising-oil beta larger, and for how many is the difference significant after a Benjamini–Hochberg correction?"
+
+asym_sum |> transmute(Specification = spec, `Rising-oil beta larger` = paste(n_up_bigger, "of", nrow(eres)),
+                      `Significant difference (BH 5%)` = n_sig) |> kable(align = "lrr")
+```
+
+The answer depends on choices that should not matter. With simple returns over the full sample, falling oil appears to hit producers harder. With log returns, the rising-oil beta is larger for most stocks, but never significantly so. Dropping March and April 2020 changes it again. The reason is that a few extreme months dominate a 15-year sample: Brent moved `r paste(sprintf("%+.0f%% (%s)", 100 * (exp(extreme$r_brent_log) - 1), format(extreme$month, "%b %Y")), collapse = ", ")`. The overall oil betas are stable: switching to log returns moves no stock's beta by more than `r num(beta_shift)`. Only the split into rising and falling months is fragile, so no conclusion about asymmetry is drawn.
+
+### Is oil risk priced?
+
+```{r}
+#| label: tbl-fm
+#| tbl-cap: "Fama–MacBeth risk premia (monthly) across the 51-stock universe in USD, with Shanken-corrected t-statistics. Oil, iron ore and the Australian dollar are non-traded factors, so their premia are not directly comparable with their average returns."
+
+bind_rows(fm2 |> mutate(Model = "Market + oil"), fm4 |> mutate(Model = "Market + oil + iron ore + AUD")) |>
+  transmute(Model, Factor = recode(term, gamma0 = "Intercept", MKT = "Market (regional)", oil = "Oil (Brent)",
+                                   iron = "Iron ore", aud = "AUD/USD"),
+            `Premium (monthly)` = pct(estimate, 2), `t (Shanken)` = num(t_shanken)) |>
+  kable(align = "llrr")
+```
+
+Stocks differ in their oil exposure (betas range from `r num(min(B4[, "oil"]))` to `r num(max(B4[, "oil"]))` across the universe), but higher exposure has not come with higher average returns. The estimated oil premium is `r pct(oil_lam$estimate, 2)` a month, with a Shanken t-statistic of `r num(oil_lam$t_shanken)`. Iron ore and the Australian dollar, Australia's other big commodity exposures, are not priced either. The test has limited power: the standard error on the oil premium is about `r pct(oil_lam$se_shanken, 1)` a month, so a modest premium cannot be ruled out. But there is no evidence that APAC investors are paid for bearing commodity risk, consistent with Chen, Roll and Ross's (1986) finding for oil in US data. The market factor and the Australian dollar are highly correlated in USD returns (`r num(cor_mkt_aud)`), which makes their separate premia hard to distinguish.
+
+## Limitations
+
+- **One country's fundamentals.** Australia's petroleum statistics are unusually detailed and free, but Australia is a price-taker. Chinese, Japanese and Korean refinery runs and stocks would be more informative about regional demand and are not freely available in this form.
+- **No refining margins.** Singapore's benchmark refining margins and product cracks are commercial data. The refiners' oil betas therefore mix the effects of crude prices and margins, which often move together.
+- **Monthly data, global price.** Monthly returns are too coarse to capture intra-month timing, and the Brent close (London) and Asian closes do not overlap. Weekly returns would address this at the cost of noisier fundamentals.
+- **Viva Energy** has only `r eres$months[eres$symbol == "VEA.AX"]` months of history (listed 2018).
+- **Survivor sample and low power** in the pricing test, as in Modules 03 and 04.
+
+## References
+
+- Chen, N.-F., Roll, R., & Ross, S. A. (1986). Economic forces and the stock market. *Journal of Business, 59*(3), 383–403.
+- Department of Climate Change, Energy, the Environment and Water. *Australian Petroleum Statistics*. data.gov.au.
+- Maritime and Port Authority of Singapore. *Bunker Sales Total, Monthly*. data.gov.sg.
+- World Bank. *Commodity Price Data (The Pink Sheet)*, November 2026 update.
+- U.S. Energy Information Administration, via Federal Reserve Bank of St. Louis (FRED): DCOILBRENTEU, DCOILWTICO.
