@@ -139,10 +139,10 @@ A model "prices" the assets if, after controlling for the assets' factor exposur
 
 ## Data
 
-- **Test assets:** the `r N_` large caps from Module 01 (ASX, HKEX, SGX), with monthly total returns converted to US dollars at month-end exchange rates. The sample runs from `r format(min(months), "%b %Y")` to `r format(max(months), "%b %Y")` (`r T_` months).
+- **Test assets:** the `r N_` large caps from Module 01 (ASX, HKEX, SGX), with monthly total returns converted to US dollars at month-end exchange rates. The sample runs from `r format(min(months), "%b %Y")` to `r format(max(months), "%b %Y")` (`r T_` months). It ends earlier than Module 01's sample (to Sep 2026) because the archived factor files stop at the end of 2025.
 - **Factors:** Fama–French *Asia Pacific ex Japan* factors (Australia, Hong Kong, Singapore and New Zealand), in USD, with the US one-month T-bill as the risk-free rate, from the Kenneth French Data Library. They are built from all listed stocks in the region, not just our sample.
 - **Why USD:** the factors are USD returns on a regional portfolio, so the test assets have to be in the same currency and in excess of the same risk-free rate. Module 01 used local currency against local rates, which suits single-market betas.
-- **Data access note:** the French library was unreachable from the network used for this analysis, so the factor files are copies of the original files from the Internet Archive (dated February 2026, data to December 2025). French rebuilds the full history each month, so later versions can differ slightly. Provenance is recorded in the repository.
+- **Data access note:** the French library was unreachable from the network used for this analysis, so the factor files are copies of the original files from the Internet Archive (dated February 2026, data to December 2025). French rebuilds the full history each month, so later versions can differ slightly. Snapshot URLs and checksums are in [`data/SOURCES.md`](https://github.com/kyanite03/apac-asset-pricing/blob/main/data/SOURCES.md).
 
 ```{r}
 #| label: tbl-factors

@@ -2,7 +2,8 @@
 #
 # Kenneth French Data Library files carry no reuse licence (copyright Fama and
 # French), so the raw ZIPs live in data/raw/french/ (gitignored) and are
-# parsed at render time. See data/raw/french/SOURCE.txt for provenance.
+# parsed at render time. See data/SOURCES.md for provenance (snapshot URLs
+# and checksums).
 
 #' Read the monthly block of a Kenneth French CSV-in-ZIP file.
 #'

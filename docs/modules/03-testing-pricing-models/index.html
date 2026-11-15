@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Kai Marsh">
-<meta name="dcterms.date" content="2026-11-15">
+<meta name="dcterms.date" content="2026-11-16">
 
 <title>03 · Testing pricing models: CAPM vs zero-beta CAPM vs Fama–French – APAC Asset Pricing</title>
 <style>
@@ -249,7 +249,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">November 15, 2026</p>
+      <p class="date">November 16, 2026</p>
     </div>
   </div>
   
@@ -426,10 +426,10 @@ window.Quarto = {
 <section id="data" class="level2">
 <h2 class="anchored" data-anchor-id="data">Data</h2>
 <ul>
-<li><strong>Test assets:</strong> the 51 large caps from Module 01 (ASX, HKEX, SGX), with monthly total returns converted to US dollars at month-end exchange rates. The sample runs from Feb 2011 to Dec 2025 (179 months).</li>
+<li><strong>Test assets:</strong> the 51 large caps from Module 01 (ASX, HKEX, SGX), with monthly total returns converted to US dollars at month-end exchange rates. The sample runs from Feb 2011 to Dec 2025 (179 months). It ends earlier than Module 01’s sample (to Sep 2026) because the archived factor files stop at the end of 2025.</li>
 <li><strong>Factors:</strong> Fama–French <em>Asia Pacific ex Japan</em> factors (Australia, Hong Kong, Singapore and New Zealand), in USD, with the US one-month T-bill as the risk-free rate, from the Kenneth French Data Library. They are built from all listed stocks in the region, not just our sample.</li>
 <li><strong>Why USD:</strong> the factors are USD returns on a regional portfolio, so the test assets have to be in the same currency and in excess of the same risk-free rate. Module 01 used local currency against local rates, which suits single-market betas.</li>
-<li><strong>Data access note:</strong> the French library was unreachable from the network used for this analysis, so the factor files are copies of the original files from the Internet Archive (dated February 2026, data to December 2025). French rebuilds the full history each month, so later versions can differ slightly. Provenance is recorded in the repository.</li>
+<li><strong>Data access note:</strong> the French library was unreachable from the network used for this analysis, so the factor files are copies of the original files from the Internet Archive (dated February 2026, data to December 2025). French rebuilds the full history each month, so later versions can differ slightly. Snapshot URLs and checksums are in <a href="https://github.com/kyanite03/apac-asset-pricing/blob/main/data/SOURCES.md"><code>data/SOURCES.md</code></a>.</li>
 </ul>
 <div class="cell">
 <details class="code-fold">
