@@ -2,7 +2,7 @@
 
 Do asset pricing models built on US data hold in Asia-Pacific markets? This repo tests the CAPM and factor models on APAC equities, starting with the ASX.
 
-**First study:** [Does the CAPM price ASX large caps?](reports/capm_asx.qmd) (rendered report: [`reports/capm_asx.html`](reports/capm_asx.html), download and open in a browser).
+**First study:** [Does the CAPM price ASX large caps?](https://kyanite03.github.io/apac-capital-markets-analysis/reports/capm_asx.html) ([Read online](https://kyanite03.github.io/apac-capital-markets-analysis/reports/capm_asx.html) · [source](reports/capm_asx.qmd)).
 
 ## Executive summary
 
@@ -36,7 +36,7 @@ The CAPM remains the standard model for the cost of equity in Australian valuati
 | Fama–MacBeth beta premium (out-of-sample betas) | 2.5% | 0.44 | 11.7% (market premium, same months) |
 | GRS joint test of zero alphas | F = 1.17 | p = 0.31 | not rejected |
 
-The flat line matches Black's zero-beta CAPM and the "betting against beta" evidence of Frazzini and Pedersen (2014) in US data. Beta stability results are in [the report](reports/capm_asx.qmd) ([chart](figures/beta_stability.png)).
+The flat line matches Black's zero-beta CAPM and the "betting against beta" evidence of Frazzini and Pedersen (2014) in US data. Beta stability results are in [the report](https://kyanite03.github.io/apac-capital-markets-analysis/reports/capm_asx.html) ([chart](figures/beta_stability.png)).
 
 ## Tools
 
