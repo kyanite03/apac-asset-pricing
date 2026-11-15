@@ -8,12 +8,14 @@
 #   market_monthly.csv  market, month, mkt          (total-return index ETF per market)
 #   rf_monthly.csv      market, month, rf           (monthly risk-free return, lagged one month)
 #   rf_rates_raw.csv    market, month, rf_annual_pct (the published rates, for reference)
+#   fx_monthly.csv      market, month, fx           (change in USD per unit of local currency)
 
 suppressPackageStartupMessages({
   library(dplyr); library(readr); library(tidyr)
 })
 source("R/data_prices.R")
 source("R/data_rates.R")
+source("R/data_factors.R")
 
 from <- "2011-02-01"   # first month with a lagged rate available in all three markets
 to   <- "2026-09-30"   # last month with all three risk-free series published
@@ -94,6 +96,7 @@ mkt <- get_monthly_returns(unname(market_etf), from, to) |>
 
 rates <- bind_rows(get_rf_au(), get_rf_hk(), get_rf_sg())
 rf <- rf_monthly(rates) |> filter(month >= as.Date(from), month <= as.Date(to))
+fx <- get_fx_monthly(from, to)
 
 # ---- Checks --------------------------------------------------------------------
 months <- seq(as.Date(from), lubridate::floor_date(as.Date(to), "month"), by = "month")
@@ -104,7 +107,8 @@ message("Sample months: ", length(months))
 message("Stocks with incomplete history:")
 print(cover |> filter(n_months < length(months)) |> select(symbol, name, n_months))
 stopifnot(all(table(mkt$market) == length(months)),
-          all(table(rf$market) == length(months)))
+          all(table(rf$market) == length(months)),
+          all(table(fx$market) == length(months)))
 
 # Flag implausible monthly moves (data errors usually show as |ret| > 100%)
 big <- ret |> filter(abs(ret) > 0.6)
@@ -116,6 +120,7 @@ write_csv(universe, "data/processed/universe.csv")
 write_csv(ret |> arrange(symbol, month), "data/processed/returns_monthly.csv")
 write_csv(mkt |> arrange(market, month), "data/processed/market_monthly.csv")
 write_csv(rf |> arrange(market, month), "data/processed/rf_monthly.csv")
+write_csv(fx |> arrange(market, month), "data/processed/fx_monthly.csv")
 write_csv(rates |> filter(month >= as.Date(from) - 31, month <= as.Date(to)) |> arrange(market, month),
           "data/processed/rf_rates_raw.csv")
 message("Done.")

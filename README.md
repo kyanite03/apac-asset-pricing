@@ -4,7 +4,17 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 
 **Read online:** [kyanite03.github.io/apac-asset-pricing](https://kyanite03.github.io/apac-asset-pricing/)
 
-## Latest: Module 01, CAPM and the market model
+## Latest: Module 03, testing pricing models
+
+![Realised vs predicted average returns for 51 APAC large caps under four pricing models](modules/03-testing-pricing-models/figures/key_chart.png)
+
+- **All four models are rejected** (CAPM, Fama–French 3, FF3 + momentum, FF5; GRS p ≤ 0.005). But 88% of CAPM alphas are positive, averaging 4.6% a year. That is the signature of a survivor sample, not of a missing factor.
+- **Extra factors explain more variance but price no better.** R² rises from 40% to 47%, yet the CAPM has the smallest root-mean-square alpha.
+- **Beta is priced roughly as the CAPM says** (7.1% a year vs a 4.5% market premium, with an insignificant zero-beta intercept). This overturns an earlier flat-line result from a 16-stock ASX sample, though with low power (t = 0.94).
+
+[Full write-up](https://kyanite03.github.io/apac-asset-pricing/modules/03-testing-pricing-models/) · [source](modules/03-testing-pricing-models/index.qmd)
+
+## Module 01, CAPM and the market model
 
 ![CAPM betas with 95% Newey–West intervals for 51 large caps on the ASX, HKEX and SGX](modules/01-capm-market-model/figures/key_chart.png)
 
@@ -20,7 +30,7 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 |---|--------|----------|--------|
 | 01 | [CAPM and the market model](modules/01-capm-market-model/) | How market-sensitive are APAC large caps, and are their betas stable? | Done |
 | 02 | Factor construction | Can SMB/HML be built for the ASX from fundamentals? | Planned |
-| 03 | Testing pricing models | CAPM vs zero-beta CAPM vs Fama–French: which prices APAC returns? | In progress |
+| 03 | [Testing pricing models](modules/03-testing-pricing-models/) | CAPM vs zero-beta CAPM vs Fama–French: which prices APAC returns? | Done |
 | 04 | Statistical factors (APT) | How many factors drive APAC returns? | Planned |
 | 05 | Cross-market comparison | Are factor premia equal across the three markets? | Planned |
 | 06 | DCF: Tencent | Does Tencent deserve its valuation premium? | Planned |
@@ -41,11 +51,12 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 | `modules/NN-*/index.qmd` | One write-up per module (Quarto) |
 | `R/` | Shared functions: data (`data_prices.R`, `data_rates.R`), estimators (`models_linear.R`), chart theme (`plots.R`) |
 | `scripts/build_data.R` | Downloads prices and rates; writes `data/processed/` |
+| `data/raw/french/` | Kenneth French factor ZIPs (not committed: no reuse licence). Download the three *Asia Pacific ex Japan* files (3 factors, 5 factors, momentum) from the [Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html) |
 | `data/processed/` | Monthly returns, market proxies, risk-free rates, universe, module outputs |
 | `tests/testthat/` | Estimator tests |
 | `docs/` | Rendered website (GitHub Pages) |
 
-**Reproduce:** `Rscript scripts/build_data.R`, then `Rscript -e 'testthat::test_dir("tests/testthat")'`, then `quarto render`.
+**Reproduce:** `Rscript scripts/build_data.R`, put the French files in `data/raw/french/`, then `Rscript -e 'testthat::test_dir("tests/testthat")'`, then `quarto render`.
 
 ## Data caveats
 

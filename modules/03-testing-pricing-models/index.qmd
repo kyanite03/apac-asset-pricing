@@ -1,0 +1,264 @@
+---
+title: "03 · Testing pricing models: CAPM vs zero-beta CAPM vs Fama–French"
+subtitle: "Which model prices the returns of APAC large caps, and does beta earn its premium?"
+author: "Kai Marsh"
+date: last-modified
+---
+
+```{r}
+#| label: setup
+#| code-summary: "Setup: packages, shared functions, data in USD"
+
+suppressPackageStartupMessages({ library(tidyverse); library(knitr) })
+source("../../R/models_linear.R")
+source("../../R/data_factors.R")
+source("../../R/plots.R")
+
+data_dir <- "../../data/processed"
+universe <- read_csv(file.path(data_dir, "universe.csv"), show_col_types = FALSE)
+ret <- read_csv(file.path(data_dir, "returns_monthly.csv"), show_col_types = FALSE)
+fx  <- read_csv(file.path(data_dir, "fx_monthly.csv"), show_col_types = FALSE)
+ff  <- get_french_apac("../../data/raw/french")
+
+# Convert local-currency total returns to USD, then subtract the US T-bill rate
+# that the French factors use, so test assets and factors share one numeraire.
+panel <- ret |>
+  inner_join(universe, by = c("symbol" = "ticker")) |>
+  inner_join(fx, by = c("market", "month")) |>
+  inner_join(ff, by = "month") |>
+  mutate(ret_usd = (1 + ret) * (1 + fx) - 1, ex = ret_usd - RF,
+         ticker = sub("\\.(AX|HK|SI)$", "", symbol))
+
+months <- sort(unique(panel$month))
+stopifnot(all(count(panel, symbol)$n == length(months)))   # balanced panel
+Y <- panel |> select(month, symbol, ex) |> pivot_wider(names_from = symbol, values_from = ex) |>
+  arrange(month) |> select(-month) |> as.matrix()
+Fac <- ff |> filter(month %in% months) |> arrange(month)
+T_ <- nrow(Y); N_ <- ncol(Y)
+
+models <- list(
+  "CAPM"          = c("MKT"),
+  "Fama–French 3" = c("MKT", "SMB3", "HML"),
+  "FF3 + momentum"= c("MKT", "SMB3", "HML", "WML"),
+  "Fama–French 5" = c("MKT", "SMB", "HML", "RMW", "CMA")
+)
+fac_label <- c(MKT = "Market", SMB3 = "Size (SMB)", SMB = "Size (SMB)", HML = "Value (HML)",
+               WML = "Momentum (WML)", RMW = "Profitability (RMW)", CMA = "Investment (CMA)")
+```
+
+```{r}
+#| label: time-series
+#| code-summary: "Time-series tests: alphas and GRS for each model"
+
+ts_res <- imap(models, function(f, nm) {
+  F <- as.matrix(Fac[, f])
+  g <- grs_test(Y, F)
+  fit <- ols_matrix(Y, cbind(1, F))
+  r2 <- 1 - colSums(fit$resid^2) / colSums(sweep(Y, 2, colMeans(Y))^2)
+  # per-stock HAC t-stats on alpha
+  p_alpha <- map_dbl(seq_len(N_), function(j) {
+    fj <- ols_matrix(Y[, j], cbind(1, F)); coef_table(fj, hac_vcov(fj, 4))$p[1]
+  })
+  list(grs = g, alpha = g$alpha, r2 = r2, p_alpha = p_alpha,
+       predicted = drop(t(fit$coef[-1, , drop = FALSE]) %*% colMeans(F)),  # beta' * mean factor
+       realised = colMeans(Y))
+})
+
+grs_tbl <- imap_dfr(ts_res, function(r, nm) tibble(
+  Model = nm, Factors = length(models[[nm]]),
+  `GRS F` = r$grs$stat, p = r$grs$p,
+  `Mean |α| (p.a.)` = 12 * mean(abs(r$alpha)),
+  `RMS α (p.a.)` = 12 * sqrt(mean(r$alpha^2)),
+  `Alphas sig. (BH 5%)` = sum(p.adjust(r$p_alpha, "BH") < 0.05),
+  `Mean R²` = mean(r$r2),
+  `Sharpe: factors` = sqrt(12) * r$grs$sharpe_factors,
+  `Sharpe: tangency` = sqrt(12) * r$grs$sharpe_tangency))
+```
+
+```{r}
+#| label: cross-section
+#| code-summary: "Cross-sectional tests: Fama–MacBeth with Shanken errors, GLS, zero-beta CAPM"
+
+fm_res <- imap(models, function(f, nm) {
+  F <- as.matrix(Fac[, f]); colnames(F) <- f
+  fm <- fama_macbeth(Y, F, intercept = TRUE)
+  fm$factor_mean <- c(NA, colMeans(F))
+  fm$model <- nm
+  fm
+})
+fm_tbl <- bind_rows(fm_res)
+
+# Zero-beta (Black) CAPM: intercept = zero-beta excess rate; slope vs market premium
+capm_fm <- fm_res[["CAPM"]]
+g0 <- capm_fm[capm_fm$term == "gamma0", ]; g1 <- capm_fm[capm_fm$term == "MKT", ]
+mkt_mean <- mean(Fac$MKT)
+# Is the beta premium below the market premium? t on (gamma1 - mean MKT) using the
+# monthly gamma series minus the monthly market return.
+gam <- attr(capm_fm, "gammas")
+gap_series <- gam[, "MKT"] - Fac$MKT
+gap_t <- mean(gap_series) / (sd(gap_series) / sqrt(T_))
+
+# GLS cross-sectional regression for the CAPM:
+#   lambda = (Z' S^-1 Z)^-1 Z' S^-1 mu, S = residual covariance from the time series
+B_capm <- t(ols_matrix(Y, cbind(1, Fac$MKT))$coef[-1, , drop = FALSE])
+S_res <- ts_res[["CAPM"]]$grs$resid_cov
+gls <- gls_matrix(colMeans(Y), cbind(gamma0 = 1, MKT = B_capm[, 1]), S_res)
+c_sh <- mean(Fac$MKT)^2 / var(Fac$MKT)
+se_gls <- sqrt(diag(gls$vcov * (1 + c_sh) / T_ + diag(c(0, var(Fac$MKT) / T_))))
+
+capm_row <- grs_tbl |> filter(Model == "CAPM")
+alpha_sign <- imap_dfr(ts_res, \(r, nm) tibble(Model = nm, share_pos = mean(r$alpha > 0),
+                                                mean_alpha = 12 * mean(r$alpha)))
+capm_pos <- alpha_sign$share_pos[1]; capm_mean_alpha <- alpha_sign$mean_alpha[1]
+capm_alpha_mkt <- tibble(symbol = colnames(Y), a = 12 * ts_res[["CAPM"]]$alpha) |>
+  left_join(universe, by = c("symbol" = "ticker")) |> group_by(market) |> summarise(a = mean(a))
+stopifnot(all(capm_alpha_mkt$a > 0))                    # text: positive "in all three markets"
+b_capm <- B_capm[, 1]; mu <- colMeans(Y)
+hi_lo <- c(lo = mean(mu[b_capm < median(b_capm)]), hi = mean(mu[b_capm >= median(b_capm)]))
+```
+
+::: {.callout-tip title="Answer first"}
+- **Every model is rejected, and mostly for the same reason.** The GRS test rejects all four models jointly (p ≤ `r num(max(grs_tbl$p), 3)`). But the pricing errors are one-sided: under the CAPM, `r pct(capm_pos, 0)` of stocks have a positive alpha, averaging `r pct(capm_mean_alpha)` a year, in all three markets. That is the signature of a sample of survivors (today's large caps beat what their risk predicted), not of a missing risk factor.
+- **Extra factors explain more variance but price no better.** The Fama–French factors raise the average R² from `r pct(capm_row$"Mean R²", 0)` (CAPM) to `r pct(max(grs_tbl$"Mean R²"), 0)`. But the root-mean-square alpha is lowest for the CAPM itself (`r pct(capm_row$"RMS α (p.a.)")` a year, against `r pct(min(grs_tbl$"RMS α (p.a.)"[-1]))`–`r pct(max(grs_tbl$"RMS α (p.a.)"[-1]))` for the multi-factor models).
+- **Beta is rewarded in the cross-section, roughly as the CAPM says.** In Fama–MacBeth regressions the price of beta is `r pct(12 * g1$estimate)` a year, against a realised market premium of `r pct(12 * mkt_mean)`, and the zero-beta intercept of `r pct(12 * g0$estimate)` is insignificant (t = `r num(g0$t_shanken)`). The flat security market line found earlier in a 16-stock ASX sample does not survive three markets and proper factors. The test has little power, though: the beta premium itself has t = `r num(g1$t_shanken)`.
+- **So what:** for cost-of-capital work on APAC large caps, the regional Fama–French factors do not earn their extra complexity. A CAPM beta (Module 01) is as defensible as any model tested here, provided the uncertainty is stated: a 95% interval on the regional market premium over these 15 years is `r pct(12 * mkt_mean)` ± `r pct(1.96 * sqrt(12) * sd(Fac$MKT) / sqrt(T_ / 12))` a year.
+:::
+
+## Question
+
+Module 01 measured how APAC large caps move with their markets. This module asks whether those exposures *explain average returns*, comparing four models:
+
+| Model | Factors |
+|---|---|
+| CAPM | market |
+| Fama–French 3 | market, size (SMB), value (HML) |
+| FF3 + momentum (Carhart) | + winners-minus-losers (WML) |
+| Fama–French 5 | market, size, value, profitability (RMW), investment (CMA) |
+
+A model "prices" the assets if, after controlling for the assets' factor exposures, nothing is left over. Two tests check this. **Time-series:** are all the intercepts (alphas) jointly zero? **Cross-sectional:** do the estimated exposures earn premia equal to the factors' own average returns, with no extra intercept?
+
+## Data
+
+- **Test assets:** the `r N_` large caps from Module 01 (ASX, HKEX, SGX), with monthly total returns converted to US dollars at month-end exchange rates. The sample runs from `r format(min(months), "%b %Y")` to `r format(max(months), "%b %Y")` (`r T_` months).
+- **Factors:** Fama–French *Asia Pacific ex Japan* factors (Australia, Hong Kong, Singapore and New Zealand), in USD, with the US one-month T-bill as the risk-free rate, from the Kenneth French Data Library. They are built from all listed stocks in the region, not just our sample.
+- **Why USD:** the factors are USD returns on a regional portfolio, so the test assets have to be in the same currency and in excess of the same risk-free rate. Module 01 used local currency against local rates, which suits single-market betas.
+- **Data access note:** the French library was unreachable from the network used for this analysis, so the factor files are copies of the original files from the Internet Archive (dated February 2026, data to December 2025). French rebuilds the full history each month, so later versions can differ slightly. Provenance is recorded in the repository.
+
+```{r}
+#| label: tbl-factors
+#| tbl-cap: "Factor premia over the sample: average monthly return, annualised, with t-statistic."
+
+map_dfr(unique(unlist(models)), function(f) {
+  x <- Fac[[f]]
+  tibble(Factor = fac_label[f], Code = f, `Mean (p.a.)` = pct(12 * mean(x)),
+         `Volatility (p.a.)` = pct(sqrt(12) * sd(x)), t = num(mean(x) / (sd(x) / sqrt(T_))))
+}) |> kable(align = "llrrr")
+```
+
+## Method
+
+All estimators are matrix-form functions in [`R/models_linear.R`](https://github.com/kyanite03/apac-asset-pricing/blob/main/R/models_linear.R), each unit-tested against reference implementations and simulations.
+
+**Time series.** For each model with *K* factors, $\mathbf Y = \mathbf 1\boldsymbol\alpha' + \mathbf F\mathbf B' + \mathbf E$ is fitted to all `r N_` stocks at once. The Gibbons–Ross–Shanken statistic tests $H_0: \boldsymbol\alpha = \mathbf 0$ jointly:
+
+$$
+\text{GRS} = \frac{T}{N}\,\frac{T-N-K}{T-K-1}\;\frac{\hat{\boldsymbol\alpha}'\hat{\boldsymbol\Sigma}^{-1}\hat{\boldsymbol\alpha}}{1 + \bar{\mathbf f}'\hat{\boldsymbol\Omega}^{-1}\bar{\mathbf f}} \;\sim\; F_{N,\;T-N-K}.
+$$
+
+It has a useful reading in terms of Sharpe ratios. GRS is large when the best portfolio of the test assets *and* the factors (the tangency portfolio) has a much higher Sharpe ratio than the factors alone.
+
+**Cross section.** Fama–MacBeth two-pass regressions. Pass 1 estimates each stock's betas over the full sample. Pass 2 regresses each month's excess returns on those betas, $r_{i,t} = \gamma_{0,t} + \boldsymbol\beta_i'\boldsymbol\gamma_t + \eta_{i,t}$, and averages the slopes. Standard errors use the Shanken (1992) correction for the fact that the betas are estimated. If a model holds, $\gamma_0 = 0$ and each premium equals its factor's mean return. A positive $\gamma_0$ with a beta premium below the market premium is the zero-beta (Black, 1972) CAPM. A GLS version of the cross-sectional regression, weighting by the inverse residual covariance, is reported for the CAPM as a check.
+
+## Results
+
+### Time-series tests: all four models are rejected
+
+```{r}
+#| label: tbl-grs
+#| tbl-cap: "Time-series tests on 51 stocks. Alphas annualised. 'Alphas sig.' counts stocks whose Newey–West alpha p-value survives a Benjamini–Hochberg correction. Sharpe ratios annualised."
+
+grs_tbl |>
+  mutate(`GRS F` = num(`GRS F`), p = formatC(p, format = "g", digits = 2),
+         across(c(`Mean |α| (p.a.)`, `RMS α (p.a.)`), \(x) pct(x)),
+         `Mean R²` = pct(`Mean R²`, 0),
+         across(starts_with("Sharpe"), \(x) num(x))) |>
+  kable(align = "lrrrrrrrrr")
+```
+
+```{r}
+#| label: fig-pred
+#| fig-cap: "Realised vs model-predicted average excess return for each stock (predicted = betas × average factor returns). Points on the dashed 45° line are priced perfectly; the vertical distance is the stock's alpha."
+#| fig-width: 9
+#| fig-height: 7.5
+
+pred <- imap_dfr(ts_res, function(r, nm) tibble(model = nm, symbol = colnames(Y),
+                                                 predicted = 12 * r$predicted, realised = 12 * r$realised)) |>
+  left_join(universe |> select(ticker, market), by = c("symbol" = "ticker")) |>
+  mutate(model = factor(model, levels = names(models)),
+         market = factor(market, levels = names(market_cols)))
+lim <- range(c(pred$predicted, pred$realised))
+p_pred <- ggplot(pred, aes(predicted, realised, colour = market)) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", colour = "#52514e", linewidth = 0.5) +
+  geom_hline(yintercept = 0, colour = "#c3c2b7", linewidth = 0.3) +
+  geom_point(size = 2, alpha = 0.85) +
+  facet_wrap(~ model, ncol = 2) +
+  coord_equal(xlim = lim, ylim = lim) +
+  scale_colour_manual(values = market_cols) +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(title = "No model lines up realised returns with predicted ones",
+       subtitle = sprintf("51 APAC large caps, USD excess returns, %s–%s, annualised",
+                          format(min(months), "%Y"), format(max(months), "%Y")),
+       x = "Predicted by the model (β × average factor return)", y = "Realised average excess return",
+       caption = "Factors: Fama–French Asia Pacific ex Japan (Kenneth French Data Library).") +
+  theme_report()
+dir.create("figures", showWarnings = FALSE)
+ggsave("figures/key_chart.png", p_pred, width = 9, height = 7.5, dpi = 200, bg = "white")
+p_pred
+```
+
+The GRS statistics reject every model. @fig-pred shows the shape of the failure: points sit mostly *above* the 45° line under every model. The share of positive alphas ranges from `r pct(min(alpha_sign$share_pos), 0)` to `r pct(max(alpha_sign$share_pos), 0)` across the four models, and the mean alpha is positive in each market. A missing risk factor would push some stocks up and others down. A common upward shift is what **survivorship** produces: the sample is today's large caps, which are large partly *because* their returns beat what their risk exposures predicted.
+
+The Sharpe-ratio columns need care. The "tangency" Sharpe ratio is the best in-sample combination of 51 stocks and the factors. With that many assets it is heavily overfitted, which is exactly why GRS is a formal test rather than a comparison of these two numbers.
+
+Adding factors changes the picture surprisingly little. The multi-factor models raise R², so they track month-to-month movements better. But their alphas are not smaller: the CAPM has the lowest root-mean-square alpha of the four. Size, value, momentum, profitability and investment exposures among these large caps do not line up with the gaps between their realised and CAPM-predicted returns.
+
+### Cross-sectional tests: beta is priced; the other factors are not
+
+```{r}
+#| label: tbl-fm
+#| tbl-cap: "Fama–MacBeth risk premia (annualised) with Shanken-corrected t-statistics, compared with each factor's realised average return. Under the model, γ₀ = 0 and each premium equals its factor mean."
+
+fm_tbl |>
+  mutate(Term = if_else(term == "gamma0", "Intercept γ₀ (zero-beta excess return)", fac_label[term]),
+         `Premium (p.a.)` = pct(12 * estimate), `t (Shanken)` = num(t_shanken),
+         `t (plain FM)` = num(t_fm),
+         `Factor mean (p.a.)` = if_else(is.na(factor_mean), "0 (model)", pct(12 * factor_mean))) |>
+  select(Model = model, Term, `Premium (p.a.)`, `t (Shanken)`, `t (plain FM)`, `Factor mean (p.a.)`) |>
+  kable(align = "llrrrr")
+```
+
+**The CAPM cross-section.** The price of beta is `r pct(12 * g1$estimate)` a year, against a market premium of `r pct(12 * mkt_mean)` over the same months. The gap (`r sprintf("%+.1f%%", 1200 * mean(gap_series))` a year, t = `r num(gap_t)`) is not significant. The intercept, the excess return of a zero-beta portfolio, is `r pct(12 * g0$estimate)` a year (Shanken t = `r num(g0$t_shanken)`), also indistinguishable from zero. The GLS cross-sectional regression agrees: an intercept of `r pct(12 * gls$coef[1])` (t = `r num(gls$coef[1] / se_gls[1])`) and a beta premium of `r pct(12 * gls$coef[2])` (t = `r num(gls$coef[2] / se_gls[2])`). Put simply, the higher-beta half of the sample earned `r pct(12 * hi_lo["hi"])` a year in excess of T-bills and the lower-beta half `r pct(12 * hi_lo["lo"])`.
+
+This **overturns the earlier ASX-only result.** A 16-stock ASX study, measured against an equal-weighted proxy, found a flat security market line, which pointed to Black's zero-beta CAPM and the "betting against beta" anomaly. With three markets, USD returns and a proper regional market factor, the evidence is instead consistent with the standard Sharpe–Lintner CAPM: zero intercept, slope near the market premium. The honest caveat is power. With `r N_` stocks and `r round(T_ / 12)` years, the beta premium is not significantly different from zero either (t = `r num(g1$t_shanken)`), so the data cannot reject a flat line strongly.
+
+**The multi-factor cross-sections** do not line up with the factors' own returns. Value (HML) earned `r pct(12 * mean(Fac$HML))` a year as a factor, but its price among these stocks is negative in every specification. Investment (CMA) gets a significantly *negative* price in the five-factor model (`r pct(12 * fm_tbl$estimate[fm_tbl$model == "Fama–French 5" & fm_tbl$term == "CMA"])`, Shanken t = `r num(fm_tbl$t_shanken[fm_tbl$model == "Fama–French 5" & fm_tbl$term == "CMA"])`), against a factor mean of `r pct(12 * mean(Fac$CMA))`. The factors are built from all listed stocks in the region, small caps included, and their premia do not show up across 51 large caps.
+
+## Limitations
+
+- **Survivorship bias.** The test assets are today's large caps. This biases alphas upward for every model, so the GRS rejections overstate how badly the models price the *typical* APAC stock. A clean test needs the full historical constituent list, including delistings (a target for Module 02).
+- **Individual stocks as test assets.** Single stocks have noisy betas and returns. Portfolios sorted on characteristics (size, value, beta) are the standard test assets and give sharper tests, but need fundamentals data for this region.
+- **Regional factors, local stocks.** The French factors cover the whole Asia Pacific ex-Japan region, while each stock also moves with its own market and currency. Market-specific factors (Module 05) would be a fairer comparison.
+- **Sample end.** The archived factor files end in December 2025, nine months before the rest of the dataset.
+
+## References
+
+- Black, F. (1972). Capital market equilibrium with restricted borrowing. *Journal of Business, 45*(3), 444–455.
+- Carhart, M. M. (1997). On persistence in mutual fund performance. *Journal of Finance, 52*(1), 57–82.
+- Fama, E. F., & French, K. R. (1993). Common risk factors in the returns on stocks and bonds. *Journal of Financial Economics, 33*(1), 3–56.
+- Fama, E. F., & French, K. R. (2015). A five-factor asset pricing model. *Journal of Financial Economics, 116*(1), 1–22.
+- Fama, E. F., & MacBeth, J. D. (1973). Risk, return, and equilibrium: Empirical tests. *Journal of Political Economy, 81*(3), 607–636.
+- Frazzini, A., & Pedersen, L. H. (2014). Betting against beta. *Journal of Financial Economics, 111*(1), 1–25.
+- Gibbons, M. R., Ross, S. A., & Shanken, J. (1989). A test of the efficiency of a given portfolio. *Econometrica, 57*(5), 1121–1152.
+- Shanken, J. (1992). On the estimation of beta-pricing models. *Review of Financial Studies, 5*(1), 1–33.
+- Kenneth R. French Data Library, Asia Pacific ex Japan factors. <https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html>

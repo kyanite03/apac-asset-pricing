@@ -19,6 +19,8 @@ website:
         menu:
           - href: modules/01-capm-market-model/index.qmd
             text: "01 · CAPM and the market model"
+          - href: modules/03-testing-pricing-models/index.qmd
+            text: "03 · Testing pricing models"
     right:
       - icon: github
         href: "https://github.com/kyanite03/apac-asset-pricing"
