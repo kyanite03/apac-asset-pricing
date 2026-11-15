@@ -21,6 +21,8 @@ website:
             text: "01 · CAPM and the market model"
           - href: modules/03-testing-pricing-models/index.qmd
             text: "03 · Testing pricing models"
+          - href: modules/04-statistical-factors-apt/index.qmd
+            text: "04 · Statistical factors (APT)"
     right:
       - icon: github
         href: "https://github.com/kyanite03/apac-asset-pricing"

@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Kai Marsh">
+<meta name="dcterms.date" content="2026-11-15">
+
+<title>04 · Statistical factors: how many risks drive APAC returns? – APAC Asset Pricing</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-090bb288a39a07c4253b5f9c062900d1.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">APAC Asset Pricing</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html"> 
+<span class="menu-text">Overview</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-modules" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Modules</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-modules">    
+        <li>
+    <a class="dropdown-item" href="../../modules/01-capm-market-model/index.html">
+ <span class="dropdown-text">01 · CAPM and the market model</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../../modules/03-testing-pricing-models/index.html">
+ <span class="dropdown-text">03 · Testing pricing models</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../../modules/04-statistical-factors-apt/index.html">
+ <span class="dropdown-text">04 · Statistical factors (APT)</span></a>
+  </li>  
+    </ul>
+  </li>
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/kyanite03/apac-asset-pricing"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#question" id="toc-question" class="nav-link active" data-scroll-target="#question">Question</a></li>
+  <li><a href="#method" id="toc-method" class="nav-link" data-scroll-target="#method">Method</a></li>
+  <li><a href="#results" id="toc-results" class="nav-link" data-scroll-target="#results">Results</a>
+  <ul class="collapse">
+  <li><a href="#three-factors-stand-out-from-the-noise" id="toc-three-factors-stand-out-from-the-noise" class="nav-link" data-scroll-target="#three-factors-stand-out-from-the-noise">Three factors stand out from the noise</a></li>
+  <li><a href="#what-the-factors-are" id="toc-what-the-factors-are" class="nav-link" data-scroll-target="#what-the-factors-are">What the factors are</a></li>
+  <li><a href="#how-well-do-observable-factors-span-them" id="toc-how-well-do-observable-factors-span-them" class="nav-link" data-scroll-target="#how-well-do-observable-factors-span-them">How well do observable factors span them?</a></li>
+  <li><a href="#do-statistical-factors-price-better" id="toc-do-statistical-factors-price-better" class="nav-link" data-scroll-target="#do-statistical-factors-price-better">Do statistical factors price better?</a></li>
+  </ul></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations">Limitations</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/kyanite03/apac-asset-pricing/blob/main/modules/04-statistical-factors-apt/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">04 · Statistical factors: how many risks drive APAC returns?</h1>
+<p class="subtitle lead">Principal components of 51 large caps, compared with the Fama–French factors, local markets and currencies</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Kai Marsh </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">November 15, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="cell">
+<details class="code-fold">
+<summary>Setup: packages, shared functions, USD excess returns</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({ <span class="fu">library</span>(tidyverse); <span class="fu">library</span>(knitr); <span class="fu">library</span>(glmnet) })</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"../../R/models_linear.R"</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"../../R/models_factor.R"</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"../../R/data_factors.R"</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"../../R/plots.R"</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>data_dir <span class="ot">&lt;-</span> <span class="st">"../../data/processed"</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>universe <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">file.path</span>(data_dir, <span class="st">"universe.csv"</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>ret <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">file.path</span>(data_dir, <span class="st">"returns_monthly.csv"</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>fx  <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">file.path</span>(data_dir, <span class="st">"fx_monthly.csv"</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>mkt <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">file.path</span>(data_dir, <span class="st">"market_monthly.csv"</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>ff  <span class="ot">&lt;-</span> <span class="fu">get_french_apac</span>(<span class="st">"../../data/raw/french"</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Same test assets as Module 03: USD excess returns over the US T-bill</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>panel <span class="ot">&lt;-</span> ret <span class="sc">|&gt;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(universe, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"symbol"</span> <span class="ot">=</span> <span class="st">"ticker"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(fx, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"market"</span>, <span class="st">"month"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(ff, <span class="at">by =</span> <span class="st">"month"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">ex =</span> (<span class="dv">1</span> <span class="sc">+</span> ret) <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">+</span> fx) <span class="sc">-</span> <span class="dv">1</span> <span class="sc">-</span> RF)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>wide <span class="ot">&lt;-</span> panel <span class="sc">|&gt;</span> <span class="fu">select</span>(month, symbol, ex) <span class="sc">|&gt;</span> <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> symbol, <span class="at">values_from =</span> ex) <span class="sc">|&gt;</span> <span class="fu">arrange</span>(month)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>Y <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">select</span>(wide, <span class="sc">-</span>month)); months <span class="ot">&lt;-</span> wide<span class="sc">$</span>month</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>Fac <span class="ot">&lt;-</span> ff <span class="sc">|&gt;</span> <span class="fu">filter</span>(month <span class="sc">%in%</span> months) <span class="sc">|&gt;</span> <span class="fu">arrange</span>(month)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>T_ <span class="ot">&lt;-</span> <span class="fu">nrow</span>(Y); N_ <span class="ot">&lt;-</span> <span class="fu">ncol</span>(Y)</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>stock_market <span class="ot">&lt;-</span> universe<span class="sc">$</span>market[<span class="fu">match</span>(<span class="fu">colnames</span>(Y), universe<span class="sc">$</span>ticker)]</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>stock_sector <span class="ot">&lt;-</span> universe<span class="sc">$</span>sector[<span class="fu">match</span>(<span class="fu">colnames</span>(Y), universe<span class="sc">$</span>ticker)]</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>short <span class="ot">&lt;-</span> <span class="cf">function</span>(s) <span class="fu">sub</span>(<span class="st">"</span><span class="sc">\\</span><span class="st">.(AX|HK|SI)$"</span>, <span class="st">""</span>, s)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Principal components and the two noise benchmarks</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>pc <span class="ot">&lt;-</span> <span class="fu">pca_returns</span>(Y)                                  <span class="co"># correlation-matrix PCA</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>mp <span class="ot">&lt;-</span> <span class="fu">mp_upper</span>(N_, T_)                                <span class="co"># Marchenko–Pastur edge</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>pa <span class="ot">&lt;-</span> <span class="fu">parallel_analysis</span>(Y, <span class="at">reps =</span> <span class="dv">500</span>, <span class="at">prob =</span> <span class="fl">0.95</span>)   <span class="co"># permutation benchmark</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>n_mp <span class="ot">&lt;-</span> <span class="fu">sum</span>(pc<span class="sc">$</span>values <span class="sc">&gt;</span> mp); n_pa <span class="ot">&lt;-</span> <span class="fu">sum</span>(pc<span class="sc">$</span>values <span class="sc">&gt;</span> pa)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>k_sig <span class="ot">&lt;-</span> <span class="fu">min</span>(n_mp, n_pa)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(n_mp <span class="sc">==</span> n_pa)                               <span class="co"># text reports one agreed number</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Linking components to observable factors: correlations, canonical correlation, LASSO</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>ff_names <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"MKT"</span>, <span class="st">"SMB"</span>, <span class="st">"HML"</span>, <span class="st">"RMW"</span>, <span class="st">"CMA"</span>, <span class="st">"WML"</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>X_ff <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(Fac[, ff_names])</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Candidate observables beyond Fama–French: each local index (USD excess) and currencies</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>loc <span class="ot">&lt;-</span> mkt <span class="sc">|&gt;</span> <span class="fu">inner_join</span>(fx, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"market"</span>, <span class="st">"month"</span>)) <span class="sc">|&gt;</span> <span class="fu">filter</span>(month <span class="sc">%in%</span> months) <span class="sc">|&gt;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">usd =</span> (<span class="dv">1</span> <span class="sc">+</span> mkt) <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">+</span> fx) <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">|&gt;</span> <span class="fu">select</span>(market, month, usd) <span class="sc">|&gt;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> market, <span class="at">values_from =</span> usd) <span class="sc">|&gt;</span> <span class="fu">arrange</span>(month)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>fxw <span class="ot">&lt;-</span> fx <span class="sc">|&gt;</span> <span class="fu">filter</span>(month <span class="sc">%in%</span> months) <span class="sc">|&gt;</span> <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> market, <span class="at">values_from =</span> fx) <span class="sc">|&gt;</span> <span class="fu">arrange</span>(month)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>X_all <span class="ot">&lt;-</span> <span class="fu">cbind</span>(X_ff, <span class="st">`</span><span class="at">ASX index</span><span class="st">`</span> <span class="ot">=</span> loc<span class="sc">$</span>ASX <span class="sc">-</span> Fac<span class="sc">$</span>RF, <span class="st">`</span><span class="at">HK index</span><span class="st">`</span> <span class="ot">=</span> loc<span class="sc">$</span>HKEX <span class="sc">-</span> Fac<span class="sc">$</span>RF,</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>               <span class="st">`</span><span class="at">SG index</span><span class="st">`</span> <span class="ot">=</span> loc<span class="sc">$</span>SGX <span class="sc">-</span> Fac<span class="sc">$</span>RF, <span class="at">AUD =</span> fxw<span class="sc">$</span>ASX, <span class="at">SGD =</span> fxw<span class="sc">$</span>SGX)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>cors <span class="ot">&lt;-</span> <span class="fu">cor</span>(pc<span class="sc">$</span>scores[, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>], X_all)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>nm_of <span class="ot">&lt;-</span> <span class="cf">function</span>(s) <span class="fu">paste0</span>(universe<span class="sc">$</span>name[<span class="fu">match</span>(s, universe<span class="sc">$</span>ticker)])</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>o1 <span class="ot">&lt;-</span> <span class="fu">order</span>(pc<span class="sc">$</span>vectors[, <span class="dv">1</span>])</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>top_pc1 <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="fu">nm_of</span>(<span class="fu">rownames</span>(pc<span class="sc">$</span>vectors)[<span class="fu">rev</span>(o1)[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]]), <span class="at">collapse =</span> <span class="st">", "</span>)</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>bot_pc1 <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="fu">nm_of</span>(<span class="fu">rownames</span>(pc<span class="sc">$</span>vectors)[o1[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]]), <span class="at">collapse =</span> <span class="st">", "</span>)</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>cc <span class="ot">&lt;-</span> <span class="fu">cancor</span>(pc<span class="sc">$</span>scores[, <span class="dv">1</span><span class="sc">:</span>k_sig], X_ff)<span class="sc">$</span>cor</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>lasso <span class="ot">&lt;-</span> <span class="fu">map_dfr</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="cf">function</span>(k) {</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  cv <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(<span class="fu">scale</span>(X_all), pc<span class="sc">$</span>scores[, k], <span class="at">alpha =</span> <span class="dv">1</span>, <span class="at">nfolds =</span> <span class="dv">10</span>)</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  b <span class="ot">&lt;-</span> <span class="fu">coef</span>(cv, <span class="at">s =</span> <span class="st">"lambda.1se"</span>)[<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>]</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  fit <span class="ot">&lt;-</span> <span class="fu">predict</span>(cv, <span class="fu">scale</span>(X_all), <span class="at">s =</span> <span class="st">"lambda.1se"</span>)</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(<span class="at">PC =</span> <span class="fu">paste0</span>(<span class="st">"PC"</span>, k),</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">Selected (standardised coefficient)</span><span class="st">`</span> <span class="ot">=</span> <span class="cf">if</span> (<span class="fu">any</span>(b <span class="sc">!=</span> <span class="dv">0</span>))</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>           <span class="fu">paste</span>(<span class="fu">sprintf</span>(<span class="st">"%s %+.2f"</span>, <span class="fu">names</span>(b)[b <span class="sc">!=</span> <span class="dv">0</span>], b[b <span class="sc">!=</span> <span class="dv">0</span>])[<span class="fu">order</span>(<span class="sc">-</span><span class="fu">abs</span>(b[b <span class="sc">!=</span> <span class="dv">0</span>]))], <span class="at">collapse =</span> <span class="st">", "</span>) <span class="cf">else</span> <span class="st">"none"</span>,</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>         <span class="at">R2 =</span> <span class="dv">1</span> <span class="sc">-</span> <span class="fu">sum</span>((pc<span class="sc">$</span>scores[, k] <span class="sc">-</span> fit)<span class="sc">^</span><span class="dv">2</span>) <span class="sc">/</span> <span class="fu">sum</span>((pc<span class="sc">$</span>scores[, k] <span class="sc">-</span> <span class="fu">mean</span>(pc<span class="sc">$</span>scores[, k]))<span class="sc">^</span><span class="dv">2</span>))</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Out-of-sample pricing: factors from half the stocks (2011–18), tested on the other half (2019–25)</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>early <span class="ot">&lt;-</span> months <span class="sc">&lt;</span> <span class="fu">as.Date</span>(<span class="st">"2019-01-01"</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>fac_models <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">CAPM =</span> <span class="st">"MKT"</span>, <span class="st">`</span><span class="at">Fama–French 3</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"MKT"</span>, <span class="st">"SMB3"</span>, <span class="st">"HML"</span>),</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>                   <span class="st">`</span><span class="at">Fama–French 5</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"MKT"</span>, <span class="st">"SMB"</span>, <span class="st">"HML"</span>, <span class="st">"RMW"</span>, <span class="st">"CMA"</span>))</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>n_splits <span class="ot">&lt;-</span> <span class="dv">200</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>oos <span class="ot">&lt;-</span> <span class="fu">map_dfr</span>(<span class="fu">seq_len</span>(n_splits), <span class="cf">function</span>(s) {</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># stratified random half of the stocks builds the factors; the rest are test assets</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  A <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(<span class="fu">split</span>(<span class="fu">seq_len</span>(N_), stock_market), \(ix) <span class="fu">sample</span>(ix, <span class="fu">floor</span>(<span class="fu">length</span>(ix) <span class="sc">/</span> <span class="dv">2</span>))))</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  B <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(<span class="fu">seq_len</span>(N_), A)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  pA <span class="ot">&lt;-</span> <span class="fu">pca_returns</span>(Y[early, A])</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  pcs <span class="ot">&lt;-</span> <span class="fu">map_dfr</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="cf">function</span>(k) {</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    Fk <span class="ot">&lt;-</span> Y[<span class="sc">!</span>early, A] <span class="sc">%*%</span> <span class="fu">eigenportfolio_weights</span>(pA, k)</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    g <span class="ot">&lt;-</span> <span class="fu">grs_test</span>(Y[<span class="sc">!</span>early, B], Fk)</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(<span class="at">model =</span> <span class="fu">paste0</span>(<span class="st">"PCA, "</span>, k, <span class="cf">if</span> (k <span class="sc">==</span> <span class="dv">1</span>) <span class="st">" factor"</span> <span class="cf">else</span> <span class="st">" factors"</span>),</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>           <span class="at">rms =</span> <span class="dv">12</span> <span class="sc">*</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>(g<span class="sc">$</span>alpha<span class="sc">^</span><span class="dv">2</span>)), <span class="at">p =</span> g<span class="sc">$</span>p)</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  obs <span class="ot">&lt;-</span> <span class="fu">imap_dfr</span>(fac_models, <span class="cf">function</span>(f, nm) {</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    g <span class="ot">&lt;-</span> <span class="fu">grs_test</span>(Y[<span class="sc">!</span>early, B], <span class="fu">as.matrix</span>(Fac[<span class="sc">!</span>early, f]))</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(<span class="at">model =</span> nm, <span class="at">rms =</span> <span class="dv">12</span> <span class="sc">*</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>(g<span class="sc">$</span>alpha<span class="sc">^</span><span class="dv">2</span>)), <span class="at">p =</span> g<span class="sc">$</span>p)</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bind_rows</span>(pcs, obs) <span class="sc">|&gt;</span> <span class="fu">mutate</span>(<span class="at">split =</span> s)</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>oos_sum <span class="ot">&lt;-</span> oos <span class="sc">|&gt;</span> <span class="fu">group_by</span>(model) <span class="sc">|&gt;</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">rms_med =</span> <span class="fu">median</span>(rms), <span class="at">rms_lo =</span> <span class="fu">quantile</span>(rms, <span class="fl">0.1</span>), <span class="at">rms_hi =</span> <span class="fu">quantile</span>(rms, <span class="fl">0.9</span>),</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>            <span class="at">reject =</span> <span class="fu">mean</span>(p <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>best_pca <span class="ot">&lt;-</span> oos_sum <span class="sc">|&gt;</span> <span class="fu">filter</span>(<span class="fu">str_starts</span>(model, <span class="st">"PCA"</span>)) <span class="sc">|&gt;</span> <span class="fu">slice_min</span>(rms_med, <span class="at">n =</span> <span class="dv">1</span>)</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>capm_oos <span class="ot">&lt;-</span> oos_sum <span class="sc">|&gt;</span> <span class="fu">filter</span>(model <span class="sc">==</span> <span class="st">"CAPM"</span>); ff5_oos <span class="ot">&lt;-</span> oos_sum <span class="sc">|&gt;</span> <span class="fu">filter</span>(model <span class="sc">==</span> <span class="st">"Fama–French 5"</span>)</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>pca_beats_capm <span class="ot">&lt;-</span> oos <span class="sc">|&gt;</span> <span class="fu">filter</span>(model <span class="sc">%in%</span> <span class="fu">c</span>(best_pca<span class="sc">$</span>model, <span class="st">"CAPM"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(split, model, rms) <span class="sc">|&gt;</span> <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> model, <span class="at">values_from =</span> rms) <span class="sc">|&gt;</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">m =</span> <span class="fu">mean</span>(.data[[best_pca<span class="sc">$</span>model]] <span class="sc">&lt;</span> CAPM)) <span class="sc">|&gt;</span> <span class="fu">pull</span>(m)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<div class="callout callout-style-default callout-tip callout-titled" title="Answer first">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Answer first
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li><strong>Three common risks, and one dominates.</strong> Out of 51 eigenvalues, 3 rise above both noise benchmarks (random-matrix theory and a permutation test). The first component alone explains 43% of the variation in returns; the next two add 9% and 5%.</li>
+<li><strong>The three risks have plain names.</strong> PC1 is the regional market (correlation 0.97 with the Fama–French market factor). PC2 is <strong>Hong Kong/China vs Australia</strong>, with China’s state banks at one end and Australia’s banks at the other. PC3 is <strong>energy vs utilities</strong>, an oil factor that no Fama–French factor captures (the best linear combination of all candidate observables explains only 30% of it).</li>
+<li><strong>Fama–French factors span the market, partly span the second risk, and miss the third.</strong> Canonical correlations between the first 3 components and the six Fama–French factors are 0.98, 0.68, 0.32.</li>
+<li><strong>Statistical factors price out of sample at least as well.</strong> Built on one half of the stocks in 2011–18 and tested on the other half in 2019–25, PCA, 3 factors gives a median root-mean-square alpha of 8.2% a year, against 9.5% for the CAPM and 9.5% for Fama–French 5. The gap is modest and the tests have little power.</li>
+<li><strong>So what:</strong> a risk model for an APAC equity book needs a China-vs-Australia factor and an energy factor alongside the market. Size, value and profitability, as defined for the region, are not where the common risk is.</li>
+</ul>
+</div>
+</div>
+<section id="question" class="level2">
+<h2 class="anchored" data-anchor-id="question">Question</h2>
+<p>Modules 01 and 03 started from factors chosen in advance: the market, then the Fama–French characteristics. Arbitrage Pricing Theory (Ross, 1976) only says that <em>some</em> small set of common factors drives returns and earns premia. It doesn’t say which ones. This module lets the data choose. How many common factors are in the returns of APAC large caps, what are they, and do they line up with the factors used in Module 03?</p>
+</section>
+<section id="method" class="level2">
+<h2 class="anchored" data-anchor-id="method">Method</h2>
+<p><strong>Principal components.</strong> Each stock’s monthly USD excess return (same data as Module 03, Feb 2011–Dec 2025, 179 months) is standardised. The 51 × 51 correlation matrix is decomposed as <span class="math inline">\(\mathbf R = \mathbf V \boldsymbol\Lambda \mathbf V'\)</span>. Each eigenvalue <span class="math inline">\(\lambda_j\)</span> is the variance captured by component <em>j</em>, and each column of <span class="math inline">\(\mathbf V\)</span> gives the stocks’ loadings on it. Using correlations rather than covariances stops the most volatile stocks from dominating.</p>
+<p><strong>How many factors?</strong> Some eigenvalues will look large even in pure noise, so each is compared with two benchmarks:</p>
+<ul>
+<li>the <strong>Marchenko–Pastur</strong> upper edge, <span class="math inline">\(\lambda_+ = (1+\sqrt{N/T})^2 = 2.35\)</span>, the largest eigenvalue expected from <span class="math inline">\(N\)</span> uncorrelated series of length <span class="math inline">\(T\)</span>;</li>
+<li><strong>parallel analysis</strong>: the 95th percentile of each eigenvalue across 500 data sets in which each stock’s returns are shuffled in time independently. Shuffling destroys the cross-correlation but keeps each stock’s fat-tailed distribution.</li>
+</ul>
+<p><strong>What are they?</strong> Components are compared with the six Fama–French factors and with five other observables (each local index and two currencies) using correlations, canonical correlation, and LASSO regressions (<code>glmnet</code>, penalty chosen by 10-fold cross-validation, one-standard-error rule).</p>
+<p><strong>Do they price?</strong> Components estimated on the same data they are tested on would price that data almost by construction. So the test is out of sample in two dimensions. Each of 200 random splits divides the stocks in half, stratified by market. Eigenportfolios (traded versions of the components) are built from one half using 2011–18 data, and the GRS test is run on the <em>other</em> half in 2019–25. The CAPM and Fama–French models are tested on the same stocks and months.</p>
+</section>
+<section id="results" class="level2">
+<h2 class="anchored" data-anchor-id="results">Results</h2>
+<section id="three-factors-stand-out-from-the-noise" class="level3">
+<h3 class="anchored" data-anchor-id="three-factors-stand-out-from-the-noise">Three factors stand out from the noise</h3>
+<div class="cell">
+<details class="code-fold">
+<summary>Show code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>scree <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">j =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">15</span>, <span class="at">value =</span> pc<span class="sc">$</span>values[<span class="dv">1</span><span class="sc">:</span><span class="dv">15</span>], <span class="at">pa =</span> pa[<span class="dv">1</span><span class="sc">:</span><span class="dv">15</span>],</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>                <span class="at">sig =</span> value <span class="sc">&gt;</span> <span class="fu">pmax</span>(mp, pa))</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>ymax <span class="ot">&lt;-</span> <span class="dv">6</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>p_scree <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(scree, <span class="fu">aes</span>(j, <span class="fu">pmin</span>(value, ymax))) <span class="sc">+</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> mp, <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">colour =</span> <span class="st">"#52514e"</span>, <span class="at">linewidth =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> pa), <span class="at">colour =</span> <span class="st">"#52514e"</span>, <span class="at">linewidth =</span> <span class="fl">0.6</span>) <span class="sc">+</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">fill =</span> sig), <span class="at">shape =</span> <span class="dv">21</span>, <span class="at">size =</span> <span class="dv">3</span>, <span class="at">colour =</span> <span class="st">"white"</span>, <span class="at">stroke =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="fl">1.3</span>, <span class="at">y =</span> ymax, <span class="at">label =</span> <span class="fu">sprintf</span>(<span class="st">"PC1 = %.1f (%s of variance)"</span>, pc<span class="sc">$</span>values[<span class="dv">1</span>], <span class="fu">pct</span>(pc<span class="sc">$</span>share[<span class="dv">1</span>], <span class="dv">0</span>)),</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>           <span class="at">hjust =</span> <span class="dv">0</span>, <span class="at">vjust =</span> <span class="dv">1</span>, <span class="at">size =</span> <span class="fl">3.3</span>, <span class="at">colour =</span> <span class="st">"#0b0b0b"</span>) <span class="sc">+</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="dv">15</span>, <span class="at">y =</span> mp, <span class="at">label =</span> <span class="st">"Marchenko–Pastur edge"</span>, <span class="at">hjust =</span> <span class="dv">1</span>, <span class="at">vjust =</span> <span class="sc">-</span><span class="fl">0.6</span>, <span class="at">size =</span> <span class="fl">3.1</span>, <span class="at">colour =</span> <span class="st">"#52514e"</span>) <span class="sc">+</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="dv">15</span>, <span class="at">y =</span> pa[<span class="dv">15</span>], <span class="at">label =</span> <span class="st">"permutation 95%"</span>, <span class="at">hjust =</span> <span class="dv">1</span>, <span class="at">vjust =</span> <span class="fl">1.6</span>, <span class="at">size =</span> <span class="fl">3.1</span>, <span class="at">colour =</span> <span class="st">"#52514e"</span>) <span class="sc">+</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">`</span><span class="at">TRUE</span><span class="st">`</span> <span class="ot">=</span> <span class="st">"#2a78d6"</span>, <span class="st">`</span><span class="at">FALSE</span><span class="st">`</span> <span class="ot">=</span> <span class="st">"#c3c2b7"</span>), <span class="at">guide =</span> <span class="st">"none"</span>) <span class="sc">+</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">breaks =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">15</span>) <span class="sc">+</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_continuous</span>(<span class="at">limits =</span> <span class="fu">c</span>(<span class="dv">0</span>, ymax)) <span class="sc">+</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="fu">sprintf</span>(<span class="st">"%d common factors rise above the noise in APAC large-cap returns"</span>, k_sig),</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>       <span class="at">subtitle =</span> <span class="fu">sprintf</span>(<span class="st">"Eigenvalues of the correlation matrix, %d stocks, %d months (USD)"</span>, N_, T_),</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Component"</span>, <span class="at">y =</span> <span class="st">"Eigenvalue"</span>) <span class="sc">+</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_report</span>() <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">panel.grid.major.x =</span> <span class="fu">element_blank</span>())</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(<span class="st">"figures"</span>, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="st">"figures/key_chart.png"</span>, p_scree, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="fl">4.8</span>, <span class="at">dpi =</span> <span class="dv">200</span>, <span class="at">bg =</span> <span class="st">"white"</span>)</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>p_scree</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-scree" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-scree-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-scree-1.png" class="img-fluid figure-img" width="1200">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-scree-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: Eigenvalues of the 51-stock correlation matrix (points), with the Marchenko–Pastur edge (dashed) and the 95th percentile from permuted data (line). Eigenvalues above both are treated as genuine common factors. The first eigenvalue is off the scale and labelled.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The first eigenvalue (22.0) is nearly ten times the noise edge. The second and third (4.36, 2.42) clear both benchmarks. From the fourth on (1.92, 1.63, …), the eigenvalues sit below both lines and are indistinguishable from what independent noise would produce. Together the three genuine factors explain 56% of the total variation, so most of each stock’s monthly movement remains stock-specific.</p>
+</section>
+<section id="what-the-factors-are" class="level3">
+<h3 class="anchored" data-anchor-id="what-the-factors-are">What the factors are</h3>
+<div class="cell">
+<details class="code-fold">
+<summary>Show code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>load_df <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(pc<span class="sc">$</span>vectors[, <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>], <span class="at">rownames =</span> <span class="st">"symbol"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">market =</span> <span class="fu">factor</span>(stock_market, <span class="at">levels =</span> <span class="fu">names</span>(market_cols)),</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>         <span class="at">name =</span> universe<span class="sc">$</span>name[<span class="fu">match</span>(symbol, universe<span class="sc">$</span>ticker)],</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>         <span class="at">label =</span> <span class="fu">paste</span>(<span class="fu">short</span>(symbol), name)) <span class="sc">|&gt;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(market, PC2) <span class="sc">|&gt;</span> <span class="fu">mutate</span>(<span class="at">label =</span> <span class="fu">factor</span>(label, <span class="at">levels =</span> label)) <span class="sc">|&gt;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(PC1<span class="sc">:</span>PC3, <span class="at">names_to =</span> <span class="st">"pc"</span>, <span class="at">values_to =</span> <span class="st">"loading"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">pc =</span> <span class="fu">recode</span>(pc, <span class="at">PC1 =</span> <span class="st">"PC1 · regional market"</span>, <span class="at">PC2 =</span> <span class="st">"PC2 · HK/China vs Australia"</span>,</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>                     <span class="at">PC3 =</span> <span class="st">"PC3 · energy vs utilities"</span>))</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(load_df, <span class="fu">aes</span>(loading, label, <span class="at">fill =</span> market)) <span class="sc">+</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">colour =</span> <span class="st">"#c3c2b7"</span>, <span class="at">linewidth =</span> <span class="fl">0.4</span>) <span class="sc">+</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">width =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_grid</span>(market <span class="sc">~</span> pc, <span class="at">scales =</span> <span class="st">"free_y"</span>, <span class="at">space =</span> <span class="st">"free_y"</span>) <span class="sc">+</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> market_cols, <span class="at">guide =</span> <span class="st">"none"</span>) <span class="sc">+</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Loading"</span>, <span class="at">y =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_report</span>(<span class="dv">10</span>) <span class="sc">+</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">panel.grid.major.y =</span> <span class="fu">element_blank</span>(), <span class="at">strip.text.y =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">0</span>, <span class="at">face =</span> <span class="st">"bold"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-loadings" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-loadings-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-loadings-1.png" class="img-fluid figure-img" width="1350">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-loadings-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: Loadings of each stock on the first three components (the eigenvector entries). Stocks sorted within each market by their loading on PC2.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Show code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>ends <span class="ot">&lt;-</span> <span class="fu">map_dfr</span>(<span class="dv">2</span><span class="sc">:</span><span class="dv">4</span>, <span class="cf">function</span>(k) {</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  v <span class="ot">&lt;-</span> pc<span class="sc">$</span>vectors[, k]; o <span class="ot">&lt;-</span> <span class="fu">order</span>(v)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(<span class="at">Component =</span> <span class="fu">paste0</span>(<span class="st">"PC"</span>, k),</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">Most negative</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">paste</span>(<span class="fu">short</span>(<span class="fu">names</span>(v)[o[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]]), <span class="at">collapse =</span> <span class="st">", "</span>),</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">Most positive</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">paste</span>(<span class="fu">short</span>(<span class="fu">names</span>(v)[<span class="fu">rev</span>(o)[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]]), <span class="at">collapse =</span> <span class="st">", "</span>))</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(ends, <span class="at">align =</span> <span class="st">"lll"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div id="tbl-ends" class="cell quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ends-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;1: The four stocks at each end of components 2–4.
+</figcaption>
+<div aria-describedby="tbl-ends-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Component</th>
+<th style="text-align: left;">Most negative</th>
+<th style="text-align: left;">Most positive</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">PC2</td>
+<td style="text-align: left;">NAB, CBA, WES, WBC</td>
+<td style="text-align: left;">0939, 1398, 3988, 0388</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">PC3</td>
+<td style="text-align: left;">0883, STO, WDS, 0857</td>
+<td style="text-align: left;">0066, 0002, 0003, A17U</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">PC4</td>
+<td style="text-align: left;">0003, Z74, 0002, 0941</td>
+<td style="text-align: left;">FMG, RIO, BHP, 0388</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<ul>
+<li><strong>PC1, the regional market.</strong> Every stock loads positively (smallest loading 0.10). The heaviest loaders are OCBC, UOB, DBS Group, Henderson Land and the lightest are China Mobile, CSL, Tencent, CLP Holdings. The component correlates 0.97 with the Fama–French regional market and 0.89, 0.79 and 0.92 with the three local indices in USD.</li>
+<li><strong>PC2, Hong Kong/China against Australia.</strong> China’s state banks and HKEX at one end, Australia’s major banks and Wesfarmers at the other. It behaves like a long-short of the Hong Kong and Australian indices: those are the two largest LASSO coefficients, with opposite signs. It also correlates 0.54 with value and -0.55 with profitability, plausibly because Chinese banks trade cheaply against book value while Australian banks are highly profitable.</li>
+<li><strong>PC3, energy against utilities.</strong> CNOOC, Santos, Woodside and PetroChina at one end, MTR and the Hong Kong utilities at the other, <em>regardless of market</em>. This is an oil-price factor. The best LASSO combination of all eleven candidate observables explains only 30% of it. Module 08 models it with oil prices directly.</li>
+<li><strong>PC4</strong> (below the noise threshold) contrasts the iron-ore miners with telecoms and utilities. It looks economically meaningful but cannot be distinguished statistically from noise with 15 years of data.</li>
+</ul>
+</section>
+<section id="how-well-do-observable-factors-span-them" class="level3">
+<h3 class="anchored" data-anchor-id="how-well-do-observable-factors-span-them">How well do observable factors span them?</h3>
+<div class="cell">
+<details class="code-fold">
+<summary>Show code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>lasso <span class="sc">|&gt;</span> <span class="fu">mutate</span>(<span class="at">R2 =</span> <span class="fu">pct</span>(R2, <span class="dv">0</span>)) <span class="sc">|&gt;</span> <span class="fu">rename</span>(<span class="st">`</span><span class="at">R²</span><span class="st">`</span> <span class="ot">=</span> R2) <span class="sc">|&gt;</span> <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"llr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div id="tbl-lasso" class="cell quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-lasso-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;2: LASSO regression of each component on eleven standardised candidate observables (six Fama–French factors, three local indices in USD, AUD and SGD). Coefficients at the one-standard-error penalty; R² is in-sample at that penalty.
+</figcaption>
+<div aria-describedby="tbl-lasso-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<colgroup>
+<col style="width: 3%">
+<col style="width: 93%">
+<col style="width: 3%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">PC</th>
+<th style="text-align: left;">Selected (standardised coefficient)</th>
+<th style="text-align: right;">R²</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">PC1</td>
+<td style="text-align: left;">SG index +1.56, ASX index +1.34, MKT +1.01, HK index +0.87, SGD +0.06, HML +0.06, AUD +0.06</td>
+<td style="text-align: right;">97%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">PC2</td>
+<td style="text-align: left;">HK index +1.45, ASX index -1.35, HML +0.26, RMW -0.20, WML -0.17, SGD +0.04</td>
+<td style="text-align: right;">81%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">PC3</td>
+<td style="text-align: left;">MKT +0.87, ASX index -0.76, SG index -0.68, SMB -0.37, HK index +0.27, HML -0.26, SGD +0.26, WML +0.22, RMW -0.03</td>
+<td style="text-align: right;">30%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">PC4</td>
+<td style="text-align: left;">SG index -0.38, RMW +0.23, HK index +0.21, SMB +0.14, HML -0.14, AUD +0.11, ASX index +0.11, WML -0.06</td>
+<td style="text-align: right;">23%</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>The canonical correlations, 0.98, 0.68, 0.32, give the formal answer for the Fama–French set. The first canonical pair (essentially PC1 against the market factor) is nearly perfect. The second is moderate, mostly through the value and profitability factors picking up the China–Australia contrast. The third is weak. The six Fama–French factors contain the market, part of the second risk, and little of the third.</p>
+</section>
+<section id="do-statistical-factors-price-better" class="level3">
+<h3 class="anchored" data-anchor-id="do-statistical-factors-price-better">Do statistical factors price better?</h3>
+<div class="cell">
+<details class="code-fold">
+<summary>Show code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>oos_sum <span class="sc">|&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">model =</span> <span class="fu">fct_reorder</span>(model, rms_med),</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>         <span class="at">kind =</span> <span class="fu">if_else</span>(<span class="fu">str_starts</span>(model, <span class="st">"PCA"</span>), <span class="st">"Statistical (PCA)"</span>, <span class="st">"Observable factors"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(rms_med, model, <span class="at">colour =</span> kind)) <span class="sc">+</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_errorbarh</span>(<span class="fu">aes</span>(<span class="at">xmin =</span> rms_lo, <span class="at">xmax =</span> rms_hi), <span class="at">height =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.8</span>, <span class="at">alpha =</span> <span class="fl">0.6</span>) <span class="sc">+</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_colour_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">`</span><span class="at">Statistical (PCA)</span><span class="st">`</span> <span class="ot">=</span> <span class="st">"#2a78d6"</span>, <span class="st">`</span><span class="at">Observable factors</span><span class="st">`</span> <span class="ot">=</span> <span class="st">"#eb6834"</span>)) <span class="sc">+</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">labels =</span> scales<span class="sc">::</span><span class="fu">percent_format</span>(<span class="at">accuracy =</span> <span class="dv">1</span>)) <span class="sc">+</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Root-mean-square alpha, 2019–25 (annualised)"</span>, <span class="at">y =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_report</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-oos" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-oos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-oos-1.png" class="img-fluid figure-img" width="1200">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-oos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: Out-of-sample root-mean-square alpha across 200 random splits (factors from one half of the stocks, 2011–18; test on the other half, 2019–25). Points: median; bars: 10th–90th percentile. Lower is better.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Show code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>oos_sum <span class="sc">|&gt;</span> <span class="fu">arrange</span>(rms_med) <span class="sc">|&gt;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(<span class="at">Model =</span> model, <span class="st">`</span><span class="at">Median RMS α (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(rms_med),</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">10th–90th pct</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">sprintf</span>(<span class="st">"%s–%s"</span>, <span class="fu">pct</span>(rms_lo), <span class="fu">pct</span>(rms_hi)),</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">GRS rejects at 5%</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(reject, <span class="dv">0</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"lrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div id="tbl-oos" class="cell quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-oos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;3: Out-of-sample pricing summary over 200 splits.
+</figcaption>
+<div aria-describedby="tbl-oos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Model</th>
+<th style="text-align: right;">Median RMS α (p.a.)</th>
+<th style="text-align: right;">10th–90th pct</th>
+<th style="text-align: right;">GRS rejects at 5%</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">PCA, 3 factors</td>
+<td style="text-align: right;">8.2%</td>
+<td style="text-align: right;">6.9%–9.5%</td>
+<td style="text-align: right;">0%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">PCA, 4 factors</td>
+<td style="text-align: right;">8.3%</td>
+<td style="text-align: right;">6.9%–9.6%</td>
+<td style="text-align: right;">0%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">PCA, 1 factor</td>
+<td style="text-align: right;">8.4%</td>
+<td style="text-align: right;">6.7%–9.4%</td>
+<td style="text-align: right;">0%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">PCA, 5 factors</td>
+<td style="text-align: right;">8.4%</td>
+<td style="text-align: right;">6.8%–10.0%</td>
+<td style="text-align: right;">0%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">PCA, 2 factors</td>
+<td style="text-align: right;">8.6%</td>
+<td style="text-align: right;">7.0%–9.7%</td>
+<td style="text-align: right;">0%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Fama–French 5</td>
+<td style="text-align: right;">9.5%</td>
+<td style="text-align: right;">7.7%–10.7%</td>
+<td style="text-align: right;">2%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CAPM</td>
+<td style="text-align: right;">9.5%</td>
+<td style="text-align: right;">7.5%–10.9%</td>
+<td style="text-align: right;">4%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Fama–French 3</td>
+<td style="text-align: right;">10.4%</td>
+<td style="text-align: right;">7.9%–11.6%</td>
+<td style="text-align: right;">19%</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>Out of sample, the statistical factors leave smaller pricing errors than the observable ones. The best, PCA, 3 factors, has a median RMS alpha of 8.2% a year and beats the CAPM in 92% of splits. The Fama–French models do no better than the CAPM here, consistent with Module 03. Most of the gain comes from the first component, though: a single statistical factor already does about as well as three to five. The intervals overlap substantially, and with only 84 test months GRS rarely rejects <em>any</em> model (power is low, so “not rejected” here is weak evidence of a good fit). Pricing errors are also larger here than in Module 03’s full-sample tests, partly because alphas estimated over seven years are noisier than over fifteen.</p>
+</section>
+</section>
+<section id="limitations" class="level2">
+<h2 class="anchored" data-anchor-id="limitations">Limitations</h2>
+<ul>
+<li><strong>Survivor sample.</strong> As in Module 03, today’s large caps are the test assets, which biases alphas upward for every model. It does not affect the factor-count results, which concern covariances.</li>
+<li><strong>Stationarity.</strong> PCA assumes one stable covariance structure over 15 years. Module 01 found that betas shifted after 2020 (for example, the Chinese banks decoupled), so the loadings on PC2 in particular are averages over two regimes.</li>
+<li><strong>Labelling is interpretation.</strong> Components are defined only up to rotation within the significant set. The names given here describe the loadings but are not unique.</li>
+<li><strong>Small test.</strong> 51 stocks and a 7-year test window limit power. A broader universe (all regional stocks) would sharpen both the factor count and the pricing comparison.</li>
+</ul>
+</section>
+<section id="references" class="level2">
+<h2 class="anchored" data-anchor-id="references">References</h2>
+<ul>
+<li>Connor, G., &amp; Korajczyk, R. A. (1988). Risk and return in an equilibrium APT: Application of a new test methodology. <em>Journal of Financial Economics, 21</em>(2), 255–289.</li>
+<li>Horn, J. L. (1965). A rationale and test for the number of factors in factor analysis. <em>Psychometrika, 30</em>(2), 179–185.</li>
+<li>Laloux, L., Cizeau, P., Bouchaud, J.-P., &amp; Potters, M. (1999). Noise dressing of financial correlation matrices. <em>Physical Review Letters, 83</em>(7), 1467–1470.</li>
+<li>Marchenko, V. A., &amp; Pastur, L. A. (1967). Distribution of eigenvalues for some sets of random matrices. <em>Mathematics of the USSR-Sbornik, 1</em>(4), 457–483.</li>
+<li>Ross, S. A. (1976). The arbitrage theory of capital asset pricing. <em>Journal of Economic Theory, 13</em>(3), 341–360.</li>
+<li>Tibshirani, R. (1996). Regression shrinkage and selection via the lasso. <em>Journal of the Royal Statistical Society B, 58</em>(1), 267–288.</li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/kyanite03\.github\.io\/apac-asset-pricing\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>© 2026 Kai Marsh · code MIT, text and figures all rights reserved</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/kyanite03/apac-asset-pricing/blob/main/modules/04-statistical-factors-apt/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li></ul></div></div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

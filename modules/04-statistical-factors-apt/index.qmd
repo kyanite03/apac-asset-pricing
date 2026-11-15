@@ -1,0 +1,284 @@
+---
+title: "04 · Statistical factors: how many risks drive APAC returns?"
+subtitle: "Principal components of 51 large caps, compared with the Fama–French factors, local markets and currencies"
+author: "Kai Marsh"
+date: last-modified
+---
+
+```{r}
+#| label: setup
+#| code-summary: "Setup: packages, shared functions, USD excess returns"
+
+suppressPackageStartupMessages({ library(tidyverse); library(knitr); library(glmnet) })
+source("../../R/models_linear.R")
+source("../../R/models_factor.R")
+source("../../R/data_factors.R")
+source("../../R/plots.R")
+
+data_dir <- "../../data/processed"
+universe <- read_csv(file.path(data_dir, "universe.csv"), show_col_types = FALSE)
+ret <- read_csv(file.path(data_dir, "returns_monthly.csv"), show_col_types = FALSE)
+fx  <- read_csv(file.path(data_dir, "fx_monthly.csv"), show_col_types = FALSE)
+mkt <- read_csv(file.path(data_dir, "market_monthly.csv"), show_col_types = FALSE)
+ff  <- get_french_apac("../../data/raw/french")
+
+# Same test assets as Module 03: USD excess returns over the US T-bill
+panel <- ret |>
+  inner_join(universe, by = c("symbol" = "ticker")) |>
+  inner_join(fx, by = c("market", "month")) |>
+  inner_join(ff, by = "month") |>
+  mutate(ex = (1 + ret) * (1 + fx) - 1 - RF)
+wide <- panel |> select(month, symbol, ex) |> pivot_wider(names_from = symbol, values_from = ex) |> arrange(month)
+Y <- as.matrix(select(wide, -month)); months <- wide$month
+Fac <- ff |> filter(month %in% months) |> arrange(month)
+T_ <- nrow(Y); N_ <- ncol(Y)
+stock_market <- universe$market[match(colnames(Y), universe$ticker)]
+stock_sector <- universe$sector[match(colnames(Y), universe$ticker)]
+short <- function(s) sub("\\.(AX|HK|SI)$", "", s)
+```
+
+```{r}
+#| label: pca
+#| code-summary: "Principal components and the two noise benchmarks"
+
+pc <- pca_returns(Y)                                  # correlation-matrix PCA
+mp <- mp_upper(N_, T_)                                # Marchenko–Pastur edge
+pa <- parallel_analysis(Y, reps = 500, prob = 0.95)   # permutation benchmark
+n_mp <- sum(pc$values > mp); n_pa <- sum(pc$values > pa)
+k_sig <- min(n_mp, n_pa)
+stopifnot(n_mp == n_pa)                               # text reports one agreed number
+```
+
+```{r}
+#| label: link-observables
+#| code-summary: "Linking components to observable factors: correlations, canonical correlation, LASSO"
+
+ff_names <- c("MKT", "SMB", "HML", "RMW", "CMA", "WML")
+X_ff <- as.matrix(Fac[, ff_names])
+
+# Candidate observables beyond Fama–French: each local index (USD excess) and currencies
+loc <- mkt |> inner_join(fx, by = c("market", "month")) |> filter(month %in% months) |>
+  mutate(usd = (1 + mkt) * (1 + fx) - 1) |> select(market, month, usd) |>
+  pivot_wider(names_from = market, values_from = usd) |> arrange(month)
+fxw <- fx |> filter(month %in% months) |> pivot_wider(names_from = market, values_from = fx) |> arrange(month)
+X_all <- cbind(X_ff, `ASX index` = loc$ASX - Fac$RF, `HK index` = loc$HKEX - Fac$RF,
+               `SG index` = loc$SGX - Fac$RF, AUD = fxw$ASX, SGD = fxw$SGX)
+
+cors <- cor(pc$scores[, 1:4], X_all)
+nm_of <- function(s) paste0(universe$name[match(s, universe$ticker)])
+o1 <- order(pc$vectors[, 1])
+top_pc1 <- paste(nm_of(rownames(pc$vectors)[rev(o1)[1:4]]), collapse = ", ")
+bot_pc1 <- paste(nm_of(rownames(pc$vectors)[o1[1:4]]), collapse = ", ")
+cc <- cancor(pc$scores[, 1:k_sig], X_ff)$cor
+
+set.seed(1)
+lasso <- map_dfr(1:4, function(k) {
+  cv <- cv.glmnet(scale(X_all), pc$scores[, k], alpha = 1, nfolds = 10)
+  b <- coef(cv, s = "lambda.1se")[-1, 1]
+  fit <- predict(cv, scale(X_all), s = "lambda.1se")
+  tibble(PC = paste0("PC", k),
+         `Selected (standardised coefficient)` = if (any(b != 0))
+           paste(sprintf("%s %+.2f", names(b)[b != 0], b[b != 0])[order(-abs(b[b != 0]))], collapse = ", ") else "none",
+         R2 = 1 - sum((pc$scores[, k] - fit)^2) / sum((pc$scores[, k] - mean(pc$scores[, k]))^2))
+})
+```
+
+```{r}
+#| label: oos
+#| code-summary: "Out-of-sample pricing: factors from half the stocks (2011–18), tested on the other half (2019–25)"
+
+early <- months < as.Date("2019-01-01")
+fac_models <- list(CAPM = "MKT", `Fama–French 3` = c("MKT", "SMB3", "HML"),
+                   `Fama–French 5` = c("MKT", "SMB", "HML", "RMW", "CMA"))
+n_splits <- 200
+set.seed(42)
+oos <- map_dfr(seq_len(n_splits), function(s) {
+  # stratified random half of the stocks builds the factors; the rest are test assets
+  A <- unlist(lapply(split(seq_len(N_), stock_market), \(ix) sample(ix, floor(length(ix) / 2))))
+  B <- setdiff(seq_len(N_), A)
+  pA <- pca_returns(Y[early, A])
+  pcs <- map_dfr(1:5, function(k) {
+    Fk <- Y[!early, A] %*% eigenportfolio_weights(pA, k)
+    g <- grs_test(Y[!early, B], Fk)
+    tibble(model = paste0("PCA, ", k, if (k == 1) " factor" else " factors"),
+           rms = 12 * sqrt(mean(g$alpha^2)), p = g$p)
+  })
+  obs <- imap_dfr(fac_models, function(f, nm) {
+    g <- grs_test(Y[!early, B], as.matrix(Fac[!early, f]))
+    tibble(model = nm, rms = 12 * sqrt(mean(g$alpha^2)), p = g$p)
+  })
+  bind_rows(pcs, obs) |> mutate(split = s)
+})
+oos_sum <- oos |> group_by(model) |>
+  summarise(rms_med = median(rms), rms_lo = quantile(rms, 0.1), rms_hi = quantile(rms, 0.9),
+            reject = mean(p < 0.05), .groups = "drop")
+best_pca <- oos_sum |> filter(str_starts(model, "PCA")) |> slice_min(rms_med, n = 1)
+capm_oos <- oos_sum |> filter(model == "CAPM"); ff5_oos <- oos_sum |> filter(model == "Fama–French 5")
+pca_beats_capm <- oos |> filter(model %in% c(best_pca$model, "CAPM")) |>
+  select(split, model, rms) |> pivot_wider(names_from = model, values_from = rms) |>
+  summarise(m = mean(.data[[best_pca$model]] < CAPM)) |> pull(m)
+```
+
+::: {.callout-tip title="Answer first"}
+- **Three common risks, and one dominates.** Out of `r N_` eigenvalues, `r k_sig` rise above both noise benchmarks (random-matrix theory and a permutation test). The first component alone explains `r pct(pc$share[1], 0)` of the variation in returns; the next two add `r pct(pc$share[2], 0)` and `r pct(pc$share[3], 0)`.
+- **The three risks have plain names.** PC1 is the regional market (correlation `r num(cors[1, "MKT"])` with the Fama–French market factor). PC2 is **Hong Kong/China vs Australia**, with China's state banks at one end and Australia's banks at the other. PC3 is **energy vs utilities**, an oil factor that no Fama–French factor captures (the best linear combination of all candidate observables explains only `r pct(lasso$R2[3], 0)` of it).
+- **Fama–French factors span the market, partly span the second risk, and miss the third.** Canonical correlations between the first `r k_sig` components and the six Fama–French factors are `r paste(num(cc), collapse = ", ")`.
+- **Statistical factors price out of sample at least as well.** Built on one half of the stocks in 2011–18 and tested on the other half in 2019–25, `r best_pca$model` gives a median root-mean-square alpha of `r pct(best_pca$rms_med)` a year, against `r pct(capm_oos$rms_med)` for the CAPM and `r pct(ff5_oos$rms_med)` for Fama–French 5. The gap is modest and the tests have little power.
+- **So what:** a risk model for an APAC equity book needs a China-vs-Australia factor and an energy factor alongside the market. Size, value and profitability, as defined for the region, are not where the common risk is.
+:::
+
+## Question
+
+Modules 01 and 03 started from factors chosen in advance: the market, then the Fama–French characteristics. Arbitrage Pricing Theory (Ross, 1976) only says that *some* small set of common factors drives returns and earns premia. It doesn't say which ones. This module lets the data choose. How many common factors are in the returns of APAC large caps, what are they, and do they line up with the factors used in Module 03?
+
+## Method
+
+**Principal components.** Each stock's monthly USD excess return (same data as Module 03, `r format(min(months), "%b %Y")`–`r format(max(months), "%b %Y")`, `r T_` months) is standardised. The `r N_` × `r N_` correlation matrix is decomposed as $\mathbf R = \mathbf V \boldsymbol\Lambda \mathbf V'$. Each eigenvalue $\lambda_j$ is the variance captured by component *j*, and each column of $\mathbf V$ gives the stocks' loadings on it. Using correlations rather than covariances stops the most volatile stocks from dominating.
+
+**How many factors?** Some eigenvalues will look large even in pure noise, so each is compared with two benchmarks:
+
+- the **Marchenko–Pastur** upper edge, $\lambda_+ = (1+\sqrt{N/T})^2 = `r num(mp)`$, the largest eigenvalue expected from $N$ uncorrelated series of length $T$;
+- **parallel analysis**: the 95th percentile of each eigenvalue across 500 data sets in which each stock's returns are shuffled in time independently. Shuffling destroys the cross-correlation but keeps each stock's fat-tailed distribution.
+
+**What are they?** Components are compared with the six Fama–French factors and with five other observables (each local index and two currencies) using correlations, canonical correlation, and LASSO regressions (`glmnet`, penalty chosen by 10-fold cross-validation, one-standard-error rule).
+
+**Do they price?** Components estimated on the same data they are tested on would price that data almost by construction. So the test is out of sample in two dimensions. Each of `r n_splits` random splits divides the stocks in half, stratified by market. Eigenportfolios (traded versions of the components) are built from one half using 2011–18 data, and the GRS test is run on the *other* half in 2019–25. The CAPM and Fama–French models are tested on the same stocks and months.
+
+## Results
+
+### Three factors stand out from the noise
+
+```{r}
+#| label: fig-scree
+#| fig-cap: "Eigenvalues of the 51-stock correlation matrix (points), with the Marchenko–Pastur edge (dashed) and the 95th percentile from permuted data (line). Eigenvalues above both are treated as genuine common factors. The first eigenvalue is off the scale and labelled."
+#| fig-width: 8
+#| fig-height: 4.8
+
+scree <- tibble(j = 1:15, value = pc$values[1:15], pa = pa[1:15],
+                sig = value > pmax(mp, pa))
+ymax <- 6
+p_scree <- ggplot(scree, aes(j, pmin(value, ymax))) +
+  geom_hline(yintercept = mp, linetype = "dashed", colour = "#52514e", linewidth = 0.5) +
+  geom_line(aes(y = pa), colour = "#52514e", linewidth = 0.6) +
+  geom_point(aes(fill = sig), shape = 21, size = 3, colour = "white", stroke = 0.8) +
+  annotate("text", x = 1.3, y = ymax, label = sprintf("PC1 = %.1f (%s of variance)", pc$values[1], pct(pc$share[1], 0)),
+           hjust = 0, vjust = 1, size = 3.3, colour = "#0b0b0b") +
+  annotate("text", x = 15, y = mp, label = "Marchenko–Pastur edge", hjust = 1, vjust = -0.6, size = 3.1, colour = "#52514e") +
+  annotate("text", x = 15, y = pa[15], label = "permutation 95%", hjust = 1, vjust = 1.6, size = 3.1, colour = "#52514e") +
+  scale_fill_manual(values = c(`TRUE` = "#2a78d6", `FALSE` = "#c3c2b7"), guide = "none") +
+  scale_x_continuous(breaks = 1:15) +
+  scale_y_continuous(limits = c(0, ymax)) +
+  labs(title = sprintf("%d common factors rise above the noise in APAC large-cap returns", k_sig),
+       subtitle = sprintf("Eigenvalues of the correlation matrix, %d stocks, %d months (USD)", N_, T_),
+       x = "Component", y = "Eigenvalue") +
+  theme_report() + theme(panel.grid.major.x = element_blank())
+dir.create("figures", showWarnings = FALSE)
+ggsave("figures/key_chart.png", p_scree, width = 8, height = 4.8, dpi = 200, bg = "white")
+p_scree
+```
+
+The first eigenvalue (`r num(pc$values[1], 1)`) is nearly ten times the noise edge. The second and third (`r num(pc$values[2])`, `r num(pc$values[3])`) clear both benchmarks. From the fourth on (`r num(pc$values[4])`, `r num(pc$values[5])`, …), the eigenvalues sit below both lines and are indistinguishable from what independent noise would produce. Together the three genuine factors explain `r pct(sum(pc$share[1:3]), 0)` of the total variation, so most of each stock's monthly movement remains stock-specific.
+
+### What the factors are
+
+```{r}
+#| label: fig-loadings
+#| fig-cap: "Loadings of each stock on the first three components (the eigenvector entries). Stocks sorted within each market by their loading on PC2."
+#| fig-width: 9
+#| fig-height: 9
+
+load_df <- as_tibble(pc$vectors[, 1:3], rownames = "symbol") |>
+  mutate(market = factor(stock_market, levels = names(market_cols)),
+         name = universe$name[match(symbol, universe$ticker)],
+         label = paste(short(symbol), name)) |>
+  arrange(market, PC2) |> mutate(label = factor(label, levels = label)) |>
+  pivot_longer(PC1:PC3, names_to = "pc", values_to = "loading") |>
+  mutate(pc = recode(pc, PC1 = "PC1 · regional market", PC2 = "PC2 · HK/China vs Australia",
+                     PC3 = "PC3 · energy vs utilities"))
+ggplot(load_df, aes(loading, label, fill = market)) +
+  geom_vline(xintercept = 0, colour = "#c3c2b7", linewidth = 0.4) +
+  geom_col(width = 0.7) +
+  facet_grid(market ~ pc, scales = "free_y", space = "free_y") +
+  scale_fill_manual(values = market_cols, guide = "none") +
+  labs(x = "Loading", y = NULL) +
+  theme_report(10) +
+  theme(panel.grid.major.y = element_blank(), strip.text.y = element_text(angle = 0, face = "bold"))
+```
+
+```{r}
+#| label: tbl-ends
+#| tbl-cap: "The four stocks at each end of components 2–4."
+
+ends <- map_dfr(2:4, function(k) {
+  v <- pc$vectors[, k]; o <- order(v)
+  tibble(Component = paste0("PC", k),
+         `Most negative` = paste(short(names(v)[o[1:4]]), collapse = ", "),
+         `Most positive` = paste(short(names(v)[rev(o)[1:4]]), collapse = ", "))
+})
+kable(ends, align = "lll")
+```
+
+- **PC1, the regional market.** Every stock loads positively (smallest loading `r num(min(pc$vectors[, 1]))`). The heaviest loaders are `r top_pc1` and the lightest are `r bot_pc1`. The component correlates `r num(cors[1, "MKT"])` with the Fama–French regional market and `r num(cors[1, "ASX index"])`, `r num(cors[1, "HK index"])` and `r num(cors[1, "SG index"])` with the three local indices in USD.
+- **PC2, Hong Kong/China against Australia.** China's state banks and HKEX at one end, Australia's major banks and Wesfarmers at the other. It behaves like a long-short of the Hong Kong and Australian indices: those are the two largest LASSO coefficients, with opposite signs. It also correlates `r num(cors[2, "HML"])` with value and `r num(cors[2, "RMW"])` with profitability, plausibly because Chinese banks trade cheaply against book value while Australian banks are highly profitable.
+- **PC3, energy against utilities.** CNOOC, Santos, Woodside and PetroChina at one end, MTR and the Hong Kong utilities at the other, *regardless of market*. This is an oil-price factor. The best LASSO combination of all eleven candidate observables explains only `r pct(lasso$R2[3], 0)` of it. Module 08 models it with oil prices directly.
+- **PC4** (below the noise threshold) contrasts the iron-ore miners with telecoms and utilities. It looks economically meaningful but cannot be distinguished statistically from noise with 15 years of data.
+
+### How well do observable factors span them?
+
+```{r}
+#| label: tbl-lasso
+#| tbl-cap: "LASSO regression of each component on eleven standardised candidate observables (six Fama–French factors, three local indices in USD, AUD and SGD). Coefficients at the one-standard-error penalty; R² is in-sample at that penalty."
+
+lasso |> mutate(R2 = pct(R2, 0)) |> rename(`R²` = R2) |> kable(align = "llr")
+```
+
+The canonical correlations, `r paste(num(cc), collapse = ", ")`, give the formal answer for the Fama–French set. The first canonical pair (essentially PC1 against the market factor) is nearly perfect. The second is moderate, mostly through the value and profitability factors picking up the China–Australia contrast. The third is weak. The six Fama–French factors contain the market, part of the second risk, and little of the third.
+
+### Do statistical factors price better?
+
+```{r}
+#| label: fig-oos
+#| fig-cap: "Out-of-sample root-mean-square alpha across 200 random splits (factors from one half of the stocks, 2011–18; test on the other half, 2019–25). Points: median; bars: 10th–90th percentile. Lower is better."
+#| fig-width: 8
+#| fig-height: 4
+
+oos_sum |>
+  mutate(model = fct_reorder(model, rms_med),
+         kind = if_else(str_starts(model, "PCA"), "Statistical (PCA)", "Observable factors")) |>
+  ggplot(aes(rms_med, model, colour = kind)) +
+  geom_errorbarh(aes(xmin = rms_lo, xmax = rms_hi), height = 0, linewidth = 0.8, alpha = 0.6) +
+  geom_point(size = 3) +
+  scale_colour_manual(values = c(`Statistical (PCA)` = "#2a78d6", `Observable factors` = "#eb6834")) +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(x = "Root-mean-square alpha, 2019–25 (annualised)", y = NULL) +
+  theme_report()
+```
+
+```{r}
+#| label: tbl-oos
+#| tbl-cap: "Out-of-sample pricing summary over 200 splits."
+
+oos_sum |> arrange(rms_med) |>
+  transmute(Model = model, `Median RMS α (p.a.)` = pct(rms_med),
+            `10th–90th pct` = sprintf("%s–%s", pct(rms_lo), pct(rms_hi)),
+            `GRS rejects at 5%` = pct(reject, 0)) |>
+  kable(align = "lrrr")
+```
+
+Out of sample, the statistical factors leave smaller pricing errors than the observable ones. The best, `r best_pca$model`, has a median RMS alpha of `r pct(best_pca$rms_med)` a year and beats the CAPM in `r pct(pca_beats_capm, 0)` of splits. The Fama–French models do no better than the CAPM here, consistent with Module 03. Most of the gain comes from the first component, though: a single statistical factor already does about as well as three to five. The intervals overlap substantially, and with only 84 test months GRS rarely rejects *any* model (power is low, so "not rejected" here is weak evidence of a good fit). Pricing errors are also larger here than in Module 03's full-sample tests, partly because alphas estimated over seven years are noisier than over fifteen.
+
+## Limitations
+
+- **Survivor sample.** As in Module 03, today's large caps are the test assets, which biases alphas upward for every model. It does not affect the factor-count results, which concern covariances.
+- **Stationarity.** PCA assumes one stable covariance structure over 15 years. Module 01 found that betas shifted after 2020 (for example, the Chinese banks decoupled), so the loadings on PC2 in particular are averages over two regimes.
+- **Labelling is interpretation.** Components are defined only up to rotation within the significant set. The names given here describe the loadings but are not unique.
+- **Small test.** 51 stocks and a 7-year test window limit power. A broader universe (all regional stocks) would sharpen both the factor count and the pricing comparison.
+
+## References
+
+- Connor, G., & Korajczyk, R. A. (1988). Risk and return in an equilibrium APT: Application of a new test methodology. *Journal of Financial Economics, 21*(2), 255–289.
+- Horn, J. L. (1965). A rationale and test for the number of factors in factor analysis. *Psychometrika, 30*(2), 179–185.
+- Laloux, L., Cizeau, P., Bouchaud, J.-P., & Potters, M. (1999). Noise dressing of financial correlation matrices. *Physical Review Letters, 83*(7), 1467–1470.
+- Marchenko, V. A., & Pastur, L. A. (1967). Distribution of eigenvalues for some sets of random matrices. *Mathematics of the USSR-Sbornik, 1*(4), 457–483.
+- Ross, S. A. (1976). The arbitrage theory of capital asset pricing. *Journal of Economic Theory, 13*(3), 341–360.
+- Tibshirani, R. (1996). Regression shrinkage and selection via the lasso. *Journal of the Royal Statistical Society B, 58*(1), 267–288.

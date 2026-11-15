@@ -4,7 +4,17 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 
 **Read online:** [kyanite03.github.io/apac-asset-pricing](https://kyanite03.github.io/apac-asset-pricing/)
 
-## Latest: Module 03, testing pricing models
+## Latest: Module 04, statistical factors
+
+![Eigenvalues of the 51-stock correlation matrix against two noise benchmarks](modules/04-statistical-factors-apt/figures/key_chart.png)
+
+- **Three common risks rise above the noise** (Marchenko–Pastur edge and permutation test agree): the regional market (43% of variance), **Hong Kong/China vs Australia**, and **energy vs utilities**.
+- **The Fama–French factors capture the first, part of the second and little of the third** (canonical correlations 0.98, 0.68, 0.32). The energy factor is only 30% explained by any observable tested.
+- **Out of sample** (factors from half the stocks in 2011–18, tested on the other half in 2019–25), statistical factors leave smaller pricing errors than the CAPM or FF5 (median RMS alpha 8.2% vs 9.5%), though with low power.
+
+[Full write-up](https://kyanite03.github.io/apac-asset-pricing/modules/04-statistical-factors-apt/) · [source](modules/04-statistical-factors-apt/index.qmd)
+
+## Module 03, testing pricing models
 
 ![Realised vs predicted average returns for 51 APAC large caps under four pricing models](modules/03-testing-pricing-models/figures/key_chart.png)
 
@@ -31,7 +41,7 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 | 01 | [CAPM and the market model](modules/01-capm-market-model/) | How market-sensitive are APAC large caps, and are their betas stable? | Done |
 | 02 | Factor construction | Can SMB/HML be built for the ASX from fundamentals? | Planned |
 | 03 | [Testing pricing models](modules/03-testing-pricing-models/) | CAPM vs zero-beta CAPM vs Fama–French: which prices APAC returns? | Done |
-| 04 | Statistical factors (APT) | How many factors drive APAC returns? | Planned |
+| 04 | [Statistical factors (APT)](modules/04-statistical-factors-apt/) | How many factors drive APAC returns? | Done |
 | 05 | Cross-market comparison | Are factor premia equal across the three markets? | Planned |
 | 06 | DCF: Tencent | Does Tencent deserve its valuation premium? | Planned |
 | 07 | Bank valuation, HK & SG | Why do Chinese banks trade at a discount to Singapore's? | Planned |
@@ -40,8 +50,8 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 
 ## Rigour
 
-- Every estimator is written in matrix form in [`R/models_linear.R`](R/models_linear.R): OLS, Newey–West HAC, GLS, general linear hypotheses, the GRS test, and Fama–MacBeth with Shanken errors.
-- Each is unit-tested in [`tests/testthat`](tests/testthat) against `lm()`, `sandwich::NeweyWest` and `car::linearHypothesis` (to 1e-8 or better), and against simulations with a known answer (GRS size and power, Fama–MacBeth premium recovery).
+- Every estimator is written in matrix form in [`R/models_linear.R`](R/models_linear.R): OLS, Newey–West HAC, GLS, general linear hypotheses, the GRS test, and Fama–MacBeth with Shanken errors. Principal components, the Marchenko–Pastur edge, parallel analysis and eigenportfolios are in [`R/models_factor.R`](R/models_factor.R).
+- Each is unit-tested in [`tests/testthat`](tests/testthat) against `lm()`, `sandwich::NeweyWest` and `car::linearHypothesis` (to 1e-8 or better), and against simulations with a known answer (GRS size and power, Fama–MacBeth premium recovery, recovery of a planted 3-factor structure).
 - Returns and risk-free rates are matched by market and currency. The risk-free rate is lagged one month, so it is known at the start of the month it applies to. p-values are corrected for multiple testing when scanning many stocks.
 
 ## Repository layout
@@ -49,7 +59,7 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 | Path | Contents |
 |---|---|
 | `modules/NN-*/index.qmd` | One write-up per module (Quarto) |
-| `R/` | Shared functions: data (`data_prices.R`, `data_rates.R`), estimators (`models_linear.R`), chart theme (`plots.R`) |
+| `R/` | Shared functions: data (`data_prices.R`, `data_rates.R`, `data_factors.R`), estimators (`models_linear.R`, `models_factor.R`), chart theme (`plots.R`) |
 | `scripts/build_data.R` | Downloads prices and rates; writes `data/processed/` |
 | `data/raw/french/` | Kenneth French factor ZIPs (not committed: no reuse licence). Download the three *Asia Pacific ex Japan* files (3 factors, 5 factors, momentum) from the [Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html) |
 | `data/processed/` | Monthly returns, market proxies, risk-free rates, universe, module outputs |
