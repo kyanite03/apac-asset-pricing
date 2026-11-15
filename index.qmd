@@ -1,0 +1,25 @@
+---
+title: "APAC Asset Pricing"
+subtitle: "Statistical asset pricing and valuation across ASX, HKEX and SGX: factor models, valuation, commodities and event studies, in R."
+toc: false
+---
+
+Do the asset-pricing models built on US data work in Asia-Pacific markets, and what do they imply for real valuation questions? Each module answers one question, opens with the answer, and feeds the next. The betas from Module 01 feed the cost of capital in Module 06, and the factor tests in Module 03 set up the cross-market comparison in Module 05.
+
+Every model is written in matrix form ($\hat{\boldsymbol\beta} = (\mathbf X'\mathbf X)^{-1}\mathbf X'\mathbf y$, GLS where errors are correlated, general linear hypotheses $\mathbf C\boldsymbol\beta = \mathbf 0$). The hand-written estimators are [unit-tested](https://github.com/kyanite03/apac-asset-pricing/tree/main/tests/testthat) against `lm()`, `sandwich` and `car`, and against simulated data with known answers.
+
+| # | Module | Question | Status |
+|---|--------|----------|--------|
+| 01 | [CAPM and the market model](modules/01-capm-market-model/index.qmd) | How market-sensitive are APAC large caps, and are their betas stable? | Done |
+| 02 | Factor construction | Can SMB/HML be built for the ASX from fundamentals? | Planned |
+| 03 | Testing pricing models | CAPM vs zero-beta CAPM vs Fama–French: which prices APAC returns? | In progress |
+| 04 | Statistical factors (APT) | How many factors drive APAC returns, and are they the Fama–French ones? | Planned |
+| 05 | Cross-market comparison | Are factor premia the same on the ASX, HKEX and SGX? | Planned |
+| 06 | DCF: Tencent | Does Tencent deserve its valuation premium? | Planned |
+| 07 | Bank valuation, HK & SG | Why do Chinese banks trade at a discount to Singapore's? | Planned |
+| 08 | Oil vs energy equities | Is commodity risk priced, or just held? | Planned |
+| 09 | The David Jones collapse | Who bore the cost of DJ's administration? | Planned |
+
+**Data:** Yahoo Finance total returns, with central-bank risk-free rates (RBA, HKMA, MAS/SingStat). The shared monthly dataset is rebuilt by [`scripts/build_data.R`](https://github.com/kyanite03/apac-asset-pricing/blob/main/scripts/build_data.R).
+
+*Kai Marsh, BCom (Finance & Statistics), University of Melbourne.*

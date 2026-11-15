@@ -1,0 +1,39 @@
+project:
+  type: website
+  output-dir: docs
+  render:
+    - index.qmd
+    - modules/*/index.qmd
+
+website:
+  title: "APAC Asset Pricing"
+  site-url: "https://kyanite03.github.io/apac-asset-pricing/"
+  repo-url: "https://github.com/kyanite03/apac-asset-pricing"
+  repo-actions: [source]
+  page-navigation: true
+  navbar:
+    left:
+      - href: index.qmd
+        text: Overview
+      - text: Modules
+        menu:
+          - href: modules/01-capm-market-model/index.qmd
+            text: "01 · CAPM and the market model"
+    right:
+      - icon: github
+        href: "https://github.com/kyanite03/apac-asset-pricing"
+  page-footer:
+    left: "© 2026 Kai Marsh · code MIT, text and figures all rights reserved"
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    code-fold: true
+    code-summary: "Show code"
+    fig-dpi: 150
+
+execute:
+  freeze: auto
+  warning: false
+  message: false

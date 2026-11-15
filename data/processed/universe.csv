@@ -1,0 +1,52 @@
+ticker,name,market,sector
+CBA.AX,Commonwealth Bank,ASX,Banks
+NAB.AX,National Australia Bank,ASX,Banks
+WBC.AX,Westpac,ASX,Banks
+ANZ.AX,ANZ,ASX,Banks
+MQG.AX,Macquarie Group,ASX,Financials (other)
+QBE.AX,QBE Insurance,ASX,Financials (other)
+BHP.AX,BHP,ASX,Materials
+RIO.AX,Rio Tinto,ASX,Materials
+FMG.AX,Fortescue,ASX,Materials
+AMC.AX,Amcor,ASX,Materials
+WDS.AX,Woodside Energy,ASX,Energy
+STO.AX,Santos,ASX,Energy
+CSL.AX,CSL,ASX,Health care
+WOW.AX,Woolworths,ASX,Consumer
+WES.AX,Wesfarmers,ASX,Consumer
+ALL.AX,Aristocrat Leisure,ASX,Consumer
+TLS.AX,Telstra,ASX,Telecoms & utilities
+TCL.AX,Transurban,ASX,Industrials
+GMG.AX,Goodman Group,ASX,Real estate
+0005.HK,HSBC Holdings,HKEX,Banks
+0939.HK,China Construction Bank,HKEX,Banks
+1398.HK,ICBC,HKEX,Banks
+3988.HK,Bank of China,HKEX,Banks
+1299.HK,AIA Group,HKEX,Financials (other)
+2318.HK,Ping An Insurance,HKEX,Financials (other)
+0388.HK,Hong Kong Exchanges & Clearing,HKEX,Financials (other)
+0883.HK,CNOOC,HKEX,Energy
+0857.HK,PetroChina,HKEX,Energy
+0386.HK,Sinopec,HKEX,Energy
+0700.HK,Tencent,HKEX,Technology
+0941.HK,China Mobile,HKEX,Telecoms & utilities
+0002.HK,CLP Holdings,HKEX,Telecoms & utilities
+0003.HK,Hong Kong & China Gas,HKEX,Telecoms & utilities
+0016.HK,Sun Hung Kai Properties,HKEX,Real estate
+0012.HK,Henderson Land,HKEX,Real estate
+0066.HK,MTR Corporation,HKEX,Industrials
+0027.HK,Galaxy Entertainment,HKEX,Consumer
+D05.SI,DBS Group,SGX,Banks
+O39.SI,OCBC,SGX,Banks
+U11.SI,UOB,SGX,Banks
+S68.SI,Singapore Exchange,SGX,Financials (other)
+Z74.SI,Singtel,SGX,Telecoms & utilities
+U96.SI,Sembcorp Industries,SGX,Telecoms & utilities
+C6L.SI,Singapore Airlines,SGX,Industrials
+BN4.SI,Keppel,SGX,Industrials
+C07.SI,Jardine Cycle & Carriage,SGX,Industrials
+F34.SI,Wilmar International,SGX,Consumer
+G13.SI,Genting Singapore,SGX,Consumer
+V03.SI,Venture Corporation,SGX,Technology
+C38U.SI,CapitaLand Integrated Comm. Trust,SGX,Real estate
+A17U.SI,CapitaLand Ascendas REIT,SGX,Real estate

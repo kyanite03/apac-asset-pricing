@@ -7,3 +7,9 @@ __pycache__/
 _freeze/
 *_files/
 .quarto/
+
+/.quarto/
+**/*.quarto_ipynb
+# Rendered website (GitHub Pages) needs its figure folders
+!docs/**/*_files/
+data/raw/

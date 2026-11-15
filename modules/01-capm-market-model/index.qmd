@@ -1,0 +1,356 @@
+---
+title: "01 · CAPM and the market model across ASX, HKEX and SGX"
+subtitle: "How market-sensitive are APAC large caps, and are their betas stable enough to price capital with?"
+author: "Kai Marsh"
+date: last-modified
+---
+
+```{r}
+#| label: setup
+#| code-summary: "Setup: packages, shared functions, settings"
+
+suppressPackageStartupMessages({
+  library(tidyverse); library(knitr)
+})
+source("../../R/models_linear.R")
+source("../../R/plots.R")
+
+data_dir <- "../../data/processed"
+nw_lag <- 4                                   # floor(4 (T/100)^(2/9)) for T = 188
+break_month <- as.Date("2020-01-01")          # split for the stability test
+roll_win <- 60                                # rolling-beta window (months)
+
+universe <- read_csv(file.path(data_dir, "universe.csv"), show_col_types = FALSE)
+ret <- read_csv(file.path(data_dir, "returns_monthly.csv"), show_col_types = FALSE)
+mkt <- read_csv(file.path(data_dir, "market_monthly.csv"), show_col_types = FALSE)
+rf  <- read_csv(file.path(data_dir, "rf_monthly.csv"), show_col_types = FALSE)
+
+# Panel of excess returns: stock and market both in excess of the local rate
+panel <- ret |>
+  inner_join(universe, by = c("symbol" = "ticker")) |>
+  inner_join(mkt, by = c("market", "month")) |>
+  inner_join(rf, by = c("market", "month")) |>
+  mutate(ex = ret - rf, mex = mkt - rf,
+         market = factor(market, levels = names(market_cols)))
+
+n_months <- n_distinct(panel$month)
+first_m <- format(min(panel$month), "%b %Y"); last_m <- format(max(panel$month), "%b %Y")
+n_stock <- table(universe$market)
+```
+
+```{r}
+#| label: estimate
+#| code-summary: "Market model for every stock, estimated in matrix form per market"
+
+# For each market: Y (T x N) = X B + E, X = [1, market excess return].
+# One normal-equations solve gives all N alphas and betas; HAC errors per stock.
+fit_market <- function(d) {
+  wide <- d |> select(month, symbol, ex) |> pivot_wider(names_from = symbol, values_from = ex) |>
+    arrange(month)
+  f <- d |> distinct(month, mex) |> arrange(month)
+  stopifnot(identical(wide$month, f$month))
+  Y <- as.matrix(select(wide, -month)); X <- cbind(const = 1, mex = f$mex)
+  map_dfr(colnames(Y), function(s) {
+    fit <- ols_matrix(Y[, s], X)
+    V <- hac_vcov(fit, nw_lag)
+    ct <- coef_table(fit, V)
+    tibble(symbol = s, alpha = ct$estimate[1], se_alpha = ct$se[1], p_alpha = ct$p[1],
+           beta = ct$estimate[2], se_beta = ct$se[2],
+           r2 = 1 - sum(fit$resid^2) / sum((Y[, s] - mean(Y[, s]))^2),
+           idio_vol = sqrt(12 * fit$sigma2), total_vol = sqrt(12) * sd(Y[, s]))
+  })
+}
+
+est <- panel |> group_by(market) |> group_modify(~ fit_market(.x)) |> ungroup() |>
+  left_join(universe |> select(ticker, name, sector), by = c("symbol" = "ticker")) |>
+  mutate(ticker = sub("\\.(AX|HK|SI)$", "", symbol),
+         beta_lo = beta - 1.96 * se_beta, beta_hi = beta + 1.96 * se_beta,
+         beta_blume = 2/3 * beta + 1/3,                # Blume (1971) adjustment toward 1
+         p_alpha_bh = p.adjust(p_alpha, "BH"))         # false-discovery-rate correction
+
+# Cross-check: the matrix estimator reproduces lm() for one stock
+chk <- panel |> filter(symbol == "0700.HK")
+stopifnot(isTRUE(all.equal(unname(coef(lm(ex ~ mex, chk))[2]),
+                           est$beta[est$symbol == "0700.HK"], tolerance = 1e-10)))
+
+mkt_summary <- est |> group_by(market) |>
+  summarise(n = n(), median_beta = median(beta), min_beta = min(beta), max_beta = max(beta),
+            median_r2 = median(r2), share_beta_lt1 = mean(beta < 1), .groups = "drop")
+n_alpha_raw <- sum(est$p_alpha < 0.05); n_alpha_bh <- sum(est$p_alpha_bh < 0.05)
+```
+
+```{r}
+#| label: stability
+#| code-summary: "Beta stability: split-sample test with HAC errors (general linear hypothesis)"
+
+# ex = a + b * mex + d0 * post + d1 * (mex x post) + e;  H0: d1 = 0 (beta unchanged)
+stab <- panel |> group_by(market, symbol) |> group_modify(function(d, key) {
+  post <- as.numeric(d$month >= break_month)
+  X <- cbind(const = 1, mex = d$mex, post = post, mex_post = d$mex * post)
+  fit <- ols_matrix(d$ex, X)
+  V <- hac_vcov(fit, nw_lag)
+  lh <- linear_hypothesis(fit, rbind(c(0, 0, 0, 1)), V = V)
+  tibble(beta_pre = fit$coef["mex"], beta_post = fit$coef["mex"] + fit$coef["mex_post"],
+         d_beta = fit$coef["mex_post"], p_change = lh["p"])
+}) |> ungroup() |>
+  mutate(p_change_bh = p.adjust(p_change, "BH"),
+         ticker = sub("\\.(AX|HK|SI)$", "", symbol))
+
+n_shift_bh <- sum(stab$p_change_bh < 0.05)
+shift_up <- stab |> filter(p_change_bh < 0.05, d_beta > 0) |> arrange(desc(d_beta))
+shift_dn <- stab |> filter(p_change_bh < 0.05, d_beta < 0) |> arrange(d_beta)
+med_abs_shift <- median(abs(stab$d_beta))
+rank_cor <- cor(stab$beta_pre, stab$beta_post, method = "spearman")
+
+# Sector groups referred to in the text
+stab <- stab |> left_join(universe |> select(ticker, sector), by = c("symbol" = "ticker"))
+cn_banks <- stab |> filter(symbol %in% c("0939.HK", "1398.HK", "3988.HK"))
+cn_banks_pre <- mean(cn_banks$beta_pre); cn_banks_post <- mean(cn_banks$beta_post)
+cn_full <- mean(est$beta[est$symbol %in% cn_banks$symbol])
+res <- stab |> filter(sector %in% c("Materials", "Energy"), symbol != "AMC.AX")  # Amcor is packaging
+n_res <- nrow(res); n_res_down <- sum(res$d_beta < 0)
+au_banks <- stab |> filter(market == "ASX", sector == "Banks")
+stopifnot(n_res_down == n_res, all(au_banks$d_beta > 0), nrow(au_banks) == 4)  # text claims "all"
+
+# Rolling 60-month betas
+roll <- panel |> group_by(symbol) |> arrange(month) |> group_modify(function(d, key) {
+  if (nrow(d) < roll_win) return(tibble())
+  map_dfr(roll_win:nrow(d), function(k) {
+    w <- d[(k - roll_win + 1):k, ]
+    tibble(month = d$month[k], beta = cov(w$ex, w$mex) / var(w$mex))
+  })
+}) |> ungroup() |> left_join(universe, by = c("symbol" = "ticker"))
+roll_range <- roll |> group_by(symbol) |> summarise(range = max(beta) - min(beta))
+```
+
+::: {.callout-tip title="Answer first"}
+- **Most APAC large caps move less than their market.** `r sum(est$beta < 1)` of `r nrow(est)` stocks have a beta below 1. The median beta is `r num(mkt_summary$median_beta[1])` on the ASX, `r num(mkt_summary$median_beta[2])` in Hong Kong and `r num(mkt_summary$median_beta[3])` in Singapore. Financials (banks, insurers, exchanges) sit above 1. Utilities, telecoms and health care sit well below, and so, perhaps surprisingly, do most resource and energy stocks.
+- **The market explains only part of the risk.** The median R² is `r pct(mkt_summary$median_r2[1], 0)` on the ASX, `r pct(mkt_summary$median_r2[2], 0)` in Hong Kong and `r pct(mkt_summary$median_r2[3], 0)` in Singapore. Most single-stock volatility is idiosyncratic, so beta describes only one slice of risk.
+- **Betas shifted after 2020, by sector.** China's three big state banks decoupled from the Hang Seng (beta roughly `r num(cn_banks_pre)` → `r num(cn_banks_post)`). All `r n_res` resource and energy names became less market-sensitive, and all four Australian major banks became more so. The median stock's beta moved by `r num(med_abs_shift)` between 2011–19 and 2020–26. For `r n_shift_bh` of `r nrow(stab)` stocks the change survives a false-discovery-rate correction.
+- **So what:** a cost-of-equity estimate should use a shrunk (Blume-adjusted) beta, quote a range, and say which window it came from. For the Chinese state banks, the full-sample beta is about `r pct(cn_full / cn_banks_post - 1, 0)` higher than the 2020–26 one. The betas here feed the WACC in Module 06.
+:::
+
+## Question
+
+The CAPM prices a stock's expected excess return off a single number, its beta against the market:
+
+$$
+r_{i,t} - r_{f,t} \;=\; \alpha_i + \beta_i\,(r_{m,t} - r_{f,t}) + \varepsilon_{i,t}.
+$$
+
+This module estimates that *market model* for large caps on the three main APAC exchanges. It asks three questions: how large and how precise the betas are, how much of each stock's risk the market explains, and whether the betas stay put. Whether beta is actually *priced* in the cross-section of returns is tested in Module 03.
+
+## Data
+
+```{r}
+#| label: tbl-sample
+#| tbl-cap: "Sample by market. Returns are monthly, in local currency, in excess of the local risk-free rate."
+
+rf_raw <- read_csv(file.path(data_dir, "rf_rates_raw.csv"), show_col_types = FALSE)
+mkt_stats <- panel |> distinct(market, month, mex, rf) |> group_by(market) |>
+  summarise(`Market excess return (p.a.)` = pct(12 * mean(mex)),
+            `Market volatility (p.a.)` = pct(sqrt(12) * sd(mex)),
+            `Mean risk-free (p.a.)` = pct(12 * mean(rf)), .groups = "drop")
+tibble(market = factor(names(market_cols), levels = names(market_cols)),
+       Stocks = as.integer(n_stock[names(market_cols)]),
+       `Market proxy` = c("SPDR S&P/ASX 200 ETF (STW)", "Tracker Fund of HK, Hang Seng (2800)",
+                          "SPDR Straits Times Index ETF (ES3)"),
+       `Risk-free rate` = c("1-month bank bills (RBA F1)", "1-month HIBOR (HKMA)",
+                            "SORA (MAS, via SingStat)")) |>
+  left_join(mkt_stats, by = "market") |>
+  rename(Market = market) |>
+  kable(align = "lrllrrr")
+```
+
+- **Stocks:** `r nrow(universe)` large caps (`r n_stock["ASX"]` ASX, `r n_stock["HKEX"]` HKEX, `r n_stock["SGX"]` SGX) across banks, other financials, resources, energy, property, utilities, telecoms, consumer and technology. Each has a complete monthly history from `r first_m` to `r last_m` (`r n_months` months). Returns are total returns from Yahoo Finance adjusted closes.
+- **Market proxies:** index-tracking ETFs rather than the price indices, because their adjusted prices include dividends. A price index would understate the market return by the dividend yield (about 3–4% a year on these markets).
+- **Risk-free rates:** one short rate per market, in the same currency as the returns. The rate published at the end of month *t*−1 is the risk-free return for month *t*. Hong Kong rates track US rates because of the HKD peg.
+- **Exclusions and data checks:** Hang Seng Bank (taken private by HSBC) has no price history, and Thai Beverage was dropped because Yahoo mis-adjusts its baht-denominated dividends (it shows +60% to +210% "returns" in dividend months). All remaining monthly moves above 35% were checked against known events.
+
+## Method
+
+For each market, the excess returns of its *N* stocks are stacked into a *T* × *N* matrix and estimated in one step,
+
+$$
+\mathbf{Y} = \mathbf{X}\mathbf{B} + \mathbf{E}, \qquad \mathbf{X} = [\,\mathbf{1},\; \mathbf{r}_m - \mathbf{r}_f\,], \qquad \hat{\mathbf{B}} = (\mathbf{X}'\mathbf{X})^{-1}\mathbf{X}'\mathbf{Y}.
+$$
+
+- **Standard errors** are Newey–West (Bartlett kernel, `r nw_lag` lags), $\widehat{\operatorname{Var}}(\hat\beta) = (\mathbf{X}'\mathbf{X})^{-1}\hat{\mathbf{S}}(\mathbf{X}'\mathbf{X})^{-1}$, allowing for heteroskedasticity and autocorrelation. The estimators are hand-written in [`R/models_linear.R`](https://github.com/kyanite03/apac-asset-pricing/blob/main/R/models_linear.R) and unit-tested against `lm()` and `sandwich::NeweyWest` to 10 decimal places ([`tests/`](https://github.com/kyanite03/apac-asset-pricing/tree/main/tests/testthat)).
+- **Multiple testing:** with `r nrow(est)` stocks, about `r round(0.05 * nrow(est))` would show "significant" alphas or beta shifts at 5% by chance alone. p-values are therefore also reported after a Benjamini–Hochberg false-discovery-rate correction.
+- **Stability** is tested with a dummy-interaction model, $r_i - r_f = a + b\,x + d_0\,\text{post} + d_1\,(x \times \text{post}) + \varepsilon$, where $x$ is the market excess return and *post* = 1 from January 2020. The test is the general linear hypothesis $H_0\!: d_1 = 0$ with HAC covariance. Rolling 60-month betas show the path between the two halves.
+
+## Results
+
+### Betas: mostly below 1, with clear sector patterns
+
+```{r}
+#| label: fig-betas
+#| fig-cap: "Market-model beta with 95% Newey–West confidence interval, by market. Grey line: β = 1."
+#| fig-height: 9
+#| fig-width: 9
+
+p_beta <- est |>
+  mutate(label = paste0(ticker, "  ", name), label = fct_reorder(label, beta)) |>
+  ggplot(aes(beta, label, colour = market)) +
+  geom_vline(xintercept = 1, colour = "#c3c2b7", linewidth = 0.4) +
+  geom_errorbarh(aes(xmin = beta_lo, xmax = beta_hi), height = 0, linewidth = 0.6, alpha = 0.6) +
+  geom_point(size = 2.2) +
+  facet_grid(market ~ ., scales = "free_y", space = "free_y") +
+  scale_colour_manual(values = market_cols, guide = "none") +
+  labs(title = "Most APAC large caps are less market-sensitive than their index",
+       subtitle = sprintf("CAPM beta vs local total-return index, monthly, %s–%s", first_m, last_m),
+       x = "Beta (95% Newey–West CI)", y = NULL,
+       caption = "Local-currency excess returns. Market proxies: STW (ASX 200), 2800.HK (Hang Seng), ES3 (STI).") +
+  theme_report() +
+  theme(panel.grid.major.y = element_blank(), strip.text.y = element_text(angle = 0, face = "bold"))
+dir.create("figures", showWarnings = FALSE)
+ggsave("figures/key_chart.png", p_beta, width = 9, height = 9, dpi = 200, bg = "white")
+p_beta
+```
+
+```{r}
+#| label: tbl-sector
+#| tbl-cap: "Median beta and median R² by sector (all three markets pooled)."
+
+est |> group_by(Sector = sector) |>
+  summarise(Stocks = n(), `Median beta` = num(median(beta)), `Median R²` = pct(median(r2), 0),
+            `Median idiosyncratic vol (p.a.)` = pct(median(idio_vol), 0), .groups = "drop") |>
+  arrange(desc(`Median beta`)) |>
+  kable(align = "lrrrr")
+```
+
+Financials have the highest betas: banks, insurers and exchange operators, whose earnings scale with market activity and which make up a large share of each index. Utilities, telecoms and health care, with regulated or defensive cash flows, have the lowest (CLP Holdings: `r num(est$beta[est$symbol == "0002.HK"])`; CSL: `r num(est$beta[est$symbol == "CSL.AX"])`).
+
+Resources and energy are the interesting case. Their betas are mostly *below* 1 and their R² is low (median `r pct(median(est$r2[est$sector %in% c("Materials", "Energy")]), 0)`), even though BHP and RIO are among the ASX's largest stocks. Their returns are driven by commodity prices, which only partly move with the local market. Module 08 models that oil and iron-ore exposure directly.
+
+### Alphas: indistinguishable from zero once multiple testing is respected
+
+```{r}
+#| label: tbl-alpha
+#| tbl-cap: "Stocks with the largest absolute alphas. Alpha is annualised; p-values use Newey–West errors, before and after Benjamini–Hochberg correction across all stocks."
+
+est |> arrange(p_alpha) |> head(8) |>
+  transmute(Stock = paste0(ticker, " ", name), Market = market,
+            `Alpha (p.a.)` = pct(12 * alpha), `SE (p.a.)` = pct(12 * se_alpha),
+            p = num(p_alpha, 3), `p (BH)` = num(p_alpha_bh, 3)) |>
+  kable(align = "llrrrr")
+```
+
+`r n_alpha_raw` of `r nrow(est)` stocks have an alpha significant at 5% on its own. After the false-discovery-rate correction, `r n_alpha_bh` remain. The typical standard error on an annual alpha is about `r pct(median(12 * est$se_alpha), 0)`, so an alpha would need to be roughly ±`r pct(1.96 * median(12 * est$se_alpha), 0)` a year to register. "No significant alpha" here mostly means "15 years of monthly data cannot tell". The joint test of all alphas, together with the multi-factor alternatives, is in Module 03.
+
+### Stability: betas drift, and sometimes jump
+
+```{r}
+#| label: fig-rolling
+#| fig-cap: "Rolling 60-month betas for selected stocks. Each point uses the previous five years of monthly data. Sharp steps occur when a single extreme month (such as March 2020) enters or leaves the window."
+#| fig-height: 5.5
+#| fig-width: 9
+
+pick <- c("CBA.AX", "BHP.AX", "CSL.AX", "0700.HK", "0005.HK", "0883.HK", "D05.SI", "C6L.SI", "Z74.SI")
+roll |> filter(symbol %in% pick) |>
+  mutate(lab = paste0(sub("\\.(AX|HK|SI)$", "", symbol), " ", name),
+         lab = factor(lab, levels = unique(lab[order(match(symbol, pick))]))) |>
+  ggplot(aes(month, beta, colour = market)) +
+  geom_hline(yintercept = 1, colour = "#c3c2b7", linewidth = 0.4) +
+  geom_line(linewidth = 0.8) +
+  facet_wrap(~ lab, ncol = 3) +
+  scale_colour_manual(values = market_cols) +
+  labs(title = "Rolling betas swing widely, even for the largest companies",
+       x = NULL, y = "60-month rolling beta") +
+  theme_report()
+```
+
+```{r}
+#| label: tbl-stability
+#| tbl-cap: "Stocks whose beta changed significantly between 2011–19 and 2020–26 (Newey–West Wald test, Benjamini–Hochberg adjusted p < 0.05)."
+
+bind_rows(shift_up, shift_dn) |>
+  left_join(universe |> select(ticker, name), by = c("symbol" = "ticker")) |>
+  transmute(Stock = paste0(ticker, " ", name), Market = market,
+            `Beta 2011–19` = num(beta_pre), `Beta 2020–26` = num(beta_post),
+            Change = sprintf("%+.2f", d_beta), `p (BH)` = num(p_change_bh, 3)) |>
+  kable(align = "llrrrr")
+```
+
+The shifts cluster by sector, which suggests real economic change rather than noise:
+
+- **Chinese state banks** (CCB, ICBC, Bank of China) went from moving *more* than the Hang Seng to moving about half as much. A plausible reading: after 2020 the index was driven by the Chinese tech and property sell-offs, while the state banks traded as policy-supported, high-dividend stocks.
+- **Resources and energy:** all `r n_res` such names have lower betas in 2020–26. Commodity prices (the 2021–22 iron-ore and energy spikes) drove their returns more than the domestic market did.
+- **Australian banks** all became more market-sensitive. Rate-cycle news after COVID moved the whole ASX, and the banks are among its most rate-sensitive large caps.
+
+The ranking of stocks by beta is only moderately persistent (Spearman correlation `r num(rank_cor)` between the two halves). The median absolute change is `r num(med_abs_shift)`, and the median stock's 60-month rolling beta ranged over `r num(median(roll_range$range))` across the sample. At a 6% market risk premium, a 0.3 change in beta moves the CAPM cost of equity by 1.8 percentage points. In a perpetuity valuation with 3% growth and a 9% discount rate, that lowers the value by almost a quarter (from 1/0.06 to 1/0.078 times the cash flow).
+
+### Simple vs full specification: does the set-up matter?
+
+An earlier version of this analysis used a quick specification: the market was an equal-weighted average of the sample stocks themselves (leave-one-out, so no stock is regressed on itself), and the risk-free rate was a constant 2.4% a year. Re-running that simple model on the same 51 stocks shows what the fuller set-up (a cap-weighted total-return index and published local rates) changes.
+
+```{r}
+#| label: simple-vs-full
+#| code-summary: "Simple specification: leave-one-out equal-weight market, constant risk-free rate"
+
+rf_const <- 0.024 / 12
+simple <- panel |>
+  group_by(market, month) |>
+  mutate(mkt_loo = (sum(ret) - ret) / (n() - 1)) |>
+  ungroup() |>
+  mutate(ex_s = ret - rf_const, mex_s = mkt_loo - rf_const) |>
+  group_by(market, symbol) |>
+  group_modify(function(d, key) {
+    fit <- ols_matrix(d$ex_s, cbind(1, d$mex_s))
+    tibble(beta_simple = fit$coef[2], alpha_simple = fit$coef[1],
+           r2_simple = 1 - sum(fit$resid^2) / sum((d$ex_s - mean(d$ex_s))^2))
+  }) |> ungroup() |>
+  inner_join(est |> select(symbol, beta, alpha, r2, sector), by = "symbol")
+
+cmp <- simple |> group_by(Market = market) |>
+  summarise(`Median beta, simple` = num(median(beta_simple)),
+            `Median beta, full` = num(median(beta)),
+            `Median R², simple` = pct(median(r2_simple), 0),
+            `Median R², full` = pct(median(r2), 0),
+            `Beta correlation` = num(cor(beta_simple, beta)),
+            `Largest beta gap` = sprintf("%s (%+.2f)",
+                                         sub("\\.(AX|HK|SI)$", "", symbol[which.max(abs(beta - beta_simple))]),
+                                         (beta - beta_simple)[which.max(abs(beta - beta_simple))]),
+            .groups = "drop")
+beta_cor_all <- cor(simple$beta_simple, simple$beta)
+alpha_gap <- median(abs(12 * (simple$alpha - simple$alpha_simple)))
+kable(cmp, align = "lrrrrrl",
+      caption = "Market-model estimates under the simple and full specifications, same 51 stocks and months.")
+```
+
+For betas, the simple model holds up well. The two specifications give betas correlated at `r num(beta_cor_all)`, and no stock's beta moves by more than `r num(max(abs(simple$beta - simple$beta_simple)))`, in either direction. **The bigger difference is in alphas.** A constant risk-free rate misstates each month's excess return when actual rates ranged from near zero (2020–21) to over 5% (2023), and that shifts alphas by a median of `r pct(alpha_gap)` a year. The simple model is fine for ranking stocks by market sensitivity. It is not fine for judging whether a stock earned more than the CAPM required, which is the question Module 03 asks.
+
+### Beta inputs for valuation (used in Module 06)
+
+```{r}
+#| label: tbl-blume
+#| tbl-cap: "Raw and Blume-adjusted betas for the names valued in later modules. The Blume adjustment, β_adj = ⅔β + ⅓, shrinks noisy estimates toward the cross-sectional mean of about 1."
+
+val_names <- c("0700.HK", "0939.HK", "1398.HK", "3988.HK", "0005.HK", "D05.SI", "O39.SI", "U11.SI",
+               "0883.HK", "0857.HK", "0386.HK", "WDS.AX", "STO.AX")
+est |> filter(symbol %in% val_names) |> arrange(match(symbol, val_names)) |>
+  left_join(stab |> select(symbol, beta_post), by = "symbol") |>
+  transmute(Stock = paste0(ticker, " ", name), `Full-sample beta` = num(beta),
+            `95% CI` = sprintf("%.2f–%.2f", beta_lo, beta_hi),
+            `2020–26 beta` = num(beta_post), `Blume-adjusted` = num(beta_blume)) |>
+  kable(align = "lrrrr")
+
+write_csv(est |> left_join(stab |> select(symbol, beta_pre, beta_post, p_change, p_change_bh), by = "symbol") |>
+            select(symbol, name, market, sector, alpha, se_alpha, beta, se_beta, beta_blume,
+                   beta_pre, beta_post, p_change_bh, r2, idio_vol),
+          file.path(data_dir, "betas_module01.csv"))
+```
+
+## Limitations
+
+- **Survivorship.** These are today's large caps, chosen with hindsight. Firms that shrank, were taken over or delisted (Hang Seng Bank is one) are missing, which biases average returns, and so alphas, upward. Betas are less affected.
+- **Market proxies.** Each index ETF tracks a cap-weighted index, which is the textbook choice. But the Hang Seng is concentrated in financials and Chinese tech, so Hong Kong betas are relative to that particular mix. ETF fees (about 0.05–0.10% a year) slightly lower the measured market return.
+- **Local currency.** Each market is analysed in its own currency against its own risk-free rate, which is right for a local investor. An AUD-based investor holding HK or SG stocks also bears currency risk, which is not modelled here.
+- **Yahoo data.** Adjusted closes can be wrong around corporate actions (Thai Beverage was excluded for this). The remaining data passed a screen for implausible moves, but this is not a vendor-grade database.
+
+## References
+
+- Blume, M. E. (1971). On the assessment of risk. *Journal of Finance, 26*(1), 1–10.
+- Benjamini, Y., & Hochberg, Y. (1995). Controlling the false discovery rate. *Journal of the Royal Statistical Society B, 57*(1), 289–300.
+- Newey, W. K., & West, K. D. (1987). A simple, positive semi-definite, heteroskedasticity and autocorrelation consistent covariance matrix. *Econometrica, 55*(3), 703–708.
+- Sharpe, W. F. (1964). Capital asset prices: A theory of market equilibrium under conditions of risk. *Journal of Finance, 19*(3), 425–442.
