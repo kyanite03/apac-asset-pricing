@@ -13,6 +13,7 @@ suppressPackageStartupMessages({ library(tidyverse); library(knitr); library(san
 source("../../R/models_linear.R")
 source("../../R/data_factors.R")
 source("../../R/plots.R")
+source("../../R/data_commodities.R")
 
 data_dir <- "../../data/processed"
 o <- read_csv(file.path(data_dir, "oil_monthly.csv"), show_col_types = FALSE) |> arrange(month)
@@ -24,6 +25,8 @@ mk <- read_csv(file.path(data_dir, "market_monthly.csv"), show_col_types = FALSE
 rf <- read_csv(file.path(data_dir, "rf_monthly.csv"), show_col_types = FALSE)
 fx <- read_csv(file.path(data_dir, "fx_monthly.csv"), show_col_types = FALSE)
 ff <- get_french_apac("../../data/raw/french")
+sg_ipi <- read_csv(file.path(data_dir, "sg_import_prices.csv"), show_col_types = FALSE)
+ema_file <- "../../data/raw/ema/SES_tidy.xlsx"
 nw <- function(m) NeweyWest(m, lag = 4, prewhite = FALSE)
 
 o <- o |> mutate(
@@ -77,6 +80,76 @@ pred_tbl <- tibble(term = names(coef(pred))[-1], est = coef(pred)[-1], t = coef(
 spread_stats <- o |> filter(month < as.Date("2026-01-01")) |> summarise(m = mean(spread), s = sd(spread))
 spread_2026 <- o |> filter(month >= as.Date("2026-01-01"))
 spread_max <- spread_2026 |> slice_max(spread, n = 1)
+```
+
+```{r}
+#| label: singapore
+#| code-summary: "Singapore: EMA energy statistics, bunker sales, and SingStat import prices"
+
+# EMA Singapore Energy Statistics (annual, ktoe)
+t11 <- read_ema_ses(ema_file, "T1.1"); t12 <- read_ema_ses(ema_file, "T1.2")
+t13 <- read_ema_ses(ema_file, "T1.3"); t29 <- read_ema_ses(ema_file, "T2.9")
+sg_annual <- full_join(
+  t11 |> filter(energy_products == "Crude Oil") |> group_by(year) |> summarise(crude_imports = sum(value_ktoe)),
+  t12 |> filter(energy_products == "Petroleum Products") |> group_by(year) |> summarise(product_exports = sum(value_ktoe)),
+  by = "year") |>
+  full_join(t29 |> filter(energy_flow == "Refinery Input") |> group_by(year) |> summarise(refinery_input = sum(value_ktoe)), by = "year") |>
+  full_join(t11 |> filter(sub_products == "Fuel Oil") |> transmute(year, fuel_oil_imports = value_ktoe), by = "year") |>
+  full_join(t29 |> filter(energy_flow == "Refinery Output", products == "Heavy Distillates & Residuum") |>
+              transmute(year, heavy_output = value_ktoe), by = "year") |>
+  full_join(t13 |> filter(energy_products != "Natural Gas") |> group_by(year) |> summarise(stock_change = sum(value_ktoe)), by = "year") |>
+  arrange(year)
+ses_years <- range(sg_annual$year[!is.na(sg_annual$product_exports)])
+ex_peak <- sg_annual |> filter(!is.na(product_exports)) |> slice_max(product_exports, n = 1)
+ex_trough <- sg_annual |> filter(year > ex_peak$year, !is.na(product_exports)) |> slice_min(product_exports, n = 1)
+ex_last <- sg_annual |> filter(!is.na(product_exports)) |> slice_max(year, n = 1)
+ri <- sg_annual |> filter(!is.na(refinery_input))
+ri_first <- ri |> slice_min(year, n = 1); ri_last <- ri |> slice_max(year, n = 1)
+
+# Bunker sales (MPA, monthly -> calendar years) vs fuel-oil supply (EMA)
+bunker_yr <- o |> mutate(year = lubridate::year(month)) |> group_by(year) |>
+  summarise(bunker = sum(sg_bunker_sales_kt), n = n(), .groups = "drop") |> filter(n == 12)
+bk <- bunker_yr |> inner_join(sg_annual, by = "year") |> filter(!is.na(fuel_oil_imports), !is.na(heavy_output)) |>
+  mutate(fo_supply = fuel_oil_imports + heavy_output)
+g <- function(x) diff(log(x))
+bk_growth_cor <- cor(g(bk$bunker), g(bk$fo_supply))
+bk_years <- range(bk$year)
+
+# Stock change vs annual Brent change
+yr_price <- o |> mutate(year = lubridate::year(month)) |> group_by(year) |>
+  summarise(brent = mean(brent_price_avg), n = n(), .groups = "drop") |> filter(n == 12) |>
+  mutate(d_brent = brent / lag(brent) - 1)
+sc <- sg_annual |> inner_join(yr_price, by = "year") |> filter(!is.na(stock_change), !is.na(d_brent))
+sc_test <- cor.test(sc$stock_change, sc$d_brent)
+
+# SingStat import price indices (SGD, 2023 = 100) converted to USD with month-end SGD rates
+usd_sgd <- fx |> filter(market == "SGX") |> arrange(month) |> transmute(month, usd_sgd = cumprod(1 + fx))
+ip <- sg_ipi |> select(month, code, value) |> pivot_wider(names_from = code, values_from = value) |>
+  inner_join(usd_sgd, by = "month") |>
+  inner_join(o |> select(month, brent_price_avg, dubai_wb_avg), by = "month") |>
+  mutate(crude_usd = ipi_crude * usd_sgd, products_usd = ipi_products * usd_sgd) |> arrange(month)
+lr <- ip |> transmute(month, crude = c(NA, diff(log(crude_usd))), products = c(NA, diff(log(products_usd))),
+                      dubai = c(NA, diff(log(dubai_wb_avg))), brent = c(NA, diff(log(brent_price_avg)))) |> drop_na()
+ip_cor <- tibble(series = c("Crude petroleum", "Refined products"),
+                 dubai = c(cor(lr$crude, lr$dubai), cor(lr$products, lr$dubai)),
+                 brent = c(cor(lr$crude, lr$brent), cor(lr$products, lr$brent)))
+hr <- lm(crude ~ dubai + brent, lr); V_hr <- nw(hr)
+hr_t <- coef(hr) / sqrt(diag(V_hr))
+cdiff <- c(0, 1, -1); p_eq <- 2 * pnorm(-abs(drop(cdiff %*% coef(hr)) / sqrt(drop(t(cdiff) %*% V_hr %*% cdiff))))
+base26 <- ip |> filter(month == as.Date("2025-12-01"))
+y26 <- ip |> filter(month >= as.Date("2025-12-01")) |>
+  transmute(month, `Singapore crude import price` = 100 * crude_usd / base26$crude_usd,
+            `Singapore refined-product import price` = 100 * products_usd / base26$products_usd,
+            Dubai = 100 * dubai_wb_avg / base26$dubai_wb_avg, Brent = 100 * brent_price_avg / base26$brent_price_avg)
+gap_dubai <- mean(abs(y26$`Singapore crude import price` - y26$Dubai)[-1])
+gap_brent <- mean(abs(y26$`Singapore crude import price` - y26$Brent)[-1])
+peak26 <- y26 |> slice_max(`Singapore crude import price`, n = 1)
+peak26_pct <- peak26$`Singapore crude import price` - 100
+n26 <- nrow(y26) - 1
+peak_prod <- y26 |> slice_max(`Singapore refined-product import price`, n = 1)
+peak_prod_pct <- peak_prod$`Singapore refined-product import price` - 100
+n_above_brent <- sum((y26$`Singapore crude import price` > y26$Brent)[-1])
+n_above_dubai <- sum((y26$`Singapore crude import price` > y26$Dubai)[-1])
 ```
 
 ```{r}
@@ -162,7 +235,7 @@ cor_mkt_aud <- cor(Fm$MKT, Fm$aud)
 
 ::: {.callout-tip title="Answer first"}
 - **Australia's fuel supply now runs through Asian refineries.** Domestic refinery throughput halved after the 2021 closures (`r round(ref_pre)` → `r round(ref_post)` megalitres a month, 2015–19 vs 2023–26), and refined-product imports rose `r pct(imp_post / imp_pre - 1, 0)`. In `r last_full_year`, `r pct(asia_share, 0)` of those imports came from Asian refiners: Singapore (`r pct(sh("Singapore", last_full_year), 0)`), South Korea (`r pct(sh("Korea, Republic of (South)", last_full_year), 0)`), Malaysia (`r pct(sh("Malaysia", last_full_year), 0)`) and others. Stock cover has averaged `r round(mean(cover$aus_iea_days_cover))` IEA days, against a 90-day obligation met in only `r n_cover90` of `r nrow(cover)` months.
-- **Asia's crude benchmark broke away from Brent in 2026.** The Brent–Dubai spread, normally `r num(spread_stats$m, 1)` dollars a barrel, reached `r num(spread_max$spread, 1)` dollars in `r format(spread_max$month, "%B %Y")` during the 2026 oil shock.
+- **Asia's crude benchmark broke away from Brent in 2026, but Singapore's import bill did not.** The Brent–Dubai spread, normally `r num(spread_stats$m, 1)` dollars a barrel, reached `r num(spread_max$spread, 1)` dollars in `r format(spread_max$month, "%B %Y")`. Over 2011–26, Singapore's actual crude import prices (SingStat) track Dubai most closely, yet in the 2026 shock they rose roughly in line with Brent, far more than Dubai (up `r round(peak26_pct)`% by `r format(peak26$month, "%B %Y")`). Asian buyers paid for the spike regardless of benchmark.
 - **APAC energy stocks are exposed to oil, in the expected order.** Monthly oil betas (controlling for each home market) run from `r num(max(prod_b$b_oil))` for upstream producers down to `r num(eres$b_oil[eres$symbol == "0386.HK"])` for refining-heavy Sinopec. Whether they react more to oil rises or falls is not robust. The answer flips with how returns are measured and with a few extreme months.
 - **Regional fundamentals add little beyond the price.** Singapore bunker demand, Australian stock cover and the Brent–Dubai spread neither predict oil returns (joint p = `r num(p_pred)`) nor explain energy-stock returns once Brent is controlled for (no stock significant after a multiple-testing correction).
 - **Oil exposure is not rewarded.** Across all 51 stocks, the Fama–MacBeth price of oil risk is `r pct(oil_lam$estimate, 2)` a month (Shanken t = `r num(oil_lam$t_shanken)`). **So what:** in APAC equities, oil is a risk to hedge or diversify, not a source of expected return. Investors are not paid for holding it.
@@ -188,11 +261,13 @@ tribble(~Series, ~Source, ~Frequency, ~Licence,
   "Dubai crude, Brent, iron ore", "World Bank Commodity Price Data (Pink Sheet)", "Monthly average", "CC BY 4.0",
   "Australian refining, imports by source, stocks, IEA cover, sales", "Australian Petroleum Statistics, DCCEEW (data.gov.au)", "Monthly", "CC BY 3.0 AU",
   "Singapore bunker (marine fuel) sales", "Maritime and Port Authority of Singapore (data.gov.sg)", "Monthly", "Singapore Open Data Licence",
+  "Singapore import price indices (crude, refined products)", "SingStat Table Builder (M213251, M213261)", "Monthly", "Singapore Open Data Licence",
+  "Singapore imports, exports, stock changes, refinery flows", "Energy Market Authority, Singapore Energy Statistics 2026", "Annual", "EMA terms (data not redistributed)",
   "Equity returns", "Yahoo Finance (as Module 01); Ampol, Viva Energy and Beach Energy added", "Monthly", "–") |>
   kable()
 ```
 
-The two oil price sources were compared before use. Like-for-like monthly averages from FRED and the World Bank agree to within about 50 cents on average. Month-end prices (FRED) are used for returns, because they line up in time with month-end stock returns; averaged prices are smoother and partly lagged. Australia's imports by source were checked against the national total: the country rows sum to the total to within 0.05% in every month. Weekly Singapore onshore oil inventories, the region's most-watched stock data, are published by Enterprise Singapore but were not available in a downloadable form, so Singapore's bunker sales (a physical-volume demand indicator) are used instead.
+The two oil price sources were compared before use. Like-for-like monthly averages from FRED and the World Bank agree to within about 50 cents on average. Month-end prices (FRED) are used for returns, because they line up in time with month-end stock returns; averaged prices are smoother and partly lagged. Australia's imports by source were checked against the national total: the country rows sum to the total to within 0.05% in every month. Weekly Singapore onshore oil inventories, the region's most-watched stock data, are published by Enterprise Singapore but were not available in a downloadable form. EMA's annual stock changes and the monthly bunker sales are used instead. The EMA workbook is read from a local copy and is not redistributed with this project.
 
 ## Results
 
@@ -269,7 +344,66 @@ ggplot(bdat, aes(month, value, colour = name)) +
   labs(x = NULL, y = NULL) + theme_report()
 ```
 
-Dubai crude, the Middle East grade that supplies most of Asia, normally trades a little below Brent: the spread averaged `r num(spread_stats$m, 1)` dollars a barrel (standard deviation `r num(spread_stats$s, 1)`) before 2026. In 2026 it blew out, reaching `r num(spread_max$spread, 1)` dollars in `r format(spread_max$month, "%B %Y")`, so Asian buyers of Middle East crude and holders of Brent-linked assets had very different experiences of the same shock.
+Dubai crude, the Middle East grade that supplies most of Asia, normally trades a little below Brent: the spread averaged `r num(spread_stats$m, 1)` dollars a barrel (standard deviation `r num(spread_stats$s, 1)`) before 2026. In 2026 it blew out, reaching `r num(spread_max$spread, 1)` dollars in `r format(spread_max$month, "%B %Y")`. On benchmark prices alone, Asian buyers of Middle East crude would seem to have escaped much of the shock. Singapore's actual import prices, below, show they did not.
+
+### Singapore: Asia's oil hub
+
+Singapore refines imported crude and re-exports fuel across Asia and to Australia, and it is the world's largest marine-fuel (bunkering) port. Three Singapore sources are used here: the Energy Market Authority's annual *Singapore Energy Statistics* (imports, exports, stock changes and refinery flows, `r ses_years[1]`–`r ses_years[2]`), the Maritime and Port Authority's monthly bunker sales, and SingStat's monthly import price indices for crude oil and refined products.
+
+```{r}
+#| label: fig-sg-flows
+#| fig-cap: "Singapore's crude oil imports, refinery input and petroleum-product exports (thousand tonnes of oil equivalent per year)."
+#| fig-width: 8.5
+#| fig-height: 4
+
+sg_annual |> select(year, `Crude oil imports` = crude_imports, `Refinery input` = refinery_input,
+                    `Petroleum-product exports` = product_exports) |>
+  pivot_longer(-year) |> filter(!is.na(value)) |>
+  ggplot(aes(year, value / 1000, colour = name)) +
+  geom_line(linewidth = 0.9) + geom_point(size = 1.4) +
+  scale_colour_manual(values = c(`Crude oil imports` = "#2a78d6", `Refinery input` = "#1baf7a",
+                                 `Petroleum-product exports` = "#eb6834")) +
+  scale_y_continuous(limits = c(0, NA)) +
+  labs(x = NULL, y = "Million tonnes of oil equivalent",
+       caption = "Energy Market Authority, Singapore Energy Statistics 2026.") +
+  theme_report()
+```
+
+- **The hub has shrunk since its peak.** Singapore's petroleum-product exports peaked at `r round(ex_peak$product_exports / 1000, 1)` million tonnes of oil equivalent in `r ex_peak$year`, fell `r pct(1 - ex_trough$product_exports / ex_peak$product_exports, 0)` to `r ex_trough$year`, and have partly recovered (`r round(ex_last$product_exports / 1000, 1)` million in `r ex_last$year`). Refinery input went from `r round(ri_first$refinery_input / 1000, 1)` million in `r ri_first$year` to `r round(ri_last$refinery_input / 1000, 1)` million in `r ri_last$year`. This matches Australia's falling Singapore share above: Australia now buys more of its fuel from refiners in Korea, Malaysia, Taiwan, China and India.
+- **Bunker demand moves with fuel-oil supply year to year.** Annual growth in MPA bunker sales correlates `r num(bk_growth_cor)` with growth in fuel-oil imports plus heavy refinery output (`r bk_years[1]`–`r bk_years[2]`). The long-run trends differ: bunker sales kept rising while fuel-oil supply fell, plausibly as ships switched to lower-sulphur blends after the 2020 IMO rules.
+- **Stock changes carry no price signal.** Singapore's annual oil stock changes are uncorrelated with the change in Brent (r = `r num(sc_test$estimate)`, p = `r num(sc_test$p.value)`, `r nrow(sc)` years), in line with the Australian result below.
+
+**What Singapore actually pays.** SingStat's import price indices measure the landed price of what Singapore imports. Converted to US dollars, they give a direct test of which benchmark describes Asia's oil costs.
+
+```{r}
+#| label: tbl-ipi
+#| tbl-cap: "Correlation of monthly changes in Singapore's import prices (USD) with Dubai and Brent, 2011–2026."
+
+ip_cor |> transmute(`Singapore import price index` = series, `vs Dubai` = num(dubai, 3), `vs Brent` = num(brent, 3)) |>
+  kable(align = "lrr")
+```
+
+Both benchmarks track Singapore's import costs closely, and Dubai slightly more so. When both are included in one regression, Dubai carries the weight (coefficient `r num(coef(hr)[["dubai"]])`, t = `r num(hr_t[["dubai"]], 1)`; Brent `r num(coef(hr)[["brent"]])`, t = `r num(hr_t[["brent"]], 1)`; R² = `r num(summary(hr)$r.squared)`). That fits Singapore's reliance on Middle East crude, although the two benchmarks are too correlated for the difference to be statistically decisive (p = `r num(p_eq)` for equal coefficients).
+
+```{r}
+#| label: fig-ipi-2026
+#| fig-cap: "The 2026 oil shock: Singapore's import prices (USD) against Dubai and Brent, indexed to December 2025 = 100."
+#| fig-width: 8.5
+#| fig-height: 4.2
+
+y26 |> pivot_longer(-month) |>
+  ggplot(aes(month, value, colour = name, linetype = name)) +
+  geom_hline(yintercept = 100, colour = "#c3c2b7") +
+  geom_line(linewidth = 0.9) + geom_point(size = 1.5) +
+  scale_colour_manual(values = c(`Singapore crude import price` = "#0b0b0b", `Singapore refined-product import price` = "#52514e",
+                                 Dubai = "#eb6834", Brent = "#2a78d6")) +
+  scale_linetype_manual(values = c(`Singapore crude import price` = "solid", `Singapore refined-product import price` = "dashed",
+                                   Dubai = "solid", Brent = "solid")) +
+  labs(x = NULL, y = "Index (Dec 2025 = 100)", caption = "SingStat Import Price Index (SITC 333, 334), converted to USD; World Bank; FRED.") +
+  theme_report() + theme(legend.position = "top")
+```
+
+The 2026 shock breaks the long-run pattern. Singapore's crude import prices rose far more than Dubai and roughly in line with Brent, peaking `r round(peak26_pct)`% above December 2025 in `r format(peak26$month, "%B %Y")`. They were above Dubai in `r n_above_dubai` of `r n26` months of 2026 and above Brent in `r n_above_brent`. Refined-product import prices rose most of all, peaking `r round(peak_prod_pct)`% above December 2025 in `r format(peak_prod$month, "%B %Y")`. Across 2026 they stayed closer to Brent (average gap `r num(gap_brent, 1)` index points) than to Dubai (`r num(gap_dubai, 1)`). The data cannot say why. Two plausible reasons are that the index is measured on a landed basis, so it includes freight and insurance costs that typically jump in a supply shock, and that refiners may have switched to Atlantic-basin crude priced off Brent. Either way, the cheaper Dubai benchmark did not translate into cheaper oil for Asia's main hub.
 
 ### Do regional fundamentals predict oil?
 
@@ -349,6 +483,7 @@ Stocks differ in their oil exposure (betas range from `r num(min(B4[, "oil"]))` 
 - **One country's fundamentals.** Australia's petroleum statistics are unusually detailed and free, but Australia is a price-taker. Chinese, Japanese and Korean refinery runs and stocks would be more informative about regional demand and are not freely available in this form.
 - **No refining margins.** Singapore's benchmark refining margins and product cracks are commercial data. The refiners' oil betas therefore mix the effects of crude prices and margins, which often move together.
 - **Monthly data, global price.** Monthly returns are too coarse to capture intra-month timing, and the Brent close (London) and Asian closes do not overlap. Weekly returns would address this at the cost of noisier fundamentals.
+- **Singapore data are annual or price-based.** EMA's energy statistics are annual (14–21 observations), and SingStat's import prices are indices, not volumes, so the Singapore tests have little statistical power.
 - **Viva Energy** has only `r eres$months[eres$symbol == "VEA.AX"]` months of history (listed 2018).
 - **Survivor sample and low power** in the pricing test, as in Modules 03 and 04.
 
@@ -357,5 +492,7 @@ Stocks differ in their oil exposure (betas range from `r num(min(B4[, "oil"]))` 
 - Chen, N.-F., Roll, R., & Ross, S. A. (1986). Economic forces and the stock market. *Journal of Business, 59*(3), 383–403.
 - Department of Climate Change, Energy, the Environment and Water. *Australian Petroleum Statistics*. data.gov.au.
 - Maritime and Port Authority of Singapore. *Bunker Sales Total, Monthly*. data.gov.sg.
+- Energy Market Authority. *Singapore Energy Statistics 2026*.
+- Singapore Department of Statistics. *Import Price Index by Commodity*, Table Builder M213251 and M213261.
 - World Bank. *Commodity Price Data (The Pink Sheet)*, November 2026 update.
 - U.S. Energy Information Administration, via Federal Reserve Bank of St. Louis (FRED): DCOILBRENTEU, DCOILWTICO.

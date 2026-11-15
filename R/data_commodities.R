@@ -37,3 +37,31 @@ get_fred_monthly <- function(series_id, from = "2010-01-01") {
     dplyr::summarise(price_end = value[which.max(date)], price_avg = mean(value),
                      n_days = dplyr::n(), .groups = "drop")
 }
+
+#' One series from SingStat Table Builder (no key needed).
+#' Singapore Open Data Licence. Monthly keys like "2026 Sep" become first-of-month dates.
+#' @param resource_id e.g. "M213261" (Import Price Index by 3-digit SITC group)
+#' @param series_no   e.g. "333" (crude petroleum)
+get_singstat_series <- function(resource_id, series_no) {
+  url <- sprintf("https://tablebuilder.singstat.gov.sg/api/table/tabledata/%s?seriesNoORrowNo=%s", resource_id, series_no)
+  js <- jsonlite::fromJSON(url, simplifyVector = FALSE)
+  rows <- js$Data$row
+  if (!length(rows)) stop("no SingStat series ", resource_id, " / ", series_no)
+  r <- rows[[1]]
+  vals <- vapply(r$columns, function(c) as.character(c$value), "")
+  keys <- vapply(r$columns, function(c) as.character(c$key), "")
+  tibble::tibble(month = as.Date(paste("01", keys), "%d %Y %b"),
+                 value = suppressWarnings(as.numeric(vals)),
+                 series = r$rowText, resource_id = resource_id, series_no = series_no,
+                 data_last_updated = js$Data$dataLastUpdated) |>
+    dplyr::filter(!is.na(month), !is.na(value))
+}
+
+#' One table from EMA's Singapore Energy Statistics tidy workbook (annual, ktoe).
+#' The workbook (SES_tidy.xlsx) is downloaded manually from EMA and kept in
+#' gitignored data/raw/ema/; column names are trimmed.
+read_ema_ses <- function(path, sheet) {
+  d <- readxl::read_excel(path, sheet = sheet)
+  names(d) <- trimws(names(d))
+  d
+}

@@ -7,9 +7,13 @@
 #   World Bank Pink Sheet (CC BY 4.0): Dubai crude, Brent, WTI, iron ore monthly averages
 #   Australian Petroleum Statistics, DCCEEW via data.gov.au (CC BY 3.0 AU): refining, imports by source, stocks, cover
 #   Maritime and Port Authority of Singapore via data.gov.sg (Singapore Open Data Licence): bunker sales
+#   SingStat Table Builder (Singapore Open Data Licence): import price indices for crude and refined petroleum
 #   Yahoo Finance: monthly total returns for energy names not in the core universe (Ampol, Viva Energy, Beach Energy)
 #
-# Writes data/processed/oil_monthly.csv, aus_fuel_imports_by_source.csv, oil_equities_extra_returns.csv
+# Writes data/processed/oil_monthly.csv, aus_fuel_imports_by_source.csv, oil_equities_extra_returns.csv,
+#   sg_import_prices.csv
+# EMA Singapore Energy Statistics (annual) is read by Module 08 directly from data/raw/ema/SES_tidy.xlsx
+#   (download manually from EMA; reuse terms unconfirmed, so it is not redistributed).
 
 suppressPackageStartupMessages({ library(dplyr); library(tidyr); library(readr) })
 source("R/data_prices.R")
@@ -78,6 +82,14 @@ oil <- fred |>
   filter(month >= as.Date(from), month <= as.Date(to)) |>
   arrange(month)
 
+# ---- Singapore import price indices (SingStat, 2023 = 100, SGD) -------------
+sg_ipi <- dplyr::bind_rows(
+  get_singstat_series("M213251", "33"),     # petroleum, petroleum products & related materials
+  get_singstat_series("M213261", "333"),    # crude petroleum
+  get_singstat_series("M213261", "334")) |> # refined petroleum products
+  dplyr::mutate(code = dplyr::recode(series_no, `33` = "ipi_petroleum", `333` = "ipi_crude", `334` = "ipi_products")) |>
+  dplyr::filter(month >= as.Date(from))
+
 # ---- Extra energy equities (not in the core 51-stock universe) -----------------
 extra <- get_monthly_returns(c("ALD.AX", "VEA.AX", "BPT.AX"), "2011-02-01", to)
 
@@ -85,5 +97,6 @@ dir.create("data/processed", showWarnings = FALSE)
 write_csv(oil, "data/processed/oil_monthly.csv")
 write_csv(by_src |> filter(month >= as.Date(from)), "data/processed/aus_fuel_imports_by_source.csv")
 write_csv(extra, "data/processed/oil_equities_extra_returns.csv")
+write_csv(sg_ipi |> select(month, code, value, series, data_last_updated), "data/processed/sg_import_prices.csv")
 message("oil_monthly: ", nrow(oil), " months, ", ncol(oil) - 1, " series; last month ", max(oil$month))
 print(oil |> summarise(across(-month, ~ sum(!is.na(.x)))) |> pivot_longer(everything(), names_to = "series", values_to = "months"), n = 40)

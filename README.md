@@ -9,7 +9,7 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 ![Source of Australia's refined fuel imports by country, 2011–2025](modules/08-oil-asia-pacific/figures/key_chart.png)
 
 - **Australia's fuel runs through Asian refineries.** Domestic refining halved after the 2021 closures and product imports rose 50%. In 2025, 96% came from Asian refiners (Singapore 26%, South Korea 25%, Malaysia 13%). Stock cover averages 60 IEA days against a 90-day obligation.
-- **Asia's Dubai benchmark broke from Brent in 2026:** the spread, normally about $2, reached $27.7 in April.
+- **Asia's Dubai benchmark broke from Brent in 2026, but Singapore's import bill did not.** The spread reached $27.7 in April. Singapore's actual crude import prices (SingStat) track Dubai over 2011–26 (correlation 0.93), yet in 2026 they rose roughly in line with Brent, peaking 88% above December 2025. EMA data show Singapore's product exports fell 29% from their 2017 peak to 2022.
 - **APAC energy stocks carry oil exposure in the expected order** (producers ~0.25–0.34, Sinopec ~0.04), but regional fundamentals add nothing beyond the price, and up/down asymmetry is not robust.
 - **Oil risk is not priced** across the 51-stock universe (Fama–MacBeth premium −0.42% a month, t = −0.25).
 
@@ -92,9 +92,10 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 | `modules/NN-*/index.qmd` | One write-up per module (Quarto) |
 | `R/` | Shared functions: data (`data_prices.R`, `data_rates.R`, `data_factors.R`), estimators (`models_linear.R`, `models_factor.R`), valuation (`valuation_dcf.R`, `data_tencent.R`), commodities (`data_commodities.R`), chart theme (`plots.R`) |
 | `scripts/build_data.R` | Downloads prices and rates; writes `data/processed/` |
-| `scripts/build_oil_data.R` | Oil prices (FRED, needs `FRED_API_KEY`; World Bank), Australian Petroleum Statistics, Singapore bunker sales |
+| `scripts/build_oil_data.R` | Oil prices (FRED, needs `FRED_API_KEY`; World Bank), Australian Petroleum Statistics, Singapore bunker sales, SingStat import price indices |
 | `scripts/extract_tencent.py` | Extracts Tencent financials (with report and page) from its annual/interim reports into `data/processed/tencent_financials.csv` |
 | `data/raw/worldbank/`, `data/raw/australia/` | World Bank Pink Sheet and Australian Petroleum Statistics workbooks (re-downloaded by the build script; not committed) |
+| `data/raw/ema/` | EMA *Singapore Energy Statistics* tidy workbook (`SES_tidy.xlsx`), downloaded manually from EMA; not redistributed |
 | `data/raw/tencent/` | Tencent annual and interim report PDFs (not committed). Download from [Tencent IR](https://www.tencent.com/investors/financial-reports/) |
 | `data/raw/french/` | Kenneth French factor ZIPs (not committed: no reuse licence). Download the three *Asia Pacific ex Japan* files (3 factors, 5 factors, momentum) from the [Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html) |
 | `data/processed/` | Monthly returns, market proxies, risk-free rates, universe, module outputs |
