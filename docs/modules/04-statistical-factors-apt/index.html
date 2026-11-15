@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Kai Marsh">
-<meta name="dcterms.date" content="2026-11-15">
+<meta name="dcterms.date" content="2026-11-16">
 
 <title>04 · Statistical factors: how many risks drive APAC returns? – APAC Asset Pricing</title>
 <style>
@@ -136,6 +136,7 @@ window.Quarto = {
 };
 </script>
 
+<link rel="stylesheet" href="../../styles.css">
 </head>
 
 <body class="nav-fixed quarto-light">
@@ -250,7 +251,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">November 15, 2026</p>
+      <p class="date">November 16, 2026</p>
     </div>
   </div>
   
@@ -448,6 +449,12 @@ Figure&nbsp;1: Eigenvalues of the 51-stock correlation matrix (points), with the
 </div>
 </div>
 </div>
+<div class="eq-box">
+<p><span class="math display">\[\mathbf R = \mathbf V\boldsymbol\Lambda\mathbf V', \qquad \text{share}_j = \frac{\lambda_j}{N}, \qquad \text{genuine if } \lambda_j &gt; \max\!\big(\lambda_+,\; \lambda^{\text{perm}}_{j,95}\big), \quad \lambda_+ = \big(1+\sqrt{N/T}\big)^2\]</span></p>
+<div class="eq-defs">
+<p><span class="math inline">\(\mathbf R\)</span> correlation matrix of the <span class="math inline">\(N\)</span> = 51 stocks’ returns over <span class="math inline">\(T\)</span> = 179 months · <span class="math inline">\(\lambda_j\)</span> <span class="math inline">\(j\)</span>-th eigenvalue (the eigenvalues sum to <span class="math inline">\(N\)</span>) · <span class="math inline">\(\lambda_+\)</span> Marchenko–Pastur edge (dashed line) · <span class="math inline">\(\lambda^{\text{perm}}_{j,95}\)</span> 95th percentile of the <span class="math inline">\(j\)</span>-th eigenvalue when each stock’s returns are shuffled in time (solid line).</p>
+</div>
+</div>
 <p>The first eigenvalue (22.0) is nearly ten times the noise edge. The second and third (4.36, 2.42) clear both benchmarks. From the fourth on (1.92, 1.63, …), the eigenvalues sit below both lines and are indistinguishable from what independent noise would produce. Together the three genuine factors explain 56% of the total variation, so most of each stock’s monthly movement remains stock-specific.</p>
 </section>
 <section id="what-the-factors-are" class="level3">
@@ -483,6 +490,12 @@ Figure&nbsp;2: Loadings of each stock on the first three components (the eigenve
 </figcaption>
 </figure>
 </div>
+</div>
+</div>
+<div class="eq-box">
+<p><span class="math display">\[z_{i,t} = \frac{x_{i,t} - \bar x_i}{s_i}, \qquad \text{PC}_{j,t} = \sum_{i=1}^{N} v_{ij}\, z_{i,t}\]</span></p>
+<div class="eq-defs">
+<p><span class="math inline">\(z_{i,t}\)</span> stock <span class="math inline">\(i\)</span>’s standardised excess return · <span class="math inline">\(s_i\)</span> its standard deviation · <span class="math inline">\(v_{ij}\)</span> loading of stock <span class="math inline">\(i\)</span> on component <span class="math inline">\(j\)</span> (column <span class="math inline">\(j\)</span> of <span class="math inline">\(\mathbf V\)</span>, the bar length), signed so that loadings sum to a positive number. Stocks with opposite-signed loadings sit at opposite ends of the component.</p>
 </div>
 </div>
 <div class="cell">
@@ -625,6 +638,12 @@ Figure&nbsp;3: Out-of-sample root-mean-square alpha across 200 random splits (fa
 </figcaption>
 </figure>
 </div>
+</div>
+</div>
+<div class="eq-box">
+<p><span class="math display">\[w_{ij} = \frac{v_{ij}/s_i}{\sum_{k\in A} |v_{kj}/s_k|}, \qquad F_{j,t} = \sum_{i\in A} w_{ij}\, x_{i,t}, \qquad \text{RMS}\,\alpha = 12\sqrt{\frac{1}{|B|}\sum_{i\in B}\hat\alpha_i^2}\]</span></p>
+<div class="eq-defs">
+<p><span class="math inline">\(A\)</span>, <span class="math inline">\(B\)</span> the two random halves of the stocks · <span class="math inline">\(v_{ij}\)</span>, <span class="math inline">\(s_i\)</span> loadings and volatilities estimated on half <span class="math inline">\(A\)</span> in 2011–18 · <span class="math inline">\(F_{j,t}\)</span> return of eigenportfolio <span class="math inline">\(j\)</span> · <span class="math inline">\(\hat\alpha_i\)</span> intercept from regressing stock <span class="math inline">\(i \in B\)</span> on the factors over 2019–25. The same RMS formula is applied to the CAPM and Fama–French factors.</p>
 </div>
 </div>
 <div class="cell">

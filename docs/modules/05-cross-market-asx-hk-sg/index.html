@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Kai Marsh">
-<meta name="dcterms.date" content="2026-11-15">
+<meta name="dcterms.date" content="2026-11-16">
 
 <title>05 · Cross-market comparison: ASX vs HKEX vs SGX – APAC Asset Pricing</title>
 <style>
@@ -136,6 +136,7 @@ window.Quarto = {
 };
 </script>
 
+<link rel="stylesheet" href="../../styles.css">
 </head>
 
 <body class="nav-fixed quarto-light">
@@ -250,7 +251,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">November 15, 2026</p>
+      <p class="date">November 16, 2026</p>
     </div>
   </div>
   
@@ -506,6 +507,13 @@ Figure&nbsp;1: Five-factor loadings of each market (SUR estimates, 95% intervals
 </div>
 </div>
 </div>
+<div class="eq-box">
+<p><span class="math display">\[x_{m,t} = \alpha_m + b_m\,\text{MKT}_t + s_m\,\text{SMB}_t + h_m\,\text{HML}_t + r_m\,\text{RMW}_t + c_m\,\text{CMA}_t + \varepsilon_{m,t}\]</span></p>
+<p><span class="math display">\[x_{m,t} = (1+R_{m,t})(1+e_{m,t}) - 1 - r^{\text{US}}_{f,t}\]</span></p>
+<div class="eq-defs">
+<p><span class="math inline">\(x_{m,t}\)</span> USD excess return of market <span class="math inline">\(m\)</span> (ASX, HKEX, SGX) · <span class="math inline">\(R_{m,t}\)</span> local-currency total return of its index ETF · <span class="math inline">\(e_{m,t}\)</span> return on its currency against the US dollar · <span class="math inline">\(r^{\text{US}}_{f,t}\)</span> US T-bill rate · <span class="math inline">\(b_m, s_m, h_m, r_m, c_m\)</span> loadings (points), with intervals <span class="math inline">\(\pm 1.96\)</span> standard errors from the SUR covariance <span class="math inline">\(\boldsymbol\Sigma \otimes \mathbf I_T\)</span>.</p>
+</div>
+</div>
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
@@ -730,6 +738,13 @@ Figure&nbsp;2: Rolling 36-month correlations between the three markets’ USD ex
 </figcaption>
 </figure>
 </div>
+</div>
+</div>
+<div class="eq-box">
+<p><span class="math display">\[\rho^{(36)}_{mn,t} = \widehat{\operatorname{Corr}}\big(x_{m,s},\, x_{n,s}\big), \quad s = t-35,\dots,t\]</span></p>
+<p><span class="math display">\[\hat\tau = \arg\min_{\tau}\big[\text{SSR}_{1}(\tau) + \text{SSR}_{2}(\tau)\big]\]</span></p>
+<div class="eq-defs">
+<p><span class="math inline">\(\rho^{(36)}_{mn,t}\)</span> correlation between markets <span class="math inline">\(m\)</span> and <span class="math inline">\(n\)</span> over the 36 months ending in <span class="math inline">\(t\)</span> · <span class="math inline">\(\hat\tau\)</span> Bai–Perron break date (dashed line) for Singapore’s regression <span class="math inline">\(x_{\text{SG},t} = a + b\,\text{MKT}_t + \varepsilon_t\)</span> · <span class="math inline">\(\text{SSR}_{1}\)</span>, <span class="math inline">\(\text{SSR}_{2}\)</span> residual sums of squares before and after <span class="math inline">\(\tau\)</span>.</p>
 </div>
 </div>
 <p>The rolling correlations add context. Comparing 36-month windows ending before Jun 2021 with windows lying entirely after it, Hong Kong’s correlation with the ASX fell from 0.67 to 0.37 and with Singapore from 0.82 to 0.63, while ASX–SGX moved from 0.72 to 0.80. Hong Kong drifted away from the other two.</p>

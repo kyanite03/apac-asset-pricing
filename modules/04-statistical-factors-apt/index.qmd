@@ -177,6 +177,14 @@ ggsave("figures/key_chart.png", p_scree, width = 8, height = 4.8, dpi = 200, bg 
 p_scree
 ```
 
+::: {.eq-box}
+$$\mathbf R = \mathbf V\boldsymbol\Lambda\mathbf V', \qquad \text{share}_j = \frac{\lambda_j}{N}, \qquad \text{genuine if } \lambda_j > \max\!\big(\lambda_+,\; \lambda^{\text{perm}}_{j,95}\big), \quad \lambda_+ = \big(1+\sqrt{N/T}\big)^2$$
+
+::: {.eq-defs}
+$\mathbf R$ correlation matrix of the $N$ = `r N_` stocks' returns over $T$ = `r T_` months · $\lambda_j$ $j$-th eigenvalue (the eigenvalues sum to $N$) · $\lambda_+$ Marchenko–Pastur edge (dashed line) · $\lambda^{\text{perm}}_{j,95}$ 95th percentile of the $j$-th eigenvalue when each stock's returns are shuffled in time (solid line).
+:::
+:::
+
 The first eigenvalue (`r num(pc$values[1], 1)`) is nearly ten times the noise edge. The second and third (`r num(pc$values[2])`, `r num(pc$values[3])`) clear both benchmarks. From the fourth on (`r num(pc$values[4])`, `r num(pc$values[5])`, …), the eigenvalues sit below both lines and are indistinguishable from what independent noise would produce. Together the three genuine factors explain `r pct(sum(pc$share[1:3]), 0)` of the total variation, so most of each stock's monthly movement remains stock-specific.
 
 ### What the factors are
@@ -204,6 +212,14 @@ ggplot(load_df, aes(loading, label, fill = market)) +
   theme_report(10) +
   theme(panel.grid.major.y = element_blank(), strip.text.y = element_text(angle = 0, face = "bold"))
 ```
+
+::: {.eq-box}
+$$z_{i,t} = \frac{x_{i,t} - \bar x_i}{s_i}, \qquad \text{PC}_{j,t} = \sum_{i=1}^{N} v_{ij}\, z_{i,t}$$
+
+::: {.eq-defs}
+$z_{i,t}$ stock $i$'s standardised excess return · $s_i$ its standard deviation · $v_{ij}$ loading of stock $i$ on component $j$ (column $j$ of $\mathbf V$, the bar length), signed so that loadings sum to a positive number. Stocks with opposite-signed loadings sit at opposite ends of the component.
+:::
+:::
 
 ```{r}
 #| label: tbl-ends
@@ -253,6 +269,14 @@ oos_sum |>
   labs(x = "Root-mean-square alpha, 2019–25 (annualised)", y = NULL) +
   theme_report()
 ```
+
+::: {.eq-box}
+$$w_{ij} = \frac{v_{ij}/s_i}{\sum_{k\in A} |v_{kj}/s_k|}, \qquad F_{j,t} = \sum_{i\in A} w_{ij}\, x_{i,t}, \qquad \text{RMS}\,\alpha = 12\sqrt{\frac{1}{|B|}\sum_{i\in B}\hat\alpha_i^2}$$
+
+::: {.eq-defs}
+$A$, $B$ the two random halves of the stocks · $v_{ij}$, $s_i$ loadings and volatilities estimated on half $A$ in 2011–18 · $F_{j,t}$ return of eigenportfolio $j$ · $\hat\alpha_i$ intercept from regressing stock $i \in B$ on the factors over 2019–25. The same RMS formula is applied to the CAPM and Fama–French factors.
+:::
+:::
 
 ```{r}
 #| label: tbl-oos

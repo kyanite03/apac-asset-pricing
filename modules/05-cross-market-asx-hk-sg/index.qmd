@@ -195,6 +195,16 @@ ggsave("figures/key_chart.png", p_load, width = 9, height = 4.8, dpi = 200, bg =
 p_load
 ```
 
+::: {.eq-box}
+$$x_{m,t} = \alpha_m + b_m\,\text{MKT}_t + s_m\,\text{SMB}_t + h_m\,\text{HML}_t + r_m\,\text{RMW}_t + c_m\,\text{CMA}_t + \varepsilon_{m,t}$$
+
+$$x_{m,t} = (1+R_{m,t})(1+e_{m,t}) - 1 - r^{\text{US}}_{f,t}$$
+
+::: {.eq-defs}
+$x_{m,t}$ USD excess return of market $m$ (ASX, HKEX, SGX) · $R_{m,t}$ local-currency total return of its index ETF · $e_{m,t}$ return on its currency against the US dollar · $r^{\text{US}}_{f,t}$ US T-bill rate · $b_m, s_m, h_m, r_m, c_m$ loadings (points), with intervals $\pm 1.96$ standard errors from the SUR covariance $\boldsymbol\Sigma \otimes \mathbf I_T$.
+:::
+:::
+
 ```{r}
 #| label: tbl-equal
 #| tbl-cap: "Cross-market tests in the SUR systems: H₀ that a coefficient is equal in all three markets (Wald χ² with 2 degrees of freedom)."
@@ -258,6 +268,16 @@ roll_cor |> pivot_longer(-month, names_to = "pair", values_to = "rho") |>
   labs(x = NULL, y = "36-month correlation") +
   theme_report()
 ```
+
+::: {.eq-box}
+$$\rho^{(36)}_{mn,t} = \widehat{\operatorname{Corr}}\big(x_{m,s},\, x_{n,s}\big), \quad s = t-35,\dots,t$$
+
+$$\hat\tau = \arg\min_{\tau}\big[\text{SSR}_{1}(\tau) + \text{SSR}_{2}(\tau)\big]$$
+
+::: {.eq-defs}
+$\rho^{(36)}_{mn,t}$ correlation between markets $m$ and $n$ over the 36 months ending in $t$ · $\hat\tau$ Bai–Perron break date (dashed line) for Singapore's regression $x_{\text{SG},t} = a + b\,\text{MKT}_t + \varepsilon_t$ · $\text{SSR}_{1}$, $\text{SSR}_{2}$ residual sums of squares before and after $\tau$.
+:::
+:::
 
 The rolling correlations add context. Comparing 36-month windows ending before `r format(sg$dates, "%b %Y")` with windows lying entirely after it, Hong Kong's correlation with the ASX fell from `r num(rc_pre$"ASX–HKEX")` to `r num(rc_post$"ASX–HKEX")` and with Singapore from `r num(rc_pre$"HKEX–SGX")` to `r num(rc_post$"HKEX–SGX")`, while ASX–SGX moved from `r num(rc_pre$"ASX–SGX")` to `r num(rc_post$"ASX–SGX")`. Hong Kong drifted away from the other two.
 

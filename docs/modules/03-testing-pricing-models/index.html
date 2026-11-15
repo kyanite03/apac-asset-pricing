@@ -136,6 +136,7 @@ window.Quarto = {
 };
 </script>
 
+<link rel="stylesheet" href="../../styles.css">
 </head>
 
 <body class="nav-fixed quarto-light">
@@ -668,6 +669,12 @@ Figure&nbsp;1: Realised vs model-predicted average excess return for each stock 
 </figcaption>
 </figure>
 </div>
+</div>
+</div>
+<div class="eq-box">
+<p><span class="math display">\[\underbrace{12\,\bar x_i}_{\text{realised}} \;=\; \underbrace{12\,\hat{\boldsymbol\beta}_i'\bar{\mathbf f}}_{\text{predicted}} \;+\; 12\,\hat\alpha_i\]</span></p>
+<div class="eq-defs">
+<p><span class="math inline">\(\bar x_i\)</span> stock <span class="math inline">\(i\)</span>’s average monthly USD excess return · <span class="math inline">\(\hat{\boldsymbol\beta}_i\)</span> its factor loadings from the time-series regression <span class="math inline">\(x_{i,t} = \alpha_i + \boldsymbol\beta_i'\mathbf f_t + \varepsilon_{i,t}\)</span> · <span class="math inline">\(\bar{\mathbf f}\)</span> average factor returns (one per factor in the panel’s model) · <span class="math inline">\(\hat\alpha_i\)</span> pricing error, the vertical distance from the 45° line. Multiplying by 12 annualises.</p>
 </div>
 </div>
 <p>The GRS statistics reject every model. <a href="#fig-pred" class="quarto-xref">Figure&nbsp;1</a> shows the shape of the failure: points sit mostly <em>above</em> the 45° line under every model. The share of positive alphas ranges from 71% to 88% across the four models, and the mean alpha is positive in each market. A missing risk factor would push some stocks up and others down. A common upward shift is what <strong>survivorship</strong> produces: the sample is today’s large caps, which are large partly <em>because</em> their returns beat what their risk exposures predicted.</p>

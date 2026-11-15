@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Kai Marsh">
-<meta name="dcterms.date" content="2026-11-15">
+<meta name="dcterms.date" content="2026-11-16">
 
 <title>06 · Valuing Tencent: a sum-of-the-parts DCF – APAC Asset Pricing</title>
 <style>
@@ -136,6 +136,7 @@ window.Quarto = {
 };
 </script>
 
+<link rel="stylesheet" href="../../styles.css">
 </head>
 
 <body class="nav-fixed quarto-light">
@@ -250,7 +251,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">November 15, 2026</p>
+      <p class="date">November 16, 2026</p>
     </div>
   </div>
   
@@ -674,6 +675,15 @@ Figure&nbsp;1: From operating value to value per share (HK$ per share, base case
 </div>
 </div>
 </div>
+<div class="eq-box">
+<p><span class="math display">\[V = \frac{e}{S}\Big[\text{EV} + C - D + (1-h)(I_L + I_U) - M\Big]\]</span></p>
+<p><span class="math display">\[\text{EV} = \sum_{k=1}^{n} \frac{w_k\,\text{FCF}_k}{(1+\text{WACC})^{t_k}} + \frac{\text{FCF}_n\,(1+g)}{(\text{WACC}-g)\,(1+\text{WACC})^{n-1}}\]</span></p>
+<p><span class="math display">\[\text{FCF}_k = \text{EBITDA}_k - \tau\max(\text{EBIT}_k, 0) - \text{Capex}_k - \text{Lease}_k\]</span></p>
+<p><span class="math display">\[\text{EBIT}_k = \text{EBITDA}_k - \tfrac15\textstyle\sum_{j=1}^{5}\text{Capex}_{k-j}\]</span></p>
+<div class="eq-defs">
+<p><span class="math inline">\(V\)</span> value per share (HK$) · <span class="math inline">\(e\)</span> HK$ per RMB · <span class="math inline">\(S\)</span> diluted shares · <span class="math inline">\(C\)</span> cash and term deposits · <span class="math inline">\(D\)</span> borrowings and notes · <span class="math inline">\(h\)</span> holding discount (20%) · <span class="math inline">\(I_L\)</span>, <span class="math inline">\(I_U\)</span> listed and unlisted stakes · <span class="math inline">\(M\)</span> minority interests · <span class="math inline">\(n\)</span> = 10 forecast years (FY2026–35) · <span class="math inline">\(w_1 = 0.5\)</span>, <span class="math inline">\(t_1 = 0.25\)</span> (only H2 FY2026 counts), then <span class="math inline">\(w_k = 1\)</span>, <span class="math inline">\(t_k = k-1\)</span> (mid-year) · the first terminal-year flow (FY2036) also arrives mid-year, at <span class="math inline">\(t = n\)</span>, so the perpetuity is valued at <span class="math inline">\(t = n-1\)</span> · <span class="math inline">\(g\)</span> terminal growth · <span class="math inline">\(\tau\)</span> tax rate · depreciation is five-year straight-line on capex.</p>
+</div>
+</div>
 <p>The base case values Tencent at <strong>HK$827</strong> per share, 114% above the price. The operating business is worth HK$741 per share, of which 69% comes from the terminal value (typical for a long-lived business). The forecast reaches RMB 1431 billion of revenue and RMB 354 billion of free cash flow in FY2035. That free cash flow is 25% of revenue, in line with the 24% Tencent achieved in 2025.</p>
 <div class="cell">
 <details class="code-fold">
@@ -785,6 +795,13 @@ Figure&nbsp;2: Value per share across the two assumptions that matter most: the 
 </div>
 </div>
 </div>
+<div class="eq-box">
+<p><span class="math display">\[\text{WACC}(\text{ERP}) = (1-w_d)\,(r_f + \beta\,\text{ERP}) + w_d\,k_d\,(1-\tau)\]</span></p>
+<p><span class="math display">\[\text{Capex}_k = c_k\,\text{Rev}_k,\;\; c_k \to c_{\text{ss}} \text{ linearly by FY2030}\]</span></p>
+<div class="eq-defs">
+<p>Each cell is <span class="math inline">\(V(\text{ERP}, c_{\text{ss}})\)</span> from the DCF above. <span class="math inline">\(r_f\)</span> China 10-year yield · <span class="math inline">\(\beta\)</span> Tencent’s Blume-adjusted beta (Module 01) · <span class="math inline">\(w_d\)</span> debt share at market values · <span class="math inline">\(k_d\)</span> pre-tax cost of debt · <span class="math inline">\(c_{\text{ss}}\)</span> steady-state capex as a share of revenue (x-axis). The black contour is the set of inputs where <span class="math inline">\(V = P\)</span>, today’s price.</p>
+</div>
+</div>
 <p>Holding everything else at the base case, the price is justified by any one of the following:</p>
 <ul>
 <li>a <strong>WACC of 13.6%</strong>, which is a cost of equity of about 15% and an equity risk premium of 12%, more than twice Damodaran’s 5.14% for China;</li>
@@ -819,6 +836,13 @@ Figure&nbsp;3: Distribution of value per share across 10,000 draws. Dashed line:
 </figcaption>
 </figure>
 </div>
+</div>
+</div>
+<div class="eq-box">
+<p><span class="math display">\[V^{(j)} = V\big(\beta^{(j)}, \text{ERP}^{(j)}, g^{(j)}, \dots, h^{(j)}\big), \quad j = 1,\dots,10\,000\]</span></p>
+<p><span class="math display">\[\widehat{\Pr}(V &gt; P) = \frac{1}{10\,000}\sum_{j} \mathbf 1\big[V^{(j)} &gt; P\big]\]</span></p>
+<div class="eq-defs">
+<p>Each draw re-runs the full DCF and bridge with <span class="math inline">\(\beta \sim N(\hat\beta, \widehat{\mathrm{se}}^2)\)</span>, ERP <span class="math inline">\(\sim U(4.5\%, 8\%)\)</span>, <span class="math inline">\(c_{\text{ss}} \sim U(8\%, 20\%)\)</span>, <span class="math inline">\(h \sim U(10\%, 40\%)\)</span> and the other ranges in the table below · <span class="math inline">\(P\)</span> share price (dashed line).</p>
 </div>
 </div>
 <div class="cell">

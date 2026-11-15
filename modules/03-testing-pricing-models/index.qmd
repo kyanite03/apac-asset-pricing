@@ -217,6 +217,14 @@ ggsave("figures/key_chart.png", p_pred, width = 9, height = 7.5, dpi = 200, bg =
 p_pred
 ```
 
+::: {.eq-box}
+$$\underbrace{12\,\bar x_i}_{\text{realised}} \;=\; \underbrace{12\,\hat{\boldsymbol\beta}_i'\bar{\mathbf f}}_{\text{predicted}} \;+\; 12\,\hat\alpha_i$$
+
+::: {.eq-defs}
+$\bar x_i$ stock $i$'s average monthly USD excess return · $\hat{\boldsymbol\beta}_i$ its factor loadings from the time-series regression $x_{i,t} = \alpha_i + \boldsymbol\beta_i'\mathbf f_t + \varepsilon_{i,t}$ · $\bar{\mathbf f}$ average factor returns (one per factor in the panel's model) · $\hat\alpha_i$ pricing error, the vertical distance from the 45° line. Multiplying by 12 annualises.
+:::
+:::
+
 The GRS statistics reject every model. @fig-pred shows the shape of the failure: points sit mostly *above* the 45° line under every model. The share of positive alphas ranges from `r pct(min(alpha_sign$share_pos), 0)` to `r pct(max(alpha_sign$share_pos), 0)` across the four models, and the mean alpha is positive in each market. A missing risk factor would push some stocks up and others down. A common upward shift is what **survivorship** produces: the sample is today's large caps, which are large partly *because* their returns beat what their risk exposures predicted.
 
 The Sharpe-ratio columns need care. The "tangency" Sharpe ratio is the best in-sample combination of 51 stocks and the factors. With that many assets it is heavily overfitted, which is exactly why GRS is a formal test rather than a comparison of these two numbers.

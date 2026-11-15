@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Kai Marsh">
-<meta name="dcterms.date" content="2026-11-15">
+<meta name="dcterms.date" content="2026-11-16">
 
 <title>08 · Oil in Asia-Pacific: regional fundamentals, prices and energy equities – APAC Asset Pricing</title>
 <style>
@@ -106,7 +106,37 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 }</script>
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../styles.css">
 </head>
 
 <body class="nav-fixed quarto-light">
@@ -223,7 +253,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">November 15, 2026</p>
+      <p class="date">November 16, 2026</p>
     </div>
   </div>
   
@@ -613,6 +643,12 @@ Figure&nbsp;1: Source of Australia’s refined petroleum product imports, share 
 </div>
 </div>
 </div>
+<div class="eq-box">
+<p><span class="math display">\[s_{c,y} = \frac{Q_{c,y}}{\sum_{c'} Q_{c',y}}\]</span></p>
+<div class="eq-defs">
+<p><span class="math inline">\(s_{c,y}\)</span> share of Australia’s refined-product imports from country <span class="math inline">\(c\)</span> in year <span class="math inline">\(y\)</span> · <span class="math inline">\(Q_{c,y}\)</span> volume imported from <span class="math inline">\(c\)</span> in <span class="math inline">\(y\)</span> (megalitres, summed over months).</p>
+</div>
+</div>
 <p>In 2011, Singapore supplied 53% of Australia’s refined-fuel imports. By 2025 its share was 26%. South Korea (25%), Malaysia (13%), Taiwan, China and India have grown, so the supply base is more diversified, but it remains almost entirely Asian.</p>
 <div class="cell">
 <details class="code-fold">
@@ -645,6 +681,12 @@ Figure&nbsp;2: Australian refinery input and refined-product imports (megalitres
 </div>
 </div>
 </div>
+<div class="eq-box">
+<p><span class="math display">\[\bar Q_t = \frac{1}{12}\sum_{k=0}^{11} Q_{t-k}, \qquad \text{cover}_t = \frac{\text{stocks}_t}{\text{average daily net imports}}\]</span></p>
+<div class="eq-defs">
+<p><span class="math inline">\(\bar Q_t\)</span> 12-month trailing average of refinery input or product imports <span class="math inline">\(Q_t\)</span> (ML/month) · cover in IEA days as published in Australian Petroleum Statistics; the IEA obligation is <span class="math inline">\(\text{cover}_t \ge 90\)</span>.</p>
+</div>
+</div>
 <p>The decline came in two waves. Throughput averaged about 3500 megalitres a month in 2011, fell to about 2400 after earlier closures, then to about 1200 after the 2021 closures. Each time, imports filled the gap. Stock cover has sat well below the International Energy Agency’s 90-day obligation for most of the period. It was 52 days in August 2026. That is about 7 weeks of net imports as a buffer against a regional supply disruption.</p>
 </section>
 <section id="asias-benchmark-and-the-2026-shock" class="level3">
@@ -674,6 +716,12 @@ Figure&nbsp;3: Brent and Dubai crude (US$ per barrel, World Bank monthly average
 </figcaption>
 </figure>
 </div>
+</div>
+</div>
+<div class="eq-box">
+<p><span class="math display">\[\text{spread}_t = P^{\text{Brent}}_t - P^{\text{Dubai}}_t\]</span></p>
+<div class="eq-defs">
+<p><span class="math inline">\(P_t\)</span> World Bank monthly average price, US$ per barrel. A positive spread means Asia’s Middle East crude is cheaper than the Atlantic benchmark.</p>
 </div>
 </div>
 <p>Dubai crude, the Middle East grade that supplies most of Asia, normally trades a little below Brent: the spread averaged 1.9 dollars a barrel (standard deviation 1.6) before 2026. In 2026 it blew out, reaching 27.7 dollars in April 2026. On benchmark prices alone, Asian buyers of Middle East crude would seem to have escaped much of the shock. Singapore’s actual import prices, below, show they did not.</p>
@@ -782,6 +830,12 @@ Figure&nbsp;5: The 2026 oil shock: Singapore’s import prices (USD) against Dub
 </div>
 </div>
 </div>
+<div class="eq-box">
+<p><span class="math display">\[I^{\text{USD}}_t = I^{\text{SGD}}_t \cdot e_t, \qquad \tilde I_t = 100\,\frac{I^{\text{USD}}_t}{I^{\text{USD}}_{\text{Dec 2025}}}, \qquad \tilde P_t = 100\,\frac{P_t}{P_{\text{Dec 2025}}}\]</span></p>
+<div class="eq-defs">
+<p><span class="math inline">\(I^{\text{SGD}}_t\)</span> SingStat import price index (crude or refined products, SGD) · <span class="math inline">\(e_t\)</span> US-dollar value of the Singapore dollar (month-end) · <span class="math inline">\(P_t\)</span> Brent or Dubai price. Every line is rebased so December 2025 = 100.</p>
+</div>
+</div>
 <p>The 2026 shock breaks the long-run pattern. Singapore’s crude import prices rose far more than Dubai and roughly in line with Brent, peaking 88% above December 2025 in September 2026. They were above Dubai in 7 of 9 months of 2026 and above Brent in 5. Refined-product import prices rose most of all, peaking 105% above December 2025 in April 2026. Across 2026 they stayed closer to Brent (average gap 10.5 index points) than to Dubai (19.3). The data cannot say why. Two plausible reasons are that the index is measured on a landed basis, so it includes freight and insurance costs that typically jump in a supply shock, and that refiners may have switched to Atlantic-basin crude priced off Brent. Either way, the cheaper Dubai benchmark did not translate into cheaper oil for Asia’s main hub.</p>
 </section>
 <section id="do-regional-fundamentals-predict-oil" class="level3">
@@ -859,6 +913,12 @@ Figure&nbsp;6: Oil beta of each APAC energy stock (monthly excess return on home
 </figcaption>
 </figure>
 </div>
+</div>
+</div>
+<div class="eq-box">
+<p><span class="math display">\[x_{i,t} = a_i + b_i\,x_{m,t} + \beta^{\text{oil}}_i\, r^{\text{Brent}}_t + \varepsilon_{i,t}, \qquad r^{\text{Brent}}_t = \frac{P^{\text{Brent}}_t}{P^{\text{Brent}}_{t-1}} - 1\]</span></p>
+<div class="eq-defs">
+<p><span class="math inline">\(x_{i,t}\)</span> stock <span class="math inline">\(i\)</span>’s monthly excess return · <span class="math inline">\(x_{m,t}\)</span> its home market’s excess return · <span class="math inline">\(\beta^{\text{oil}}_i\)</span> oil beta (points), with intervals <span class="math inline">\(\pm 1.96\)</span> Newey–West standard errors (4 lags) · <span class="math inline">\(P^{\text{Brent}}_t\)</span> month-end Brent price.</p>
 </div>
 </div>
 <div class="cell">

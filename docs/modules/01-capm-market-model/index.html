@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Kai Marsh">
-<meta name="dcterms.date" content="2026-11-15">
+<meta name="dcterms.date" content="2026-11-16">
 
 <title>01 · CAPM and the market model across ASX, HKEX and SGX – APAC Asset Pricing</title>
 <style>
@@ -136,6 +136,7 @@ window.Quarto = {
 };
 </script>
 
+<link rel="stylesheet" href="../../styles.css">
 </head>
 
 <body class="nav-fixed quarto-light">
@@ -252,7 +253,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">November 15, 2026</p>
+      <p class="date">November 16, 2026</p>
     </div>
   </div>
   
@@ -545,6 +546,12 @@ Figure&nbsp;1: Market-model beta with 95% Newey–West confidence interval, by m
 </div>
 </div>
 </div>
+<div class="eq-box">
+<p><span class="math display">\[\hat\beta_i = \frac{\sum_t (x_{m,t}-\bar x_m)(x_{i,t}-\bar x_i)}{\sum_t (x_{m,t}-\bar x_m)^2}, \qquad \text{interval: } \hat\beta_i \pm 1.96\,\widehat{\mathrm{se}}_{\mathrm{NW}}(\hat\beta_i)\]</span></p>
+<div class="eq-defs">
+<p><span class="math inline">\(x_{i,t} = r_{i,t} - r_{f,t}\)</span> stock <span class="math inline">\(i\)</span>’s monthly excess return (local currency) · <span class="math inline">\(x_{m,t}\)</span> its market’s excess return · <span class="math inline">\(\widehat{\mathrm{se}}_{\mathrm{NW}}\)</span> Newey–West standard error (4 lags). A point left of the grey line (<span class="math inline">\(\hat\beta_i &lt; 1\)</span>) moves less than its market.</p>
+</div>
+</div>
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
@@ -799,6 +806,12 @@ Figure&nbsp;2: Rolling 60-month betas for selected stocks. Each point uses the p
 </figcaption>
 </figure>
 </div>
+</div>
+</div>
+<div class="eq-box">
+<p><span class="math display">\[\hat\beta^{(60)}_{i,t} = \frac{\widehat{\operatorname{Cov}}(x_{i,s},\, x_{m,s})}{\widehat{\operatorname{Var}}(x_{m,s})}, \qquad s = t-59, \dots, t\]</span></p>
+<div class="eq-defs">
+<p><span class="math inline">\(\hat\beta^{(60)}_{i,t}\)</span> beta of stock <span class="math inline">\(i\)</span> estimated on the 60 months ending in month <span class="math inline">\(t\)</span> · <span class="math inline">\(x_{i,s}\)</span>, <span class="math inline">\(x_{m,s}\)</span> stock and market excess returns. One extreme month moves the estimate when it enters the window and again when it leaves 60 months later.</p>
 </div>
 </div>
 <div class="cell">

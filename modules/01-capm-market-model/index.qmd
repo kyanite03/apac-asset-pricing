@@ -208,6 +208,14 @@ ggsave("figures/key_chart.png", p_beta, width = 9, height = 9, dpi = 200, bg = "
 p_beta
 ```
 
+::: {.eq-box}
+$$\hat\beta_i = \frac{\sum_t (x_{m,t}-\bar x_m)(x_{i,t}-\bar x_i)}{\sum_t (x_{m,t}-\bar x_m)^2}, \qquad \text{interval: } \hat\beta_i \pm 1.96\,\widehat{\mathrm{se}}_{\mathrm{NW}}(\hat\beta_i)$$
+
+::: {.eq-defs}
+$x_{i,t} = r_{i,t} - r_{f,t}$ stock $i$'s monthly excess return (local currency) · $x_{m,t}$ its market's excess return · $\widehat{\mathrm{se}}_{\mathrm{NW}}$ Newey–West standard error (`r nw_lag` lags). A point left of the grey line ($\hat\beta_i < 1$) moves less than its market.
+:::
+:::
+
 ```{r}
 #| label: tbl-sector
 #| tbl-cap: "Median beta and median R² by sector (all three markets pooled)."
@@ -259,6 +267,14 @@ roll |> filter(symbol %in% pick) |>
        x = NULL, y = "60-month rolling beta") +
   theme_report()
 ```
+
+::: {.eq-box}
+$$\hat\beta^{(60)}_{i,t} = \frac{\widehat{\operatorname{Cov}}(x_{i,s},\, x_{m,s})}{\widehat{\operatorname{Var}}(x_{m,s})}, \qquad s = t-59, \dots, t$$
+
+::: {.eq-defs}
+$\hat\beta^{(60)}_{i,t}$ beta of stock $i$ estimated on the 60 months ending in month $t$ · $x_{i,s}$, $x_{m,s}$ stock and market excess returns. One extreme month moves the estimate when it enters the window and again when it leaves 60 months later.
+:::
+:::
 
 ```{r}
 #| label: tbl-stability

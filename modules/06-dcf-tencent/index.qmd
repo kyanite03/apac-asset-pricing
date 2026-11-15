@@ -242,6 +242,20 @@ ggplot(br, aes(x = part)) +
   theme_report() + theme(panel.grid.major.x = element_blank(), axis.text.x = element_text(size = 8.5))
 ```
 
+::: {.eq-box}
+$$V = \frac{e}{S}\Big[\text{EV} + C - D + (1-h)(I_L + I_U) - M\Big]$$
+
+$$\text{EV} = \sum_{k=1}^{n} \frac{w_k\,\text{FCF}_k}{(1+\text{WACC})^{t_k}} + \frac{\text{FCF}_n\,(1+g)}{(\text{WACC}-g)\,(1+\text{WACC})^{n-1}}$$
+
+$$\text{FCF}_k = \text{EBITDA}_k - \tau\max(\text{EBIT}_k, 0) - \text{Capex}_k - \text{Lease}_k$$
+
+$$\text{EBIT}_k = \text{EBITDA}_k - \tfrac15\textstyle\sum_{j=1}^{5}\text{Capex}_{k-j}$$
+
+::: {.eq-defs}
+$V$ value per share (HK\$) · $e$ HK\$ per RMB · $S$ diluted shares · $C$ cash and term deposits · $D$ borrowings and notes · $h$ holding discount (`r pct(hd_base, 0)`) · $I_L$, $I_U$ listed and unlisted stakes · $M$ minority interests · $n$ = 10 forecast years (FY2026–35) · $w_1 = 0.5$, $t_1 = 0.25$ (only H2 FY2026 counts), then $w_k = 1$, $t_k = k-1$ (mid-year) · the first terminal-year flow (FY2036) also arrives mid-year, at $t = n$, so the perpetuity is valued at $t = n-1$ · $g$ terminal growth · $\tau$ tax rate · depreciation is five-year straight-line on capex.
+:::
+:::
+
 The base case values Tencent at **HK$`r round(bc$value)`** per share, `r pct(upside, 0)` above the price. The operating business is worth HK$`r round(per_share["operations"])` per share, of which `r pct(bc$dcf$pv$pv_tv / bc$dcf$pv$ev, 0)` comes from the terminal value (typical for a long-lived business). The forecast reaches RMB `r round(tail(bc$dcf$table$revenue, 1) / 1000)` billion of revenue and RMB `r round(tail(bc$dcf$table$fcf, 1) / 1000)` billion of free cash flow in FY2035. That free cash flow is `r pct(tail(bc$dcf$table$fcf, 1) / tail(bc$dcf$table$revenue, 1), 0)` of revenue, in line with the `r pct(fcf_hist[["2025"]] / rev_hist[["2025"]], 0)` Tencent achieved in 2025.
 
 ```{r}
@@ -286,6 +300,16 @@ ggsave("figures/key_chart.png", p_imp, width = 8.5, height = 5.2, dpi = 200, bg 
 p_imp
 ```
 
+::: {.eq-box}
+$$\text{WACC}(\text{ERP}) = (1-w_d)\,(r_f + \beta\,\text{ERP}) + w_d\,k_d\,(1-\tau)$$
+
+$$\text{Capex}_k = c_k\,\text{Rev}_k,\;\; c_k \to c_{\text{ss}} \text{ linearly by FY2030}$$
+
+::: {.eq-defs}
+Each cell is $V(\text{ERP}, c_{\text{ss}})$ from the DCF above. $r_f$ China 10-year yield · $\beta$ Tencent's Blume-adjusted beta (Module 01) · $w_d$ debt share at market values · $k_d$ pre-tax cost of debt · $c_{\text{ss}}$ steady-state capex as a share of revenue (x-axis). The black contour is the set of inputs where $V = P$, today's price.
+:::
+:::
+
 Holding everything else at the base case, the price is justified by any one of the following:
 
 - a **WACC of `r pct(imp_wacc)`**, which is a cost of equity of about `r pct(imp_ke, 0)` and an equity risk premium of `r pct(imp_erp, 0)`, more than twice Damodaran's `r pct(erp, 2)` for China;
@@ -312,6 +336,16 @@ ggplot(draws, aes(value)) +
   labs(x = "Value per share", y = "Draws") +
   theme_report()
 ```
+
+::: {.eq-box}
+$$V^{(j)} = V\big(\beta^{(j)}, \text{ERP}^{(j)}, g^{(j)}, \dots, h^{(j)}\big), \quad j = 1,\dots,10\,000$$
+
+$$\widehat{\Pr}(V > P) = \frac{1}{10\,000}\sum_{j} \mathbf 1\big[V^{(j)} > P\big]$$
+
+::: {.eq-defs}
+Each draw re-runs the full DCF and bridge with $\beta \sim N(\hat\beta, \widehat{\mathrm{se}}^2)$, ERP $\sim U(4.5\%, 8\%)$, $c_{\text{ss}} \sim U(8\%, 20\%)$, $h \sim U(10\%, 40\%)$ and the other ranges in the table below · $P$ share price (dashed line).
+:::
+:::
 
 ```{r}
 #| label: tbl-mc

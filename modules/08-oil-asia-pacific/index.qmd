@@ -298,6 +298,14 @@ ggsave("figures/key_chart.png", p_src, width = 9, height = 5, dpi = 200, bg = "w
 p_src
 ```
 
+::: {.eq-box}
+$$s_{c,y} = \frac{Q_{c,y}}{\sum_{c'} Q_{c',y}}$$
+
+::: {.eq-defs}
+$s_{c,y}$ share of Australia's refined-product imports from country $c$ in year $y$ · $Q_{c,y}$ volume imported from $c$ in $y$ (megalitres, summed over months).
+:::
+:::
+
 In `r first_full_year`, Singapore supplied `r pct(sh("Singapore", first_full_year), 0)` of Australia's refined-fuel imports. By `r last_full_year` its share was `r pct(sh("Singapore", last_full_year), 0)`. South Korea (`r pct(sh("Korea, Republic of (South)", last_full_year), 0)`), Malaysia (`r pct(sh("Malaysia", last_full_year), 0)`), Taiwan, China and India have grown, so the supply base is more diversified, but it remains almost entirely Asian.
 
 ```{r}
@@ -322,6 +330,14 @@ ggplot(bind_rows(p1, p2), aes(month, value, colour = name)) +
   theme_report()
 ```
 
+::: {.eq-box}
+$$\bar Q_t = \frac{1}{12}\sum_{k=0}^{11} Q_{t-k}, \qquad \text{cover}_t = \frac{\text{stocks}_t}{\text{average daily net imports}}$$
+
+::: {.eq-defs}
+$\bar Q_t$ 12-month trailing average of refinery input or product imports $Q_t$ (ML/month) · cover in IEA days as published in Australian Petroleum Statistics; the IEA obligation is $\text{cover}_t \ge 90$.
+:::
+:::
+
 The decline came in two waves. Throughput averaged about `r round(ref_2011 / 100) * 100` megalitres a month in 2011, fell to about `r round(ref_pre / 100) * 100` after earlier closures, then to about `r round(ref_post / 100) * 100` after the 2021 closures. Each time, imports filled the gap. Stock cover has sat well below the International Energy Agency's 90-day obligation for most of the period. It was `r cover_last$aus_iea_days_cover` days in `r format(cover_last$month, "%B %Y")`. That is about `r round(cover_last$aus_iea_days_cover / 7)` weeks of net imports as a buffer against a regional supply disruption.
 
 ### Asia's benchmark and the 2026 shock
@@ -343,6 +359,14 @@ ggplot(bdat, aes(month, value, colour = name)) +
   scale_colour_manual(values = c(Brent = "#2a78d6", Dubai = "#eb6834", `Brent – Dubai` = "#0b0b0b")) +
   labs(x = NULL, y = NULL) + theme_report()
 ```
+
+::: {.eq-box}
+$$\text{spread}_t = P^{\text{Brent}}_t - P^{\text{Dubai}}_t$$
+
+::: {.eq-defs}
+$P_t$ World Bank monthly average price, US\$ per barrel. A positive spread means Asia's Middle East crude is cheaper than the Atlantic benchmark.
+:::
+:::
 
 Dubai crude, the Middle East grade that supplies most of Asia, normally trades a little below Brent: the spread averaged `r num(spread_stats$m, 1)` dollars a barrel (standard deviation `r num(spread_stats$s, 1)`) before 2026. In 2026 it blew out, reaching `r num(spread_max$spread, 1)` dollars in `r format(spread_max$month, "%B %Y")`. On benchmark prices alone, Asian buyers of Middle East crude would seem to have escaped much of the shock. Singapore's actual import prices, below, show they did not.
 
@@ -403,6 +427,14 @@ y26 |> pivot_longer(-month) |>
   theme_report() + theme(legend.position = "top")
 ```
 
+::: {.eq-box}
+$$I^{\text{USD}}_t = I^{\text{SGD}}_t \cdot e_t, \qquad \tilde I_t = 100\,\frac{I^{\text{USD}}_t}{I^{\text{USD}}_{\text{Dec 2025}}}, \qquad \tilde P_t = 100\,\frac{P_t}{P_{\text{Dec 2025}}}$$
+
+::: {.eq-defs}
+$I^{\text{SGD}}_t$ SingStat import price index (crude or refined products, SGD) · $e_t$ US-dollar value of the Singapore dollar (month-end) · $P_t$ Brent or Dubai price. Every line is rebased so December 2025 = 100.
+:::
+:::
+
 The 2026 shock breaks the long-run pattern. Singapore's crude import prices rose far more than Dubai and roughly in line with Brent, peaking `r round(peak26_pct)`% above December 2025 in `r format(peak26$month, "%B %Y")`. They were above Dubai in `r n_above_dubai` of `r n26` months of 2026 and above Brent in `r n_above_brent`. Refined-product import prices rose most of all, peaking `r round(peak_prod_pct)`% above December 2025 in `r format(peak_prod$month, "%B %Y")`. Across 2026 they stayed closer to Brent (average gap `r num(gap_brent, 1)` index points) than to Dubai (`r num(gap_dubai, 1)`). The data cannot say why. Two plausible reasons are that the index is measured on a landed basis, so it includes freight and insurance costs that typically jump in a supply shock, and that refiners may have switched to Atlantic-basin crude priced off Brent. Either way, the cheaper Dubai benchmark did not translate into cheaper oil for Asia's main hub.
 
 ### Do regional fundamentals predict oil?
@@ -436,6 +468,14 @@ ggplot(bdf, aes(y = lbl)) +
   labs(x = "Oil beta (excess return per unit Brent return, controlling for the home market)", y = NULL) +
   theme_report() + theme(panel.grid.major.y = element_blank())
 ```
+
+::: {.eq-box}
+$$x_{i,t} = a_i + b_i\,x_{m,t} + \beta^{\text{oil}}_i\, r^{\text{Brent}}_t + \varepsilon_{i,t}, \qquad r^{\text{Brent}}_t = \frac{P^{\text{Brent}}_t}{P^{\text{Brent}}_{t-1}} - 1$$
+
+::: {.eq-defs}
+$x_{i,t}$ stock $i$'s monthly excess return · $x_{m,t}$ its home market's excess return · $\beta^{\text{oil}}_i$ oil beta (points), with intervals $\pm 1.96$ Newey–West standard errors (4 lags) · $P^{\text{Brent}}_t$ month-end Brent price.
+:::
+:::
 
 ```{r}
 #| label: tbl-equities
