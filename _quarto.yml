@@ -25,6 +25,8 @@ website:
             text: "04 · Statistical factors (APT)"
           - href: modules/05-cross-market-asx-hk-sg/index.qmd
             text: "05 · Cross-market comparison"
+          - href: modules/06-dcf-tencent/index.qmd
+            text: "06 · Valuing Tencent (DCF)"
     right:
       - icon: github
         href: "https://github.com/kyanite03/apac-asset-pricing"

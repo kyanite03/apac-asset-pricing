@@ -4,7 +4,17 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 
 **Read online:** [kyanite03.github.io/apac-asset-pricing](https://kyanite03.github.io/apac-asset-pricing/)
 
-## Latest: Module 05, cross-market comparison
+## Latest: Module 06, valuing Tencent
+
+![DCF value per share of Tencent by equity risk premium and steady-state capex, with the current price as a contour](modules/06-dcf-tencent/figures/key_chart.png)
+
+- **On standard inputs Tencent is worth about HK$827 a share, against a price of HK$386.6.** The sum-of-the-parts DCF uses China's 10-year yield, Damodaran's China risk premium and Module 01's beta, with figures extracted (and cross-checked) from Tencent's 2022–25 annual and 2026 interim reports.
+- **The price implies either a 13.6% WACC (an equity risk premium near 12%) or AI capex at 28% of revenue forever.** Realistic combinations, such as an 8% premium with 20% capex, reproduce it.
+- **Monte Carlo** (10,000 draws): median HK$559, 90% interval HK$391–840. The equity risk premium and steady-state capex drive most of the uncertainty; growth matters less.
+
+[Full write-up](https://kyanite03.github.io/apac-asset-pricing/modules/06-dcf-tencent/) · [source](modules/06-dcf-tencent/index.qmd)
+
+## Module 05, cross-market comparison
 
 ![Five-factor loadings of the ASX, HKEX and SGX indices](modules/05-cross-market-asx-hk-sg/figures/key_chart.png)
 
@@ -53,7 +63,7 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 | 03 | [Testing pricing models](modules/03-testing-pricing-models/) | CAPM vs zero-beta CAPM vs Fama–French: which prices APAC returns? | Done |
 | 04 | [Statistical factors (APT)](modules/04-statistical-factors-apt/) | How many factors drive APAC returns? | Done |
 | 05 | [Cross-market comparison](modules/05-cross-market-asx-hk-sg/) | Are factor premia equal across the three markets? | Done |
-| 06 | DCF: Tencent | Does Tencent deserve its valuation premium? | Planned |
+| 06 | [Valuing Tencent (DCF)](modules/06-dcf-tencent/) | What is Tencent worth, and what does its price assume? | Done |
 | 07 | Bank valuation, HK & SG | Why do Chinese banks trade at a discount to Singapore's? | Planned |
 | 08 | Oil vs energy equities | Is commodity risk priced, or just held? | Planned |
 | 09 | The David Jones collapse | Who bore the cost of DJ's administration? | Planned |
@@ -69,8 +79,10 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 | Path | Contents |
 |---|---|
 | `modules/NN-*/index.qmd` | One write-up per module (Quarto) |
-| `R/` | Shared functions: data (`data_prices.R`, `data_rates.R`, `data_factors.R`), estimators (`models_linear.R`, `models_factor.R`), chart theme (`plots.R`) |
+| `R/` | Shared functions: data (`data_prices.R`, `data_rates.R`, `data_factors.R`), estimators (`models_linear.R`, `models_factor.R`), valuation (`valuation_dcf.R`, `data_tencent.R`), chart theme (`plots.R`) |
 | `scripts/build_data.R` | Downloads prices and rates; writes `data/processed/` |
+| `scripts/extract_tencent.py` | Extracts Tencent financials (with report and page) from its annual/interim reports into `data/processed/tencent_financials.csv` |
+| `data/raw/tencent/` | Tencent annual and interim report PDFs (not committed). Download from [Tencent IR](https://www.tencent.com/investors/financial-reports/) |
 | `data/raw/french/` | Kenneth French factor ZIPs (not committed: no reuse licence). Download the three *Asia Pacific ex Japan* files (3 factors, 5 factors, momentum) from the [Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html) |
 | `data/processed/` | Monthly returns, market proxies, risk-free rates, universe, module outputs |
 | `tests/testthat/` | Estimator tests |

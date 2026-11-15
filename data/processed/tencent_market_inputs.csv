@@ -1,0 +1,9 @@
+item,value,unit,as_of,source
+price_0700_hk,386.6,HKD per share,2026-11-13,"Yahoo Finance 0700.HK regularMarketPrice"
+price_80700_hk,329.2,CNY per share,2026-11-13,"Yahoo Finance 80700.HK (RMB counter, same shares)"
+price_tcehy,49.74,USD per ADR (1 ADR = 1 share),2026-11-13,"Yahoo Finance TCEHY (OTC ADR)"
+fx_cny_hkd,1.1747,HKD per CNY,2026-11-15,"Yahoo Finance CNYHKD=X"
+rf_cgb_10y,0.0161,decimal,2026-11-13,"China Ministry of Finance government bond yield curve, 10Yr (yield.chinabond.com.cn)"
+erp_china,0.0514,decimal,2026-01-05,"Damodaran, Country Default Spreads and Risk Premiums, China total equity risk premium"
+erp_mature,0.0423,decimal,2026-01-05,"Damodaran, same table: mature-market ERP (Australia/Singapore row)"
+tax_china_statutory,0.25,decimal,2026-01-05,"Damodaran, same table: China corporate tax rate"

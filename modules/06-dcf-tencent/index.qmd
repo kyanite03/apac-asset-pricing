@@ -1,0 +1,346 @@
+---
+title: "06 · Valuing Tencent: a sum-of-the-parts DCF"
+subtitle: "What is Tencent worth on standard inputs, and what does its share price assume?"
+author: "Kai Marsh"
+date: last-modified
+---
+
+```{r}
+#| label: setup
+#| code-summary: "Setup: packages, shared functions, extracted financials, market inputs"
+
+suppressPackageStartupMessages({ library(tidyverse); library(knitr) })
+source("../../R/valuation_dcf.R")
+source("../../R/data_tencent.R")
+source("../../R/plots.R")
+
+data_dir <- "../../data/processed"
+d <- read_tencent(file.path(data_dir, "tencent_financials.csv"))
+mkt_in <- read_csv(file.path(data_dir, "tencent_market_inputs.csv"), show_col_types = FALSE)
+m_in <- setNames(mkt_in$value, mkt_in$item)
+betas <- read_csv(file.path(data_dir, "betas_module01.csv"), show_col_types = FALSE)
+b_tc <- betas |> filter(symbol == "0700.HK")
+
+tv <- function(item, fy, ...) tval(d, item, fy, ...)
+chk <- check_tencent(d)
+stopifnot(all(abs(as.matrix(chk$identities[, -1])) < 0.5, na.rm = TRUE), chk$n_disagree == 0)
+
+price <- m_in[["price_0700_hk"]]; fx <- m_in[["fx_cny_hkd"]]
+rf <- m_in[["rf_cgb_10y"]]; erp <- m_in[["erp_china"]]
+yrs <- as.character(2021:2025)
+```
+
+```{r}
+#| label: anchors
+#| code-summary: "Forecast anchors from the reports"
+
+segs <- c(`Value-added services` = "rev_vas", `Marketing services` = "rev_marketing",
+          `FinTech & business services` = "rev_fintech_business")
+rev2025 <- c(sapply(segs, tv, fy = "2025"), Others = tv("rev_others", "2025"))
+h1 <- function(it, y) tv(paste0(it, "_h1"), y)
+g_h1_total <- h1("revenue", "2026H1") / h1("revenue", "2025H1") - 1
+g2026 <- c(sapply(segs, \(s) h1(s, "2026H1") / h1(s, "2025H1") - 1), Others = g_h1_total)
+
+capex_total <- function(y) -(tv("capex_ppe_paid", y) + tv("intangibles_paid", y) + tv("land_use_rights_paid", y))
+capex_hist <- c(capex_total("2021"), sapply(yrs, capex_total))          # FY2020 set equal to FY2021
+rev_hist <- sapply(yrs, \(y) tv("revenue", y))
+fcf_hist <- sapply(yrs, \(y) tv("cfo", y)) - sapply(yrs, capex_total) + sapply(yrs, \(y) tv("lease_principal_paid", y))
+media_2025 <- -tv("intangibles_paid", "2025")
+capex2026 <- 2 * h1("capex_reported", "2026H1") + media_2025
+margin0 <- h1("ebitda", "2026H1") / h1("revenue", "2026H1")
+tax_eff <- sapply(c("2024", "2025"), \(y) -tv("income_tax", y) / (tv("profit_before_tax", y) - tv("share_of_associates", y)))
+lease_pct <- mean(sapply(yrs, \(y) -tv("lease_principal_paid", y)) / rev_hist)
+capex_pre_ai <- mean((capex_hist[-1] / rev_hist)[c("2021", "2022", "2023")])
+
+base <- list(rev2025 = rev2025, g2026 = g2026, capex_hist = capex_hist,
+             capex2026 = capex2026, ebitda_margin0 = margin0)
+
+# Balance sheet at the valuation date (30 June 2026) and share count
+bs <- list(cash = tv("cash", "2026H1"), term_deposits = tv("term_deposits_others", "2026H1"),
+           borrowings = -tv("borrowings_total", "2026H1"), notes = -tv("notes_total", "2026H1"),
+           listed_bn = tv("listed_investments_fv_bn", "2026H1"),
+           unlisted_bn = tv("unlisted_investments_bv_bn", "2026H1"), nci = tv("nci_equity", "2026H1"))
+shares <- tv("shares_diluted_wavg_q2_m", "2026H1")
+```
+
+```{r}
+#| label: wacc
+#| code-summary: "Cost of capital"
+
+beta_base <- b_tc$beta_blume                                # Module 01, Blume-adjusted
+debt_val <- bs$borrowings + bs$notes
+equity_val <- price * shares / fx                           # market cap in RMB million
+gross_debt <- function(y) tv("borrowings_noncurrent", y) + tv("borrowings_current", y) +
+  tv("notes_noncurrent", y) + tv("notes_current", y)
+kd <- -tv("interest_paid", "2025") / mean(c(gross_debt("2024"), gross_debt("2025")))
+tax_base <- round(mean(tax_eff), 2)
+w <- wacc_calc(beta_base, rf, erp, kd, tax_base, equity_val, debt_val)
+```
+
+```{r}
+#| label: base-case
+#| code-summary: "Base case DCF and bridge"
+
+p_base <- list(growth_mult = 1, g_terminal = 0.02, ebitda_margin_target = margin0,
+               capex_intensity_ss = 0.10, tax = tax_base, lease_pct = lease_pct,
+               wacc = w$wacc, n = 10, k_norm = 5)
+hd_base <- 0.20                                             # holding discount on investments
+run <- function(p, hd = hd_base) {
+  r <- tencent_dcf(base, p)
+  b <- sotp_bridge(r$pv$ev, bs, hd, fx, shares)
+  list(dcf = r, bridge = b, value = b$per_share_hkd)
+}
+bc <- run(p_base)
+val_at <- function(...) run(modifyList(p_base, list(...)))$value
+upside <- bc$value / price - 1
+```
+
+```{r}
+#| label: reverse
+#| code-summary: "Reverse DCF: what the price implies"
+
+implied <- function(f, lo, hi) tryCatch(uniroot(\(x) f(x) - price, c(lo, hi))$root, error = function(e) NA)
+imp_wacc <- implied(\(x) val_at(wacc = x), 0.05, 0.30)
+imp_ke <- (imp_wacc - w$w_d * w$kd_after_tax) / (1 - w$w_d)
+imp_erp <- (imp_ke - rf) / beta_base
+imp_capex <- implied(\(x) val_at(capex_intensity_ss = x), 0.05, 0.45)
+imp_growth <- implied(\(x) val_at(growth_mult = x), -4, 1.5)
+wacc_of <- function(e) wacc_calc(beta_base, rf, e, kd, tax_base, equity_val, debt_val)$wacc
+
+grid <- expand_grid(erp = seq(0.04, 0.11, by = 0.0025), capex = seq(0.08, 0.30, by = 0.005)) |>
+  mutate(value = map2_dbl(erp, capex, \(e, c) val_at(wacc = wacc_of(e), capex_intensity_ss = c)))
+```
+
+```{r}
+#| label: monte-carlo
+#| code-summary: "Monte Carlo: 10,000 draws over the uncertain inputs"
+
+set.seed(2026)
+n_sim <- 10000
+draws <- tibble(
+  beta = rnorm(n_sim, beta_base, b_tc$se_beta),
+  erp = runif(n_sim, 0.045, 0.080),
+  g_terminal = runif(n_sim, 0.005, 0.025),
+  growth_mult = runif(n_sim, 0.6, 1.3),
+  margin = rnorm(n_sim, margin0, 0.025),
+  capex_ss = runif(n_sim, 0.08, 0.20),
+  tax = runif(n_sim, 0.17, 0.23),
+  hd = runif(n_sim, 0.10, 0.40)
+)
+draws$wacc <- with(draws, map2_dbl(beta, erp, \(b, e) wacc_calc(b, rf, e, kd, tax_base, equity_val, debt_val)$wacc))
+draws$value <- pmap_dbl(draws, function(beta, erp, g_terminal, growth_mult, margin, capex_ss, tax, hd, wacc) {
+  run(modifyList(p_base, list(wacc = wacc, g_terminal = g_terminal, growth_mult = growth_mult,
+                              ebitda_margin_target = margin, capex_intensity_ss = capex_ss, tax = tax)), hd)$value
+})
+q <- quantile(draws$value, c(0.05, 0.25, 0.5, 0.75, 0.95))
+p_above <- mean(draws$value > price)
+# Which inputs move value most? Standardised regression of value on the draws.
+drivers <- lm(scale(value) ~ scale(erp) + scale(beta) + scale(capex_ss) + scale(growth_mult) +
+                scale(margin) + scale(g_terminal) + scale(tax) + scale(hd), data = draws)
+drv <- tibble(term = names(coef(drivers))[-1], coef = coef(drivers)[-1]) |>
+  mutate(term = gsub("scale\\(|\\)", "", term)) |> arrange(desc(abs(coef)))
+```
+
+::: {.callout-tip title="Answer first"}
+- **On standard inputs, Tencent is worth well above its share price.** A sum-of-the-parts DCF gives **HK$`r round(bc$value)` per share** against a price of HK$`r price` (`r format(as.Date(mkt_in$as_of[1]), "%d %b %Y")`). That uses China's 10-year bond yield (`r pct(rf, 2)`), Damodaran's China equity risk premium (`r pct(erp, 2)`) and Tencent's own beta from Module 01. The operating business accounts for `r pct(bc$bridge$parts["operations"] / bc$bridge$equity_rmb_m, 0)` of the value. The investment portfolio, net of a `r pct(hd_base, 0)` holding discount, adds `r pct(sum(bc$bridge$parts[c("listed_investments", "unlisted_investments")]) / bc$bridge$equity_rmb_m, 0)`, and net cash and minority interests roughly offset each other.
+- **There is no "valuation premium"; the market applies a large discount.** To justify today's price you would need a discount rate of **`r pct(imp_wacc)`** (a cost of equity near `r pct(imp_ke, 0)`, an equity risk premium of about `r pct(imp_erp, 0)`). Alternatively, AI capital spending would have to stay at **`r pct(imp_capex, 0)` of revenue forever**, against `r pct(capex_pre_ai, 0)` before the AI build-out.
+- **The realistic reading is a mix of both.** An equity risk premium of 8% with capex settling at 20% of revenue, or 10% with 15%, roughly reproduces the price (see the chart below). Across 10,000 Monte Carlo draws over plausible ranges, the median value is HK$`r round(q["50%"])` (90% interval HK$`r round(q["5%"])`–`r round(q["95%"])`), and `r pct(p_above, 0)` of draws exceed the price.
+- **So what:** Tencent's price is not a bet on growth; it is a bet on *risk* and *capital intensity*. An investor buying at today's price is being paid to bear China-specific risk (regulation, the VIE structure, geopolitics) and the risk that AI spending permanently absorbs cash. Whether that is a good trade depends on views of those risks, not on Tencent's operating performance, which is strong.
+:::
+
+## Question
+
+Tencent (0700.HK) is one of Asia's largest companies by market value: WeChat, one of the world's largest video-game businesses, a payments network, cloud services and a large portfolio of stakes in other companies. Is its market value justified by the cash its businesses will generate? And if not, what is the price assuming?
+
+**One company, one share, three quotes.** Tencent's ordinary shares trade in Hong Kong in HKD (0700.HK) and on HKEX's renminbi counter (80700.HK). American Depositary Receipts trade over the counter in the US (TCEHY, one ADR per share). Mainland investors buy 0700 through Stock Connect. These are all claims on the same pool of shares, so the valuation uses the total diluted share count and one price: HK$`r price`. The RMB counter (CNY `r m_in[["price_80700_hk"]]`) and the ADR (US$`r m_in[["price_tcehy"]]`) trade at the same value after currency conversion. Adding the listings together would count the same shares two or three times.
+
+## Data
+
+The financials come from Tencent's annual reports for 2022–2025 and its 2026 interim report, downloaded from Tencent's investor-relations site. A script ([`scripts/extract_tencent.py`](https://github.com/kyanite03/apac-asset-pricing/blob/main/scripts/extract_tencent.py)) extracts each figure with its report and page number. Two checks run every time this page is built:
+
+- **Accounting identities:** segments sum to revenue, revenue less cost of revenue equals gross profit, profit before tax less tax equals profit, and cash plus deposits less debt equals Tencent's reported net cash. All hold to the RMB million in every year.
+- **Cross-report agreement:** each report also shows the prior year, so `r chk$n_compared` figures are extracted twice from different reports. All agree, except where Tencent has restated: in 2023 it moved investment gains below the operating-profit line, and it later redefined non-IFRS operating profit. The latest (restated) figures are used throughout.
+
+```{r}
+#| label: tbl-history
+#| tbl-cap: "Tencent's financial history (RMB billion). Free cash flow = operating cash flow − capital expenditure (property, equipment, land, and intangible assets including media content) − lease principal."
+
+hist <- tibble(
+  Item = c("Revenue", "  Value-added services", "  Marketing services", "  FinTech & business services",
+           "Operating profit (IFRS, restated)", "EBITDA margin", "Capital expenditure (cash)",
+           "Free cash flow", "Share-based compensation", "Diluted shares (billion)"),
+  !!!set_names(map(yrs, function(y) c(
+    tv("revenue", y), tv("rev_vas", y), tv("rev_marketing", y), tv("rev_fintech_business", y),
+    if (y == "2021") tv("operating_profit", y, restated = TRUE) else tv("operating_profit", y),
+    NA, capex_total(y), fcf_hist[[y]], tv("sbc_equity", y), tv("shares_diluted_wavg_m", y))), yrs))
+for (y in yrs) hist[[y]] <- ifelse(hist$Item == "EBITDA margin",
+                                   sprintf("%.1f%%", 100 * (tv("operating_profit", y, restated = y == "2021") -
+                                                              tv("other_gains", y) * (y != "2021") +
+                                                              tv("dep_ppe", y) + tv("dep_rou", y) + tv("amort_intangibles", y)) / tv("revenue", y)),
+                                   formatC(hist[[y]] / 1000, format = "f", digits = 1, big.mark = ","))
+hist$`2021`[hist$Item == "EBITDA margin"] <- "–"
+kable(hist, align = "lrrrrr")
+```
+
+Three features of the history drive the valuation. **Growth has resumed**: revenue rose `r pct(rev_hist[["2025"]] / rev_hist[["2023"]] - 1, 0)` over 2023–25, and first-half 2026 revenue was up `r pct(g_h1_total)` year on year, led by marketing services (`r pct(g2026[["Marketing services"]])`). **Margins have widened**: the EBITDA margin reached `r pct(margin0)` in the first half of 2026. **Capital spending has exploded**: cash capex rose from `r round(capex_hist[["2023"]] / 1000)` billion in 2023 to `r round(capex_hist[["2025"]] / 1000)` billion in 2025, and Tencent spent RMB `r round(h1("capex_reported", "2026H1") / 1000, 1)` billion in the first half of 2026 alone, mostly on AI infrastructure.
+
+## Model
+
+**Operating forecast (FY2026–FY2035).** Each segment's revenue grows in FY2026 at its first-half 2026 year-on-year rate. From FY2027, that rate fades linearly to the terminal growth rate by FY2035. The EBITDA margin starts at its first-half 2026 level (`r pct(margin0)`). Margin, rather than operating profit, is the driver, so that the depreciation from today's capex wave is charged against profit as it arrives. EBITDA here is after share-based compensation, which is treated as a real cost.
+
+**Capital spending and depreciation.** FY2026 capex is set to twice the first-half figure plus media-content spending at its 2025 level (RMB `r round(capex2026 / 1000)` billion, `r pct(capex2026 / sum(rev2025 * (1 + g2026)), 0)` of revenue). It then fades to a steady-state share of revenue by FY2030 (base case `r pct(p_base$capex_intensity_ss, 0)`, close to the pre-AI average of `r pct(capex_pre_ai, 1)`). Depreciation is five-year straight-line on actual and forecast capex. Free cash flow is $\text{EBITDA} - \text{tax on EBIT} - \text{capex} - \text{lease payments}$, with tax at `r pct(tax_base, 0)` (Tencent's effective rate on operating profit in 2024–25: `r paste(pct(tax_eff, 1), collapse = " and ")`).
+
+**Discounting.** The valuation date is 30 June 2026, the latest balance sheet. Only the second half of FY2026 is counted, then mid-year flows, and a Gordon terminal value from FY2035 at `r pct(p_base$g_terminal, 0)` growth.
+
+```{r}
+#| label: tbl-wacc
+#| tbl-cap: "Cost of capital (RMB)."
+
+tibble(Input = c("Risk-free rate", "Equity risk premium", "Beta", "Cost of equity",
+                 "Pre-tax cost of debt", "Debt / (debt + equity), market values", "WACC"),
+       Value = c(pct(rf, 2), pct(erp, 2), num(beta_base), pct(w$ke, 2), pct(kd, 2), pct(w$w_d, 1), pct(w$wacc, 2)),
+       Source = c(sprintf("China 10-year government bond, Ministry of Finance curve, %s", mkt_in$as_of[mkt_in$item == "rf_cgb_10y"]),
+                  "Damodaran country risk table, China, January 2026",
+                  sprintf("Module 01: Tencent vs Hang Seng, %s raw, Blume-adjusted", num(b_tc$beta)),
+                  "CAPM", "Interest paid 2025 / average gross debt 2024–25",
+                  "Borrowings + notes payable (30 June 2026) vs market capitalisation", "")) |>
+  kable(align = "lrl")
+```
+
+**Sum of the parts.** Tencent's stakes in other companies are valued separately, not through the cash-flow forecast. Their profits are excluded from the operating forecast to avoid counting them twice. Listed stakes enter at their fair value at 30 June 2026 (RMB `r bs$listed_bn` billion, down from `r tv("listed_investments_fv_bn", "2025")` billion six months earlier) and unlisted stakes at book value (RMB `r bs$unlisted_bn` billion). Both carry a `r pct(hd_base, 0)` holding discount, reflecting tax on disposal, illiquidity and the market's usual conglomerate discount. Cash and term deposits are added, debt and minority interests subtracted.
+
+## Results
+
+### Base case
+
+```{r}
+#| label: fig-bridge
+#| fig-cap: "From operating value to value per share (HK$ per share, base case)."
+#| fig-width: 8
+#| fig-height: 4.2
+
+per_share <- bc$bridge$parts / shares * fx
+br <- tibble(part = c("Operating business", "Cash & deposits", "Debt", "Listed stakes (net)",
+                      "Unlisted stakes (net)", "Minority interests"),
+             value = unname(per_share)) |>
+  mutate(end = cumsum(value), start = lag(end, default = 0), part = factor(part, levels = part))
+br <- bind_rows(br, tibble(part = factor("Value per share"), value = sum(per_share), start = 0, end = sum(per_share))) |>
+  mutate(part = factor(part, levels = c(levels(br$part), "Value per share")),
+         kind = case_when(part == "Value per share" ~ "total", value >= 0 ~ "add", TRUE ~ "subtract"))
+ggplot(br, aes(x = part)) +
+  geom_rect(aes(xmin = as.numeric(part) - 0.38, xmax = as.numeric(part) + 0.38,
+                ymin = pmin(start, end), ymax = pmax(start, end), fill = kind)) +
+  geom_hline(yintercept = price, linetype = "dashed", colour = "#52514e") +
+  annotate("label", x = 4, y = price, label = sprintf("Share price HK$%.1f", price),
+           size = 3.2, colour = "#52514e", label.size = 0, fill = "white") +
+  geom_text(aes(y = pmax(start, end), label = if_else(kind == "total", sprintf("%.0f", value), sprintf("%+.0f", value))),
+            vjust = -0.4, size = 3.1, colour = "#0b0b0b") +
+  scale_x_discrete(labels = \(x) str_wrap(x, 12)) +
+  scale_fill_manual(values = c(add = "#2a78d6", subtract = "#e34948", total = "#0b0b0b"), guide = "none") +
+  scale_y_continuous(labels = \(x) paste0("HK$", x)) +
+  labs(x = NULL, y = NULL) +
+  theme_report() + theme(panel.grid.major.x = element_blank(), axis.text.x = element_text(size = 8.5))
+```
+
+The base case values Tencent at **HK$`r round(bc$value)`** per share, `r pct(upside, 0)` above the price. The operating business is worth HK$`r round(per_share["operations"])` per share, of which `r pct(bc$dcf$pv$pv_tv / bc$dcf$pv$ev, 0)` comes from the terminal value (typical for a long-lived business). The forecast reaches RMB `r round(tail(bc$dcf$table$revenue, 1) / 1000)` billion of revenue and RMB `r round(tail(bc$dcf$table$fcf, 1) / 1000)` billion of free cash flow in FY2035. That free cash flow is `r pct(tail(bc$dcf$table$fcf, 1) / tail(bc$dcf$table$revenue, 1), 0)` of revenue, in line with the `r pct(fcf_hist[["2025"]] / rev_hist[["2025"]], 0)` Tencent achieved in 2025.
+
+```{r}
+#| label: tbl-grid
+#| tbl-cap: "Value per share (HK$) by WACC and terminal growth, other inputs at base case. Price: HK$386.6."
+
+wg <- expand_grid(wacc = c(0.07, 0.08, 0.09, 0.10, 0.11, 0.12), g = c(0.01, 0.02, 0.03)) |>
+  mutate(v = map2_dbl(wacc, g, \(a, b) val_at(wacc = a, g_terminal = b)))
+wg |> mutate(g = paste("g =", pct(g, 0)), WACC = pct(wacc, 0)) |>
+  select(WACC, g, v) |> pivot_wider(names_from = g, values_from = v) |>
+  mutate(across(-WACC, \(x) round(x))) |> kable(align = "lrrr")
+```
+
+### What the price implies
+
+```{r}
+#| label: fig-implied
+#| fig-cap: "Value per share across the two assumptions that matter most: the equity risk premium and steady-state capital spending. The black line is today's share price; combinations on it justify the price exactly. The point marks the base case."
+#| fig-width: 8.5
+#| fig-height: 5.2
+
+p_imp <- ggplot(grid, aes(capex, erp)) +
+  geom_raster(aes(fill = value), interpolate = TRUE) +
+  geom_contour(aes(z = value), breaks = price, colour = "#0b0b0b", linewidth = 0.9) +
+  geom_contour(aes(z = value), breaks = c(300, 500, 700), colour = "white", linewidth = 0.3, linetype = "dashed") +
+  annotate("point", x = p_base$capex_intensity_ss, y = erp, size = 3, shape = 21, fill = "white", colour = "#0b0b0b") +
+  annotate("label", x = p_base$capex_intensity_ss + 0.006, y = erp, label = sprintf("Base case: HK$%.0f", bc$value),
+           hjust = 0, size = 3.1, label.size = 0) +
+  annotate("label", x = 0.205, y = wacc_inv <- 0.083, label = sprintf("Price HK$%.0f", price), size = 3.1, label.size = 0) +
+  scale_fill_gradient2(low = "#e34948", mid = "#f0efec", high = "#2a78d6", midpoint = price,
+                       name = "HK$ per\nshare") +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1), expand = c(0, 0)) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1), expand = c(0, 0)) +
+  labs(title = "Tencent's price implies a large risk premium, permanent AI spending, or both",
+       subtitle = "DCF value per share by equity risk premium and steady-state capex (% of revenue)",
+       x = "Steady-state capital expenditure (% of revenue)", y = "Equity risk premium",
+       caption = sprintf("Other inputs at base case. Risk-free %s (China 10y), beta %s. Blue = above price, red = below.",
+                         pct(rf, 2), num(beta_base))) +
+  theme_report() + theme(legend.position = "right", legend.justification = "center")
+dir.create("figures", showWarnings = FALSE)
+ggsave("figures/key_chart.png", p_imp, width = 8.5, height = 5.2, dpi = 200, bg = "white")
+p_imp
+```
+
+Holding everything else at the base case, the price is justified by any one of the following:
+
+- a **WACC of `r pct(imp_wacc)`**, which is a cost of equity of about `r pct(imp_ke, 0)` and an equity risk premium of `r pct(imp_erp, 0)`, more than twice Damodaran's `r pct(erp, 2)` for China;
+- **steady-state capex of `r pct(imp_capex, 0)` of revenue**, permanently, against `r pct(capex_pre_ai, 0)` before the AI build-out and about `r pct(capex2026 / sum(rev2025 * (1 + g2026)), 0)` at the 2026 peak;
+- **revenue growth that reverses**: the FY2026 growth rates would have to be multiplied by `r num(imp_growth)` from FY2027 onward, meaning several years of shrinking revenue.
+
+Each of these alone is extreme. In combination they are not. The contour shows, for example, that a 10% equity risk premium with capex at 15% of revenue, or 8% with 20%, both land close to the price. A gap of 3–5 points over the rating-based risk premium is what a specific "China discount" on offshore-listed Chinese companies would look like. Plausible sources are regulatory risk (as in the 2021 platform crackdown), the VIE ownership structure (foreign shareholders own contractual claims, not the Chinese operating companies themselves), and US–China tensions. This analysis measures the size of the gap but does not test its causes.
+
+### Monte Carlo
+
+```{r}
+#| label: fig-mc
+#| fig-cap: "Distribution of value per share across 10,000 draws. Dashed line: share price."
+#| fig-width: 8
+#| fig-height: 3.8
+
+ggplot(draws, aes(value)) +
+  geom_histogram(bins = 80, fill = "#2a78d6", colour = "white", linewidth = 0.1) +
+  geom_vline(xintercept = price, linetype = "dashed", colour = "#0b0b0b") +
+  annotate("text", x = price, y = Inf, label = sprintf("Price HK$%.0f", price), hjust = 1.05, vjust = 1.5, size = 3.2) +
+  annotate("text", x = q["50%"], y = Inf, label = sprintf("Median HK$%.0f", q["50%"]), hjust = -0.1, vjust = 1.5, size = 3.2,
+           colour = "#2a78d6") +
+  scale_x_continuous(labels = \(x) paste0("HK$", x)) +
+  labs(x = "Value per share", y = "Draws") +
+  theme_report()
+```
+
+```{r}
+#| label: tbl-mc
+#| tbl-cap: "Monte Carlo inputs and their influence on value (standardised regression coefficient: change in value, in standard deviations, per one-standard-deviation change in the input)."
+
+lab <- c(erp = "Equity risk premium", beta = "Beta", capex_ss = "Steady-state capex (% revenue)",
+         growth_mult = "Growth multiplier (FY2027 start)", margin = "Steady-state EBITDA margin",
+         g_terminal = "Terminal growth", tax = "Tax rate", hd = "Holding discount on investments")
+rng <- c(erp = "Uniform 4.5%–8.0%", beta = sprintf("Normal(%s, %s), Module 01", num(beta_base), num(b_tc$se_beta)),
+         capex_ss = "Uniform 8%–20%", growth_mult = "Uniform 0.6–1.3", margin = sprintf("Normal(%s, 2.5 pts)", pct(margin0)),
+         g_terminal = "Uniform 0.5%–2.5%", tax = "Uniform 17%–23%", hd = "Uniform 10%–40%")
+drv |> transmute(Input = lab[term], Range = rng[term], `Influence` = sprintf("%+.2f", coef)) |>
+  kable(align = "llr")
+```
+
+The ranges are deliberately wide, and the equity risk premium range extends well above the rating-based figure. Even so, `r pct(p_above, 0)` of draws value Tencent above its price, and the 5th percentile is HK$`r round(q["5%"])`. The two inputs that matter most are the equity risk premium and steady-state capex, the same two that the reverse DCF singles out. Margins, growth and terminal growth matter less, with roughly half the influence. The valuation question is about how much risk to charge and how much cash AI will consume, not about whether Tencent's businesses keep growing.
+
+## Limitations
+
+- **The cost of capital is the crux, and it is contested.** A risk-free rate of `r pct(rf, 2)` reflects China's low-inflation, low-rate economy, and a rating-based risk premium may not capture the risks offshore investors actually price. Readers who believe the market's implied premium is correct will conclude the price is fair. This analysis makes the size of that premium explicit, but it cannot settle it.
+- **AI capex is unprecedented.** No history exists for how long the current spending lasts or what it earns. The model assumes it normalises by FY2030; the reverse DCF shows how much depends on that.
+- **No consensus forecasts.** The forecast is built from Tencent's reported trends, not analyst estimates, which would usually be a cross-check.
+- **Investments are marked at one date.** The listed portfolio's fair value fell by RMB `r round(tv("listed_investments_fv_bn", "2025") - bs$listed_bn)` billion in the first half of 2026 alone. Every RMB 100 billion is worth about HK$`r round(100e3 * (1 - hd_base) / shares * fx)` per share.
+- **Simplifications.** Minority interests are at book value. Working-capital changes are set to zero (Tencent's deferred revenue makes working capital a small source of cash). Lease payments are treated as an operating cost rather than debt. The valuation is as at 30 June 2026 and is compared with a November 2026 price without rolling forward. Rolling forward to the price date would raise it by about `r pct((1 + w$wacc)^(as.numeric(as.Date(mkt_in$as_of[1]) - as.Date("2026-06-30")) / 365) - 1, 1)`.
+- **Not investment advice.** This is an analytical exercise in valuation methods using public information.
+
+## References
+
+- Damodaran, A. (2026). *Country Default Spreads and Risk Premiums* (January 2026 update). NYU Stern.
+- Koller, T., Goedhart, M., & Wessels, D. (2020). *Valuation: Measuring and Managing the Value of Companies* (7th ed.). Wiley.
+- Tencent Holdings Ltd. *Annual Reports* 2022–2025 and *2026 Interim Report*. <https://www.tencent.com/investors/financial-reports/>
+- Ministry of Finance of the People's Republic of China. Government bond yield curve. <https://yield.chinabond.com.cn>

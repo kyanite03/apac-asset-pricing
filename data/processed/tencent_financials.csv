@@ -1,0 +1,569 @@
+fy,item,value,source,page
+2021,adj_ebitda,194798.0,AR2022,23
+2022,adj_ebitda,188986.0,AR2022,23
+2022,adj_ebitda,188986.0,AR2023,20
+2023,adj_ebitda,235454.0,AR2023,20
+2023,adj_ebitda,235454.0,AR2024,19
+2024,adj_ebitda,277012.0,AR2024,19
+2024,adj_ebitda,277012.0,AR2025,19
+2025,adj_ebitda,336427.0,AR2025,19
+2021,amort_intangibles,31504.0,AR2022,23
+2022,amort_intangibles,32772.0,AR2022,23
+2022,amort_intangibles,32772.0,AR2023,20
+2023,amort_intangibles,32703.0,AR2023,20
+2023,amort_intangibles,32703.0,AR2024,19
+2024,amort_intangibles,28881.0,AR2024,19
+2024,amort_intangibles,28881.0,AR2025,19
+2025,amort_intangibles,33229.0,AR2025,19
+2021,borrowings_current,19003.0,AR2022,136
+2022,borrowings_current,11580.0,AR2022,136
+2022,borrowings_current,11580.0,AR2023,133
+2023,borrowings_current,41537.0,AR2023,133
+2023,borrowings_current,41537.0,AR2024,128
+2024,borrowings_current,52885.0,AR2024,128
+2024,borrowings_current,52885.0,AR2025,134
+2025,borrowings_current,42618.0,AR2025,134
+2021,borrowings_noncurrent,136936.0,AR2022,135
+2022,borrowings_noncurrent,163668.0,AR2022,135
+2022,borrowings_noncurrent,163668.0,AR2023,132
+2023,borrowings_noncurrent,155819.0,AR2023,132
+2023,borrowings_noncurrent,155819.0,AR2024,127
+2024,borrowings_noncurrent,146521.0,AR2024,127
+2024,borrowings_noncurrent,146521.0,AR2025,133
+2025,borrowings_noncurrent,208369.0,AR2025,133
+2026H1,borrowings_total,-298942.0,IR2026,22
+2021,buybacks_paid,-2170.0,AR2022,142
+2022,buybacks_paid,-29307.0,AR2022,142
+2022,buybacks_paid,-29307.0,AR2023,139
+2023,buybacks_paid,-43767.0,AR2023,139
+2023,buybacks_paid,-43767.0,AR2024,134
+2024,buybacks_paid,-102331.0,AR2024,134
+2024,buybacks_paid,-102331.0,AR2025,140
+2025,buybacks_paid,-73312.0,AR2025,140
+2021,capex_ppe_paid,-29302.0,AR2022,141
+2022,capex_ppe_paid,-22679.0,AR2022,141
+2022,capex_ppe_paid,-22679.0,AR2023,138
+2023,capex_ppe_paid,-21008.0,AR2023,138
+2023,capex_ppe_paid,-21008.0,AR2024,133
+2024,capex_ppe_paid,-62927.0,AR2024,133
+2024,capex_ppe_paid,-62927.0,AR2025,139
+2025,capex_ppe_paid,-87482.0,AR2025,139
+2021,capex_reported,33392.0,AR2022,22
+2022,capex_reported,18014.0,AR2022,22
+2022,capex_reported,18014.0,AR2023,19
+2023,capex_reported,23893.0,AR2023,19
+2023,capex_reported,23893.0,AR2024,18
+2024,capex_reported,76760.0,AR2024,18
+2024,capex_reported,76760.0,AR2025,18
+2025,capex_reported,79198.0,AR2025,18
+2025H1,capex_reported_h1,46583.0,IR2026,15
+2026H1,capex_reported_h1,84720.0,IR2026,15
+2022,cash,156739.0,AR2022,29
+2023,cash,172320.0,AR2023,25
+2024,cash,132519.0,AR2024,25
+2025,cash,141041.0,AR2025,25
+2026H1,cash,206930.0,IR2026,22
+2021,cfo,175186.0,AR2022,141
+2022,cfo,146091.0,AR2022,141
+2022,cfo,146091.0,AR2023,138
+2023,cfo,221962.0,AR2023,138
+2023,cfo,221962.0,AR2024,133
+2024,cfo,258521.0,AR2024,133
+2024,cfo,258521.0,AR2025,139
+2025,cfo,303052.0,AR2025,139
+2021,cost_of_revenues,-314174.0,AR2022,132
+2022,cost_of_revenues,-315806.0,AR2022,132
+2022,cost_of_revenues,-315806.0,AR2023,129
+2023,cost_of_revenues,-315906.0,AR2023,129
+2023,cost_of_revenues,-315906.0,AR2024,124
+2024,cost_of_revenues,-311011.0,AR2024,124
+2024,cost_of_revenues,-311011.0,AR2025,130
+2025,cost_of_revenues,-329173.0,AR2025,130
+2021,dep_ppe,21517.0,AR2022,23
+2022,dep_ppe,21724.0,AR2022,23
+2022,dep_ppe,21724.0,AR2023,20
+2023,dep_ppe,19908.0,AR2023,20
+2023,dep_ppe,19908.0,AR2024,19
+2024,dep_ppe,21141.0,AR2024,19
+2024,dep_ppe,21141.0,AR2025,19
+2025,dep_ppe,26580.0,AR2025,19
+2021,dep_rou,4649.0,AR2022,23
+2022,dep_rou,6720.0,AR2022,23
+2022,dep_rou,6720.0,AR2023,20
+2023,dep_rou,6397.0,AR2023,20
+2023,dep_rou,6397.0,AR2024,19
+2024,dep_rou,6191.0,AR2024,19
+2024,dep_rou,6191.0,AR2025,19
+2025,dep_rou,6219.0,AR2025,19
+2021,dividends_paid,-12503.0,AR2022,142
+2022,dividends_paid,-12952.0,AR2022,142
+2022,dividends_paid,-12952.0,AR2023,139
+2023,dividends_paid,-20983.0,AR2023,139
+2023,dividends_paid,-20983.0,AR2024,134
+2024,dividends_paid,-28859.0,AR2024,134
+2024,dividends_paid,-28859.0,AR2025,140
+2025,dividends_paid,-37535.0,AR2025,140
+2021,dividends_received,3324.0,AR2022,141
+2022,dividends_received,2192.0,AR2022,141
+2022,dividends_received,2192.0,AR2023,138
+2023,dividends_received,2011.0,AR2023,138
+2023,dividends_received,2011.0,AR2024,133
+2024,dividends_received,3521.0,AR2024,133
+2024,dividends_received,3521.0,AR2025,139
+2025,dividends_received,6500.0,AR2025,139
+2021,ebitda,173173.0,AR2022,23
+2022,ebitda,164037.0,AR2022,23
+2022,ebitda,164037.0,AR2023,20
+2023,ebitda,214381.0,AR2023,20
+2023,ebitda,214381.0,AR2024,19
+2024,ebitda,256310.0,AR2024,19
+2024,ebitda,256310.0,AR2025,19
+2025,ebitda,310767.0,AR2025,19
+2025H1,ebitda_h1,153284.0,IR2026,15
+2026H1,ebitda_h1,169943.0,IR2026,15
+2022,equity_attrib,721391.0,AR2022,135
+2023,equity_attrib,808591.0,AR2023,132
+2024,equity_attrib,973548.0,AR2024,127
+2025,equity_attrib,1154152.0,AR2025,133
+2021,finance_costs,-7114.0,AR2022,132
+2022,finance_costs,-9352.0,AR2022,132
+2022,finance_costs,-9352.0,AR2023,129
+2023,finance_costs,-12268.0,AR2023,129
+2023,finance_costs,-12268.0,AR2024,124
+2024,finance_costs,-11981.0,AR2024,124
+2024,finance_costs,-11981.0,AR2025,130
+2025,finance_costs,-15130.0,AR2025,130
+2021,general_admin,-89847.0,AR2022,132
+2022,general_admin,-106696.0,AR2022,132
+2022,general_admin,-106696.0,AR2023,129
+2023,general_admin,-103525.0,AR2023,129
+2023,general_admin,-103525.0,AR2024,124
+2024,general_admin,-112761.0,AR2024,124
+2024,general_admin,-112761.0,AR2025,130
+2025,general_admin,-136127.0,AR2025,130
+2018,gross_profit,142120.0,AR2022 summary,4
+2019,gross_profit,167533.0,AR2022 summary,4
+2019,gross_profit,167533.0,AR2023 summary,4
+2020,gross_profit,221532.0,AR2022 summary,4
+2020,gross_profit,221532.0,AR2023 summary,4
+2020,gross_profit,221532.0,AR2024 summary,4
+2021,gross_profit,245944.0,AR2022,132
+2021,gross_profit,245944.0,AR2022 summary,4
+2021,gross_profit,245944.0,AR2023 summary,4
+2021,gross_profit,245944.0,AR2024 summary,4
+2021,gross_profit,245944.0,AR2025 summary,4
+2022,gross_profit,238746.0,AR2022,132
+2022,gross_profit,238746.0,AR2022 summary,4
+2022,gross_profit,238746.0,AR2023,129
+2022,gross_profit,238746.0,AR2023 summary,4
+2022,gross_profit,238746.0,AR2024 summary,4
+2022,gross_profit,238746.0,AR2025 summary,4
+2023,gross_profit,293109.0,AR2023,129
+2023,gross_profit,293109.0,AR2023 summary,4
+2023,gross_profit,293109.0,AR2024,124
+2023,gross_profit,293109.0,AR2024 summary,4
+2023,gross_profit,293109.0,AR2025 summary,4
+2024,gross_profit,349246.0,AR2024,124
+2024,gross_profit,349246.0,AR2024 summary,4
+2024,gross_profit,349246.0,AR2025,130
+2024,gross_profit,349246.0,AR2025 summary,4
+2025,gross_profit,422593.0,AR2025,130
+2025,gross_profit,422593.0,AR2025 summary,4
+2021,income_tax,-20252.0,AR2022,132
+2022,income_tax,-21516.0,AR2022,132
+2022,income_tax,-21516.0,AR2023,129
+2023,income_tax,-43276.0,AR2023,129
+2023,income_tax,-43276.0,AR2024,124
+2024,income_tax,-45018.0,AR2024,124
+2024,income_tax,-45018.0,AR2025,130
+2025,income_tax,-47448.0,AR2025,130
+2021,income_tax_paid,-28526.0,AR2022,141
+2022,income_tax_paid,-27669.0,AR2022,141
+2022,income_tax_paid,-27669.0,AR2023,138
+2023,income_tax_paid,-34729.0,AR2023,138
+2023,income_tax_paid,-34729.0,AR2024,133
+2024,income_tax_paid,-46184.0,AR2024,133
+2024,income_tax_paid,-46184.0,AR2025,139
+2025,income_tax_paid,-44699.0,AR2025,139
+2021,intangibles_paid,-31159.0,AR2022,141
+2022,intangibles_paid,-27645.0,AR2022,141
+2022,intangibles_paid,-27645.0,AR2023,138
+2023,intangibles_paid,-26042.0,AR2023,138
+2023,intangibles_paid,-26042.0,AR2024,133
+2024,intangibles_paid,-26394.0,AR2024,133
+2024,intangibles_paid,-26394.0,AR2025,139
+2025,intangibles_paid,-25399.0,AR2025,139
+2021,interest_paid,-7525.0,AR2022,142
+2022,interest_paid,-9342.0,AR2022,142
+2022,interest_paid,-9342.0,AR2023,139
+2023,interest_paid,-11478.0,AR2023,139
+2023,interest_paid,-11478.0,AR2024,134
+2024,interest_paid,-12417.0,AR2024,134
+2024,interest_paid,-12417.0,AR2025,140
+2025,interest_paid,-13180.0,AR2025,140
+2021,interest_received,4923.0,AR2022,141
+2022,interest_received,8506.0,AR2022,141
+2022,interest_received,8506.0,AR2023,138
+2023,interest_received,10349.0,AR2023,138
+2023,interest_received,10349.0,AR2024,133
+2024,interest_received,14913.0,AR2024,133
+2024,interest_received,14913.0,AR2025,139
+2025,interest_received,14534.0,AR2025,139
+2021,land_use_rights_paid,-1704.0,AR2022,141
+2022,land_use_rights_paid,-526.0,AR2022,141
+2022,land_use_rights_paid,-526.0,AR2023,138
+2023,land_use_rights_paid,-357.0,AR2023,138
+2023,land_use_rights_paid,-357.0,AR2024,133
+2024,land_use_rights_paid,-6727.0,AR2024,133
+2024,land_use_rights_paid,-6727.0,AR2025,139
+2025,land_use_rights_paid,6.0,AR2025,139
+2021,lease_liab_current,5446.0,AR2022,136
+2022,lease_liab_current,6354.0,AR2022,136
+2022,lease_liab_current,6354.0,AR2023,133
+2023,lease_liab_current,6154.0,AR2023,133
+2023,lease_liab_current,6154.0,AR2024,128
+2024,lease_liab_current,5600.0,AR2024,128
+2024,lease_liab_current,5600.0,AR2025,134
+2025,lease_liab_current,5386.0,AR2025,134
+2026H1,lease_liab_current,5499.0,IR2026,29
+2021,lease_liab_noncurrent,16501.0,AR2022,135
+2022,lease_liab_noncurrent,18424.0,AR2022,135
+2022,lease_liab_noncurrent,18424.0,AR2023,132
+2023,lease_liab_noncurrent,16468.0,AR2023,132
+2023,lease_liab_noncurrent,16468.0,AR2024,127
+2024,lease_liab_noncurrent,13897.0,AR2024,127
+2024,lease_liab_noncurrent,13897.0,AR2025,133
+2025,lease_liab_noncurrent,13280.0,AR2025,133
+2026H1,lease_liab_noncurrent,13366.0,IR2026,28
+2021,lease_principal_paid,-4423.0,AR2022,142
+2022,lease_principal_paid,-5969.0,AR2022,142
+2022,lease_principal_paid,-5969.0,AR2023,139
+2023,lease_principal_paid,-6652.0,AR2023,139
+2023,lease_principal_paid,-6652.0,AR2024,134
+2024,lease_principal_paid,-6369.0,AR2024,134
+2024,lease_principal_paid,-6369.0,AR2025,140
+2025,lease_principal_paid,-6783.0,AR2025,140
+2021,listed_investments_fv_bn,982.835,AR2022,27
+2022,listed_investments_fv_bn,585.115,AR2022,27
+2022,listed_investments_fv_bn,585.1,AR2023,24
+2023,listed_investments_fv_bn,550.7,AR2023,24
+2023,listed_investments_fv_bn,550.7,AR2024,24
+2024,listed_investments_fv_bn,569.8,AR2024,24
+2024,listed_investments_fv_bn,569.8,AR2025,24
+2025,listed_investments_fv_bn,672.7,AR2025,24
+2026H1,listed_investments_fv_bn,487.2,IR2026,21
+2021,nci_equity,70394.0,AR2022,135
+2022,nci_equity,61469.0,AR2022,135
+2022,nci_equity,61469.0,AR2023,132
+2023,nci_equity,65090.0,AR2023,132
+2023,nci_equity,65090.0,AR2024,127
+2024,nci_equity,80348.0,AR2024,127
+2024,nci_equity,80348.0,AR2025,133
+2025,nci_equity,86913.0,AR2025,133
+2026H1,nci_equity,86660.0,IR2026,28
+2021,net_cash,-20243.0,AR2022,22
+2022,net_cash,-14832.0,AR2022,22
+2022,net_cash,-14832.0,AR2023,19
+2023,net_cash,54740.0,AR2023,19
+2023,net_cash,54740.0,AR2024,18
+2024,net_cash,76798.0,AR2024,18
+2024,net_cash,76798.0,AR2025,18
+2025,net_cash,107145.0,AR2025,18
+2026H1,net_cash,58191.0,IR2026,22
+2018,nonifrs_operating_profit,92481.0,AR2022 summary,4
+2019,nonifrs_operating_profit,114601.0,AR2022 summary,4
+2019,nonifrs_operating_profit,108052.0,AR2023 summary,4
+2020,nonifrs_operating_profit,149404.0,AR2022 summary,4
+2020,nonifrs_operating_profit,143241.0,AR2023 summary,4
+2020,nonifrs_operating_profit,143241.0,AR2024 summary,4
+2021,nonifrs_operating_profit,159539.0,AR2022 summary,4
+2021,nonifrs_operating_profit,152729.0,AR2023 summary,4
+2021,nonifrs_operating_profit,152729.0,AR2024 summary,4
+2021,nonifrs_operating_profit,152729.0,AR2025 summary,4
+2022,nonifrs_operating_profit,153538.0,AR2022 summary,4
+2022,nonifrs_operating_profit,143203.0,AR2023 summary,4
+2022,nonifrs_operating_profit,143203.0,AR2024 summary,4
+2022,nonifrs_operating_profit,143203.0,AR2025 summary,4
+2023,nonifrs_operating_profit,191886.0,AR2023 summary,4
+2023,nonifrs_operating_profit,191886.0,AR2024 summary,4
+2023,nonifrs_operating_profit,191886.0,AR2025 summary,4
+2024,nonifrs_operating_profit,237811.0,AR2024 summary,4
+2024,nonifrs_operating_profit,237811.0,AR2025 summary,4
+2025,nonifrs_operating_profit,280656.0,AR2025 summary,4
+2018,nonifrs_profit_attrib,77469.0,AR2022 summary,4
+2019,nonifrs_profit_attrib,94351.0,AR2022 summary,4
+2019,nonifrs_profit_attrib,94351.0,AR2023 summary,4
+2020,nonifrs_profit_attrib,122742.0,AR2022 summary,4
+2020,nonifrs_profit_attrib,122742.0,AR2023 summary,4
+2020,nonifrs_profit_attrib,122742.0,AR2024 summary,4
+2021,nonifrs_profit_attrib,123788.0,AR2022 summary,4
+2021,nonifrs_profit_attrib,123788.0,AR2023 summary,4
+2021,nonifrs_profit_attrib,123788.0,AR2024 summary,4
+2021,nonifrs_profit_attrib,123788.0,AR2025 summary,4
+2022,nonifrs_profit_attrib,115649.0,AR2022 summary,4
+2022,nonifrs_profit_attrib,115649.0,AR2023 summary,4
+2022,nonifrs_profit_attrib,115649.0,AR2024 summary,4
+2022,nonifrs_profit_attrib,115649.0,AR2025 summary,4
+2023,nonifrs_profit_attrib,157688.0,AR2023 summary,4
+2023,nonifrs_profit_attrib,157688.0,AR2024 summary,4
+2023,nonifrs_profit_attrib,157688.0,AR2025 summary,4
+2024,nonifrs_profit_attrib,222703.0,AR2024 summary,4
+2024,nonifrs_profit_attrib,222703.0,AR2025 summary,4
+2025,nonifrs_profit_attrib,259626.0,AR2025 summary,4
+2021,notes_current,0.0,AR2022,136
+2022,notes_current,10446.0,AR2022,136
+2022,notes_current,10446.0,AR2023,133
+2023,notes_current,14161.0,AR2023,133
+2023,notes_current,14161.0,AR2024,128
+2024,notes_current,8623.0,AR2024,128
+2024,notes_current,8623.0,AR2025,134
+2025,notes_current,10542.0,AR2025,134
+2021,notes_noncurrent,145590.0,AR2022,135
+2022,notes_noncurrent,148669.0,AR2022,135
+2022,notes_noncurrent,148669.0,AR2023,132
+2023,notes_noncurrent,137101.0,AR2023,132
+2023,notes_noncurrent,137101.0,AR2024,127
+2024,notes_noncurrent,130586.0,AR2024,127
+2024,notes_noncurrent,130586.0,AR2025,133
+2025,notes_noncurrent,126204.0,AR2025,133
+2026H1,notes_total,-154021.0,IR2026,22
+2019,operating_profit,96501.0,AR2023 summary,4
+2020,operating_profit,126197.0,AR2023 summary,4
+2020,operating_profit,126197.0,AR2024 summary,4
+2021,operating_profit,271620.0,AR2022,132
+2021,operating_profit,124656.0,AR2023 summary,4
+2021,operating_profit,124656.0,AR2024 summary,4
+2021,operating_profit,124656.0,AR2025 summary,4
+2022,operating_profit,235706.0,AR2022,132
+2022,operating_profit,110827.0,AR2023,129
+2022,operating_profit,110827.0,AR2023 summary,4
+2022,operating_profit,110827.0,AR2024 summary,4
+2022,operating_profit,110827.0,AR2025 summary,4
+2023,operating_profit,160074.0,AR2023,129
+2023,operating_profit,160074.0,AR2023 summary,4
+2023,operating_profit,160074.0,AR2024,124
+2023,operating_profit,160074.0,AR2024 summary,4
+2023,operating_profit,160074.0,AR2025 summary,4
+2024,operating_profit,208099.0,AR2024,124
+2024,operating_profit,208099.0,AR2024 summary,4
+2024,operating_profit,208099.0,AR2025,130
+2024,operating_profit,208099.0,AR2025 summary,4
+2025,operating_profit,241562.0,AR2025,130
+2025,operating_profit,241562.0,AR2025 summary,4
+2025H1,operating_profit_h1,117670.0,IR2026,25
+2026H1,operating_profit_h1,134651.0,IR2026,25
+2021,other_gains,149467.0,AR2022,132
+2022,other_gains,124293.0,AR2022,132
+2022,other_gains,8006.0,AR2023,129
+2023,other_gains,4701.0,AR2023,129
+2023,other_gains,4701.0,AR2024,124
+2024,other_gains,8002.0,AR2024,124
+2024,other_gains,8002.0,AR2025,130
+2025,other_gains,-3177.0,AR2025,130
+2018,profit_attrib,78719.0,AR2022 summary,4
+2019,profit_attrib,93310.0,AR2022 summary,4
+2019,profit_attrib,93310.0,AR2023 summary,4
+2020,profit_attrib,159847.0,AR2022 summary,4
+2020,profit_attrib,159847.0,AR2023 summary,4
+2020,profit_attrib,159847.0,AR2024 summary,4
+2021,profit_attrib,224822.0,AR2022,132
+2021,profit_attrib,224822.0,AR2022 summary,4
+2021,profit_attrib,224822.0,AR2023 summary,4
+2021,profit_attrib,224822.0,AR2024 summary,4
+2021,profit_attrib,224822.0,AR2025 summary,4
+2022,profit_attrib,188243.0,AR2022,132
+2022,profit_attrib,188243.0,AR2022 summary,4
+2022,profit_attrib,188243.0,AR2023,129
+2022,profit_attrib,188243.0,AR2023 summary,4
+2022,profit_attrib,188243.0,AR2024 summary,4
+2022,profit_attrib,188243.0,AR2025 summary,4
+2023,profit_attrib,115216.0,AR2023,129
+2023,profit_attrib,115216.0,AR2023 summary,4
+2023,profit_attrib,115216.0,AR2024,124
+2023,profit_attrib,115216.0,AR2024 summary,4
+2023,profit_attrib,115216.0,AR2025 summary,4
+2024,profit_attrib,194073.0,AR2024,124
+2024,profit_attrib,194073.0,AR2024 summary,4
+2024,profit_attrib,194073.0,AR2025,130
+2024,profit_attrib,194073.0,AR2025 summary,4
+2025,profit_attrib,224842.0,AR2025,130
+2025,profit_attrib,224842.0,AR2025 summary,4
+2018,profit_before_tax,94466.0,AR2022 summary,4
+2019,profit_before_tax,109400.0,AR2022 summary,4
+2019,profit_before_tax,109400.0,AR2023 summary,4
+2020,profit_before_tax,180022.0,AR2022 summary,4
+2020,profit_before_tax,180022.0,AR2023 summary,4
+2020,profit_before_tax,180022.0,AR2024 summary,4
+2021,profit_before_tax,248062.0,AR2022,132
+2021,profit_before_tax,248062.0,AR2022 summary,4
+2021,profit_before_tax,248062.0,AR2023 summary,4
+2021,profit_before_tax,248062.0,AR2024 summary,4
+2021,profit_before_tax,248062.0,AR2025 summary,4
+2022,profit_before_tax,210225.0,AR2022,132
+2022,profit_before_tax,210225.0,AR2022 summary,4
+2022,profit_before_tax,210225.0,AR2023,129
+2022,profit_before_tax,210225.0,AR2023 summary,4
+2022,profit_before_tax,210225.0,AR2024 summary,4
+2022,profit_before_tax,210225.0,AR2025 summary,4
+2023,profit_before_tax,161324.0,AR2023,129
+2023,profit_before_tax,161324.0,AR2023 summary,4
+2023,profit_before_tax,161324.0,AR2024,124
+2023,profit_before_tax,161324.0,AR2024 summary,4
+2023,profit_before_tax,161324.0,AR2025 summary,4
+2024,profit_before_tax,241485.0,AR2024,124
+2024,profit_before_tax,241485.0,AR2024 summary,4
+2024,profit_before_tax,241485.0,AR2025,130
+2024,profit_before_tax,241485.0,AR2025 summary,4
+2025,profit_before_tax,277249.0,AR2025,130
+2025,profit_before_tax,277249.0,AR2025 summary,4
+2018,profit_for_year,79984.0,AR2022 summary,4
+2019,profit_for_year,95888.0,AR2022 summary,4
+2019,profit_for_year,95888.0,AR2023 summary,4
+2020,profit_for_year,160125.0,AR2022 summary,4
+2020,profit_for_year,160125.0,AR2023 summary,4
+2020,profit_for_year,160125.0,AR2024 summary,4
+2021,profit_for_year,227810.0,AR2022,132
+2021,profit_for_year,227810.0,AR2022 summary,4
+2021,profit_for_year,227810.0,AR2023 summary,4
+2021,profit_for_year,227810.0,AR2024 summary,4
+2021,profit_for_year,227810.0,AR2025 summary,4
+2022,profit_for_year,188709.0,AR2022,132
+2022,profit_for_year,188709.0,AR2022 summary,4
+2022,profit_for_year,188709.0,AR2023,129
+2022,profit_for_year,188709.0,AR2023 summary,4
+2022,profit_for_year,188709.0,AR2024 summary,4
+2022,profit_for_year,188709.0,AR2025 summary,4
+2023,profit_for_year,118048.0,AR2023,129
+2023,profit_for_year,118048.0,AR2023 summary,4
+2023,profit_for_year,118048.0,AR2024,124
+2023,profit_for_year,118048.0,AR2024 summary,4
+2023,profit_for_year,118048.0,AR2025 summary,4
+2024,profit_for_year,196467.0,AR2024,124
+2024,profit_for_year,196467.0,AR2024 summary,4
+2024,profit_for_year,196467.0,AR2025,130
+2024,profit_for_year,196467.0,AR2025 summary,4
+2025,profit_for_year,229801.0,AR2025,130
+2025,profit_for_year,229801.0,AR2025 summary,4
+2021,profit_nci,2988.0,AR2022,132
+2022,profit_nci,466.0,AR2022,132
+2022,profit_nci,466.0,AR2023,129
+2023,profit_nci,2832.0,AR2023,129
+2023,profit_nci,2832.0,AR2024,124
+2024,profit_nci,2394.0,AR2024,124
+2024,profit_nci,2394.0,AR2025,130
+2025,profit_nci,4959.0,AR2025,130
+2021,rev_fintech_business,172195.0,AR2022,132
+2022,rev_fintech_business,177064.0,AR2022,132
+2022,rev_fintech_business,177064.0,AR2023,129
+2023,rev_fintech_business,203763.0,AR2023,129
+2023,rev_fintech_business,203763.0,AR2024,124
+2024,rev_fintech_business,211956.0,AR2024,124
+2024,rev_fintech_business,211956.0,AR2025,130
+2025,rev_fintech_business,229435.0,AR2025,130
+2025H1,rev_fintech_business_h1,110443.0,IR2026,25
+2026H1,rev_fintech_business_h1,120171.0,IR2026,25
+2021,rev_marketing,88666.0,AR2022,132
+2022,rev_marketing,82729.0,AR2022,132
+2022,rev_marketing,82729.0,AR2023,129
+2023,rev_marketing,101482.0,AR2023,129
+2023,rev_marketing,101482.0,AR2024,124
+2024,rev_marketing,121374.0,AR2024,124
+2024,rev_marketing,121374.0,AR2025,130
+2025,rev_marketing,144973.0,AR2025,130
+2025H1,rev_marketing_h1,67615.0,IR2026,25
+2026H1,rev_marketing_h1,81736.0,IR2026,25
+2021,rev_others,7685.0,AR2022,132
+2022,rev_others,7194.0,AR2022,132
+2022,rev_others,7194.0,AR2023,129
+2023,rev_others,5395.0,AR2023,129
+2023,rev_others,5395.0,AR2024,124
+2024,rev_others,7759.0,AR2024,124
+2024,rev_others,7759.0,AR2025,130
+2025,rev_others,8077.0,AR2025,130
+2021,rev_vas,291572.0,AR2022,132
+2022,rev_vas,287565.0,AR2022,132
+2022,rev_vas,287565.0,AR2023,129
+2023,rev_vas,298375.0,AR2023,129
+2023,rev_vas,298375.0,AR2024,124
+2024,rev_vas,319168.0,AR2024,124
+2024,rev_vas,319168.0,AR2025,130
+2025,rev_vas,369281.0,AR2025,130
+2025H1,rev_vas_h1,183501.0,IR2026,25
+2026H1,rev_vas_h1,194524.0,IR2026,25
+2018,revenue,312694.0,AR2022 summary,4
+2019,revenue,377289.0,AR2022 summary,4
+2019,revenue,377289.0,AR2023 summary,4
+2020,revenue,482064.0,AR2022 summary,4
+2020,revenue,482064.0,AR2023 summary,4
+2020,revenue,482064.0,AR2024 summary,4
+2021,revenue,560118.0,AR2022,132
+2021,revenue,560118.0,AR2022 summary,4
+2021,revenue,560118.0,AR2023 summary,4
+2021,revenue,560118.0,AR2024 summary,4
+2021,revenue,560118.0,AR2025 summary,4
+2022,revenue,554552.0,AR2022,132
+2022,revenue,554552.0,AR2022 summary,4
+2022,revenue,554552.0,AR2023,129
+2022,revenue,554552.0,AR2023 summary,4
+2022,revenue,554552.0,AR2024 summary,4
+2022,revenue,554552.0,AR2025 summary,4
+2023,revenue,609015.0,AR2023,129
+2023,revenue,609015.0,AR2023 summary,4
+2023,revenue,609015.0,AR2024,124
+2023,revenue,609015.0,AR2024 summary,4
+2023,revenue,609015.0,AR2025 summary,4
+2024,revenue,660257.0,AR2024,124
+2024,revenue,660257.0,AR2024 summary,4
+2024,revenue,660257.0,AR2025,130
+2024,revenue,660257.0,AR2025 summary,4
+2025,revenue,751766.0,AR2025,130
+2025,revenue,751766.0,AR2025 summary,4
+2025H1,revenue_h1,364526.0,IR2026,25
+2026H1,revenue_h1,401243.0,IR2026,25
+2021,sbc_equity,21625.0,AR2022,23
+2022,sbc_equity,24949.0,AR2022,23
+2022,sbc_equity,24949.0,AR2023,20
+2023,sbc_equity,21073.0,AR2023,20
+2023,sbc_equity,21073.0,AR2024,19
+2024,sbc_equity,20702.0,AR2024,19
+2024,sbc_equity,20702.0,AR2025,19
+2025,sbc_equity,25660.0,AR2025,19
+2021,selling_marketing,-40594.0,AR2022,132
+2022,selling_marketing,-29229.0,AR2022,132
+2022,selling_marketing,-29229.0,AR2023,129
+2023,selling_marketing,-34211.0,AR2023,129
+2023,selling_marketing,-34211.0,AR2024,124
+2024,selling_marketing,-36388.0,AR2024,124
+2024,selling_marketing,-36388.0,AR2025,130
+2025,selling_marketing,-41727.0,AR2025,130
+2021,share_of_associates,-16444.0,AR2022,132
+2022,share_of_associates,-16129.0,AR2022,132
+2022,share_of_associates,-16129.0,AR2023,129
+2023,share_of_associates,5800.0,AR2023,129
+2023,share_of_associates,5800.0,AR2024,124
+2024,share_of_associates,25176.0,AR2024,124
+2024,share_of_associates,25176.0,AR2025,130
+2025,share_of_associates,23740.0,AR2025,130
+2025H1,share_of_associates_h1,9054.0,IR2026,25
+2026H1,share_of_associates_h1,-6373.0,IR2026,25
+2026H1,shares_award_scheme_m,84.278228,IR2026,73
+2021,shares_diluted_wavg_m,9696.0,AR2022,207
+2022,shares_diluted_wavg_m,9695.0,AR2022,207
+2022,shares_diluted_wavg_m,9695.0,AR2023,206
+2023,shares_diluted_wavg_m,9610.0,AR2023,206
+2023,shares_diluted_wavg_m,9610.0,AR2024,200
+2024,shares_diluted_wavg_m,9408.0,AR2024,200
+2024,shares_diluted_wavg_m,9408.0,AR2025,208
+2025,shares_diluted_wavg_m,9244.0,AR2025,208
+2026H1,shares_diluted_wavg_q2_m,9153.0,IR2026,56
+2026H1,shares_issued_m,9092.234841,IR2026,73
+2022,term_deposits_others,162792.0,AR2022,29
+2023,term_deposits_others,231038.0,AR2023,25
+2024,term_deposits_others,282894.0,AR2024,25
+2025,term_deposits_others,353837.0,AR2025,25
+2026H1,term_deposits_others,304224.0,IR2026,22
+2023,unlisted_investments_bv_bn,337.3,AR2024,24
+2024,unlisted_investments_bv_bn,335.6,AR2024,24
+2024,unlisted_investments_bv_bn,335.6,AR2025,24
+2025,unlisted_investments_bv_bn,363.1,AR2025,24
+2026H1,unlisted_investments_bv_bn,387.9,IR2026,21
