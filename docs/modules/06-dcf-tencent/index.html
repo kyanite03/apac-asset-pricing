@@ -339,14 +339,21 @@ window.Quarto = {
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>               <span class="at">capex_intensity_ss =</span> <span class="fl">0.10</span>, <span class="at">tax =</span> tax_base, <span class="at">lease_pct =</span> lease_pct,</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>               <span class="at">wacc =</span> w<span class="sc">$</span>wacc, <span class="at">n =</span> <span class="dv">10</span>, <span class="at">k_norm =</span> <span class="dv">5</span>)</span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>hd_base <span class="ot">&lt;-</span> <span class="fl">0.20</span>                                             <span class="co"># holding discount on investments</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>run <span class="ot">&lt;-</span> <span class="cf">function</span>(p, <span class="at">hd =</span> hd_base) {</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  r <span class="ot">&lt;-</span> <span class="fu">tencent_dcf</span>(base, p)</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  b <span class="ot">&lt;-</span> <span class="fu">sotp_bridge</span>(r<span class="sc">$</span>pv<span class="sc">$</span>ev, bs, hd, fx, shares)</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">dcf =</span> r, <span class="at">bridge =</span> b, <span class="at">value =</span> b<span class="sc">$</span>per_share_hkd)</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>bc <span class="ot">&lt;-</span> <span class="fu">run</span>(p_base)</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>val_at <span class="ot">&lt;-</span> <span class="cf">function</span>(...) <span class="fu">run</span>(<span class="fu">modifyList</span>(p_base, <span class="fu">list</span>(...)))<span class="sc">$</span>value</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>upside <span class="ot">&lt;-</span> bc<span class="sc">$</span>value <span class="sc">/</span> price <span class="sc">-</span> <span class="dv">1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># The DCF and balance sheet are at 30 June 2026; the price is later. Roll the</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># equity value forward to the price date at the cost of equity implied by each</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># WACC (no dividend was paid between the two dates).</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>val_date <span class="ot">&lt;-</span> <span class="fu">as.Date</span>(<span class="st">"2026-06-30"</span>); price_date <span class="ot">&lt;-</span> <span class="fu">as.Date</span>(mkt_in<span class="sc">$</span>as_of[mkt_in<span class="sc">$</span>item <span class="sc">==</span> <span class="st">"price_0700_hk"</span>])</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>dt_roll <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(price_date <span class="sc">-</span> val_date) <span class="sc">/</span> <span class="dv">365</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>ke_of_wacc <span class="ot">&lt;-</span> <span class="cf">function</span>(wacc) (wacc <span class="sc">-</span> w<span class="sc">$</span>w_d <span class="sc">*</span> w<span class="sc">$</span>kd_after_tax) <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">-</span> w<span class="sc">$</span>w_d)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>run <span class="ot">&lt;-</span> <span class="cf">function</span>(p, <span class="at">hd =</span> hd_base) {</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  r <span class="ot">&lt;-</span> <span class="fu">tencent_dcf</span>(base, p)</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  b <span class="ot">&lt;-</span> <span class="fu">sotp_bridge</span>(r<span class="sc">$</span>pv<span class="sc">$</span>ev, bs, hd, fx, shares)</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  roll <span class="ot">&lt;-</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">ke_of_wacc</span>(p<span class="sc">$</span>wacc))<span class="sc">^</span>dt_roll</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">dcf =</span> r, <span class="at">bridge =</span> b, <span class="at">value_valdate =</span> b<span class="sc">$</span>per_share_hkd, <span class="at">roll =</span> roll, <span class="at">value =</span> b<span class="sc">$</span>per_share_hkd <span class="sc">*</span> roll)</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>bc <span class="ot">&lt;-</span> <span class="fu">run</span>(p_base)</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>val_at <span class="ot">&lt;-</span> <span class="cf">function</span>(...) <span class="fu">run</span>(<span class="fu">modifyList</span>(p_base, <span class="fu">list</span>(...)))<span class="sc">$</span>value</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>upside <span class="ot">&lt;-</span> bc<span class="sc">$</span>value <span class="sc">/</span> price <span class="sc">-</span> <span class="dv">1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <div class="cell">
@@ -359,9 +366,12 @@ window.Quarto = {
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>imp_capex <span class="ot">&lt;-</span> <span class="fu">implied</span>(\(x) <span class="fu">val_at</span>(<span class="at">capex_intensity_ss =</span> x), <span class="fl">0.05</span>, <span class="fl">0.45</span>)</span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>imp_growth <span class="ot">&lt;-</span> <span class="fu">implied</span>(\(x) <span class="fu">val_at</span>(<span class="at">growth_mult =</span> x), <span class="sc">-</span><span class="dv">4</span>, <span class="fl">1.5</span>)</span>
 <span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>wacc_of <span class="ot">&lt;-</span> <span class="cf">function</span>(e) <span class="fu">wacc_calc</span>(beta_base, rf, e, kd, tax_base, equity_val, debt_val)<span class="sc">$</span>wacc</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>grid <span class="ot">&lt;-</span> <span class="fu">expand_grid</span>(<span class="at">erp =</span> <span class="fu">seq</span>(<span class="fl">0.04</span>, <span class="fl">0.11</span>, <span class="at">by =</span> <span class="fl">0.0025</span>), <span class="at">capex =</span> <span class="fu">seq</span>(<span class="fl">0.08</span>, <span class="fl">0.30</span>, <span class="at">by =</span> <span class="fl">0.005</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">value =</span> <span class="fu">map2_dbl</span>(erp, capex, \(e, c) <span class="fu">val_at</span>(<span class="at">wacc =</span> <span class="fu">wacc_of</span>(e), <span class="at">capex_intensity_ss =</span> c)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Steady-state capex that reproduces the price at a given equity risk premium</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>cap_at_erp <span class="ot">&lt;-</span> <span class="cf">function</span>(e) <span class="fu">implied</span>(\(x) <span class="fu">val_at</span>(<span class="at">wacc =</span> <span class="fu">wacc_of</span>(e), <span class="at">capex_intensity_ss =</span> x), <span class="fl">0.05</span>, <span class="fl">0.45</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>cap8 <span class="ot">&lt;-</span> <span class="fu">cap_at_erp</span>(<span class="fl">0.08</span>); cap10 <span class="ot">&lt;-</span> <span class="fu">cap_at_erp</span>(<span class="fl">0.10</span>)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>grid <span class="ot">&lt;-</span> <span class="fu">expand_grid</span>(<span class="at">erp =</span> <span class="fu">seq</span>(<span class="fl">0.04</span>, <span class="fl">0.11</span>, <span class="at">by =</span> <span class="fl">0.0025</span>), <span class="at">capex =</span> <span class="fu">seq</span>(<span class="fl">0.08</span>, <span class="fl">0.30</span>, <span class="at">by =</span> <span class="fl">0.005</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">value =</span> <span class="fu">map2_dbl</span>(erp, capex, \(e, c) <span class="fu">val_at</span>(<span class="at">wacc =</span> <span class="fu">wacc_of</span>(e), <span class="at">capex_intensity_ss =</span> c)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <div class="cell">
@@ -404,9 +414,9 @@ window.Quarto = {
 </div>
 <div class="callout-body-container callout-body">
 <ul>
-<li><strong>On standard inputs, Tencent is worth well above its share price.</strong> A sum-of-the-parts DCF gives <strong>HK$827 per share</strong> against a price of HK$386.6 (13 Nov 2026). That uses China’s 10-year bond yield (1.61%), Damodaran’s China equity risk premium (5.14%) and Tencent’s own beta from Module 01. The operating business accounts for 90% of the value. The investment portfolio, net of a 20% holding discount, adds 11%, and net cash and minority interests roughly offset each other.</li>
-<li><strong>There is no “valuation premium”; the market applies a large discount.</strong> To justify today’s price you would need a discount rate of <strong>13.6%</strong> (a cost of equity near 15%, an equity risk premium of about 12%). Alternatively, AI capital spending would have to stay at <strong>28% of revenue forever</strong>, against 9% before the AI build-out.</li>
-<li><strong>The realistic reading is a mix of both.</strong> An equity risk premium of 8% with capex settling at 20% of revenue, or 10% with 15%, roughly reproduces the price (see the chart below). Across 10,000 Monte Carlo draws over plausible ranges, the median value is HK$559 (90% interval HK$391–840), and 96% of draws exceed the price.</li>
+<li><strong>On standard inputs, Tencent is worth well above its share price.</strong> A sum-of-the-parts DCF gives <strong>HK$850 per share</strong> against a price of HK$386.6 (13 Nov 2026). That uses China’s 10-year bond yield (1.61%), Damodaran’s China equity risk premium (5.14%) and Tencent’s own beta from Module 01. The operating business accounts for 90% of the value. The investment portfolio, net of a 20% holding discount, adds 11%, and net cash and minority interests roughly offset each other.</li>
+<li><strong>There is no “valuation premium”; the market applies a large discount.</strong> To justify today’s price you would need a discount rate of <strong>14.4%</strong> (a cost of equity near 16%, an equity risk premium of about 12%). Alternatively, AI capital spending would have to stay at <strong>29% of revenue forever</strong>, against 9% before the AI build-out.</li>
+<li><strong>The realistic reading is a mix of both.</strong> An equity risk premium of 8% with capex settling at 22% of revenue, or 10% with 16%, reproduces the price (see the chart below). Across 10,000 Monte Carlo draws over plausible ranges, the median value is HK$577 (90% interval HK$406–863), and 97% of draws exceed the price.</li>
 <li><strong>So what:</strong> Tencent’s price is not a bet on growth; it is a bet on <em>risk</em> and <em>capital intensity</em>. An investor buying at today’s price is being paid to bear China-specific risk (regulation, the VIE structure, geopolitics) and the risk that AI spending permanently absorbs cash. Whether that is a good trade depends on views of those risks, not on Tencent’s operating performance, which is strong.</li>
 </ul>
 </div>
@@ -554,7 +564,7 @@ Table&nbsp;1: Tencent’s financial history (RMB billion). Free cash flow = oper
 <h2 class="anchored" data-anchor-id="model">Model</h2>
 <p><strong>Operating forecast (FY2026–FY2035).</strong> Each segment’s revenue grows in FY2026 at its first-half 2026 year-on-year rate. From FY2027, that rate fades linearly to the terminal growth rate by FY2035. The EBITDA margin starts at its first-half 2026 level (42.4%). Margin, rather than operating profit, is the driver, so that the depreciation from today’s capex wave is charged against profit as it arrives. EBITDA here is after share-based compensation, which is treated as a real cost.</p>
 <p><strong>Capital spending and depreciation.</strong> FY2026 capex is set to twice the first-half figure plus media-content spending at its 2025 level (RMB 195 billion, 24% of revenue). It then fades to a steady-state share of revenue by FY2030 (base case 10%, close to the pre-AI average of 9.4%). Depreciation is five-year straight-line on actual and forecast capex. Free cash flow is <span class="math inline">\(\text{EBITDA} - \text{tax on EBIT} - \text{capex} - \text{lease payments}\)</span>, with tax at 20% (Tencent’s effective rate on operating profit in 2024–25: 20.8% and 18.7%).</p>
-<p><strong>Discounting.</strong> The valuation date is 30 June 2026, the latest balance sheet. Only the second half of FY2026 is counted, then mid-year flows, and a Gordon terminal value from FY2035 at 2% growth.</p>
+<p><strong>Discounting.</strong> The valuation date is 30 June 2026, the latest balance sheet. Only the second half of FY2026 is counted, then mid-year flows, and a Gordon terminal value from FY2035 at 2% growth. The timeline, in years from the valuation date: the second half of FY2026 is discounted at t = 0.25, FY2027 at t = 1, and FY2035 at t = 9. FY2035 ends at t = 9.5. Terminal-period flows are also mid-year, with the first (FY2036) at t = 10. So the Gordon value <span class="math inline">\(F_{2036}/(r-g)\)</span> sits at t = 9 and is discounted by <span class="math inline">\((1+r)^9\)</span>. This is the same as a year-end terminal value at t = 9.5 grossed up by <span class="math inline">\((1+r)^{0.5}\)</span>.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
@@ -684,7 +694,7 @@ Figure&nbsp;1: From operating value to value per share (HK$ per share, base case
 <p><span class="math inline">\(V\)</span> value per share (HK$) · <span class="math inline">\(e\)</span> HK$ per RMB · <span class="math inline">\(S\)</span> diluted shares · <span class="math inline">\(C\)</span> cash and term deposits · <span class="math inline">\(D\)</span> borrowings and notes · <span class="math inline">\(h\)</span> holding discount (20%) · <span class="math inline">\(I_L\)</span>, <span class="math inline">\(I_U\)</span> listed and unlisted stakes · <span class="math inline">\(M\)</span> minority interests · <span class="math inline">\(n\)</span> = 10 forecast years (FY2026–35) · <span class="math inline">\(w_1 = 0.5\)</span>, <span class="math inline">\(t_1 = 0.25\)</span> (only H2 FY2026 counts), then <span class="math inline">\(w_k = 1\)</span>, <span class="math inline">\(t_k = k-1\)</span> (mid-year) · the first terminal-year flow (FY2036) also arrives mid-year, at <span class="math inline">\(t = n\)</span>, so the perpetuity is valued at <span class="math inline">\(t = n-1\)</span> · <span class="math inline">\(g\)</span> terminal growth · <span class="math inline">\(\tau\)</span> tax rate · depreciation is five-year straight-line on capex.</p>
 </div>
 </div>
-<p>The base case values Tencent at <strong>HK$827</strong> per share, 114% above the price. The operating business is worth HK$741 per share, of which 69% comes from the terminal value (typical for a long-lived business). The forecast reaches RMB 1431 billion of revenue and RMB 354 billion of free cash flow in FY2035. That free cash flow is 25% of revenue, in line with the 24% Tencent achieved in 2025.</p>
+<p>The base case values Tencent at <strong>HK$850</strong> per share, 120% above the price. The operating business is worth HK$741 per share, of which 69% comes from the terminal value (typical for a long-lived business). The forecast reaches RMB 1431 billion of revenue and RMB 354 billion of free cash flow in FY2035. That free cash flow is 25% of revenue, in line with the 24% Tencent achieved in 2025.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
@@ -713,39 +723,39 @@ Table&nbsp;3: Value per share (HK$) by WACC and terminal growth, other inputs at
 <tbody>
 <tr class="odd">
 <td style="text-align: left;">7%</td>
-<td style="text-align: right;">713</td>
-<td style="text-align: right;">822</td>
-<td style="text-align: right;">984</td>
+<td style="text-align: right;">733</td>
+<td style="text-align: right;">844</td>
+<td style="text-align: right;">1011</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">8%</td>
-<td style="text-align: right;">618</td>
-<td style="text-align: right;">693</td>
-<td style="text-align: right;">798</td>
+<td style="text-align: right;">638</td>
+<td style="text-align: right;">715</td>
+<td style="text-align: right;">823</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">9%</td>
-<td style="text-align: right;">547</td>
-<td style="text-align: right;">602</td>
-<td style="text-align: right;">674</td>
+<td style="text-align: right;">567</td>
+<td style="text-align: right;">623</td>
+<td style="text-align: right;">698</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">10%</td>
-<td style="text-align: right;">492</td>
-<td style="text-align: right;">533</td>
-<td style="text-align: right;">586</td>
+<td style="text-align: right;">512</td>
+<td style="text-align: right;">555</td>
+<td style="text-align: right;">609</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">11%</td>
-<td style="text-align: right;">448</td>
-<td style="text-align: right;">480</td>
-<td style="text-align: right;">520</td>
+<td style="text-align: right;">468</td>
+<td style="text-align: right;">501</td>
+<td style="text-align: right;">543</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">12%</td>
-<td style="text-align: right;">413</td>
-<td style="text-align: right;">438</td>
-<td style="text-align: right;">469</td>
+<td style="text-align: right;">432</td>
+<td style="text-align: right;">459</td>
+<td style="text-align: right;">491</td>
 </tr>
 </tbody>
 </table>
@@ -804,11 +814,11 @@ Figure&nbsp;2: Value per share across the two assumptions that matter most: the 
 </div>
 <p>Holding everything else at the base case, the price is justified by any one of the following:</p>
 <ul>
-<li>a <strong>WACC of 13.6%</strong>, which is a cost of equity of about 15% and an equity risk premium of 12%, more than twice Damodaran’s 5.14% for China;</li>
-<li><strong>steady-state capex of 28% of revenue</strong>, permanently, against 9% before the AI build-out and about 24% at the 2026 peak;</li>
-<li><strong>revenue growth that reverses</strong>: the FY2026 growth rates would have to be multiplied by -1.30 from FY2027 onward, meaning several years of shrinking revenue.</li>
+<li>a <strong>WACC of 14.4%</strong>, which is a cost of equity of about 16% and an equity risk premium of 12%, more than twice Damodaran’s 5.14% for China;</li>
+<li><strong>steady-state capex of 29% of revenue</strong>, permanently, against 9% before the AI build-out and about 24% at the 2026 peak;</li>
+<li><strong>revenue growth that reverses</strong>: the FY2026 growth rates would have to be multiplied by -1.40 from FY2027 onward, meaning several years of shrinking revenue.</li>
 </ul>
-<p>Each of these alone is extreme. In combination they are not. The contour shows, for example, that a 10% equity risk premium with capex at 15% of revenue, or 8% with 20%, both land close to the price. A gap of 3–5 points over the rating-based risk premium is what a specific “China discount” on offshore-listed Chinese companies would look like. Plausible sources are regulatory risk (as in the 2021 platform crackdown), the VIE ownership structure (foreign shareholders own contractual claims, not the Chinese operating companies themselves), and US–China tensions. This analysis measures the size of the gap but does not test its causes.</p>
+<p>Each of these alone is extreme. In combination they are not. The contour shows, for example, that a 10% equity risk premium with capex at 16% of revenue, or 8% with 22%, both reproduce the price. A gap of 3–5 points over the rating-based risk premium is what a specific “China discount” on offshore-listed Chinese companies would look like. Plausible sources are regulatory risk (as in the 2021 platform crackdown), the VIE ownership structure (foreign shareholders own contractual claims, not the Chinese operating companies themselves), and US–China tensions. This analysis measures the size of the gap but does not test its causes.</p>
 </section>
 <section id="monte-carlo" class="level3">
 <h3 class="anchored" data-anchor-id="monte-carlo">Monte Carlo</h3>
@@ -881,17 +891,17 @@ Table&nbsp;4: Monte Carlo inputs and their influence on value (standardised regr
 <tr class="odd">
 <td style="text-align: left;">Equity risk premium</td>
 <td style="text-align: left;">Uniform 4.5%–8.0%</td>
-<td style="text-align: right;">-0.61</td>
+<td style="text-align: right;">-0.60</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Steady-state capex (% revenue)</td>
 <td style="text-align: left;">Uniform 8%–20%</td>
-<td style="text-align: right;">-0.47</td>
+<td style="text-align: right;">-0.48</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Steady-state EBITDA margin</td>
 <td style="text-align: left;">Normal(42.4%, 2.5 pts)</td>
-<td style="text-align: right;">+0.32</td>
+<td style="text-align: right;">+0.33</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Growth multiplier (FY2027 start)</td>
@@ -901,7 +911,7 @@ Table&nbsp;4: Monte Carlo inputs and their influence on value (standardised regr
 <tr class="odd">
 <td style="text-align: left;">Terminal growth</td>
 <td style="text-align: left;">Uniform 0.5%–2.5%</td>
-<td style="text-align: right;">+0.29</td>
+<td style="text-align: right;">+0.30</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Beta</td>
@@ -925,7 +935,7 @@ Table&nbsp;4: Monte Carlo inputs and their influence on value (standardised regr
 </figure>
 </div>
 </div>
-<p>The ranges are deliberately wide, and the equity risk premium range extends well above the rating-based figure. Even so, 96% of draws value Tencent above its price, and the 5th percentile is HK$391. The two inputs that matter most are the equity risk premium and steady-state capex, the same two that the reverse DCF singles out. Margins, growth and terminal growth matter less, with roughly half the influence. The valuation question is about how much risk to charge and how much cash AI will consume, not about whether Tencent’s businesses keep growing.</p>
+<p>The ranges are deliberately wide, and the equity risk premium range extends well above the rating-based figure. Even so, 97% of draws value Tencent above its price, and the 5th percentile is HK$406. The two inputs that matter most are the equity risk premium and steady-state capex, the same two that the reverse DCF singles out. Margins, growth and terminal growth matter less, with roughly half the influence. The valuation question is about how much risk to charge and how much cash AI will consume, not about whether Tencent’s businesses keep growing.</p>
 </section>
 </section>
 <section id="limitations" class="level2">
@@ -935,7 +945,8 @@ Table&nbsp;4: Monte Carlo inputs and their influence on value (standardised regr
 <li><strong>AI capex is unprecedented.</strong> No history exists for how long the current spending lasts or what it earns. The model assumes it normalises by FY2030; the reverse DCF shows how much depends on that.</li>
 <li><strong>No consensus forecasts.</strong> The forecast is built from Tencent’s reported trends, not analyst estimates, which would usually be a cross-check.</li>
 <li><strong>Investments are marked at one date.</strong> The listed portfolio’s fair value fell by RMB 186 billion in the first half of 2026 alone. Every RMB 100 billion is worth about HK$10 per share.</li>
-<li><strong>Simplifications.</strong> Minority interests are at book value. Working-capital changes are set to zero (Tencent’s deferred revenue makes working capital a small source of cash). Lease payments are treated as an operating cost rather than debt. The valuation is as at 30 June 2026 and is compared with a November 2026 price without rolling forward. Rolling forward to the price date would raise it by about 2.5%.</li>
+<li><strong>Simplifications.</strong> Minority interests are at book value. Working-capital changes are set to zero (Tencent’s deferred revenue makes working capital a small source of cash). Lease payments are treated as an operating cost rather than debt.</li>
+<li><strong>Two dates.</strong> Cash flows and the balance sheet are as at 30 June 2026. The price, risk-free rate and exchange rate are from 13 November 2026. To compare like with like, the equity value is rolled forward to the price date at the cost of equity: a factor of 1.028, from HK$827 to HK$850. No dividend was paid in between. This treats cash and investments as earning the cost of equity, and it ignores the listed portfolio’s actual moves and share buybacks since June. The share count is the second-quarter diluted average. Against the 30 June close of HK$429.8, the unrolled value is 92% above the price.</li>
 <li><strong>Not investment advice.</strong> This is an analytical exercise in valuation methods using public information.</li>
 </ul>
 </section>

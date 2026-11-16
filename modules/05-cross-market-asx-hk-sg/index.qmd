@@ -45,11 +45,15 @@ equal_across <- function(fit, term) {
 #| code-summary: "Market premia and a joint HAC test of equality"
 
 mu <- colMeans(R)
-V_mu <- NeweyWest(lm(R ~ 1), lag = nw_lag, prewhite = FALSE)   # 3 x 3 HAC covariance of the means
 C_mu <- rbind(c(1, -1, 0), c(1, 0, -1))
 d_mu <- C_mu %*% mu
-W_mu <- drop(t(d_mu) %*% solve(C_mu %*% V_mu %*% t(C_mu)) %*% d_mu)
-p_mu <- pchisq(W_mu, 2, lower.tail = FALSE)
+wald_mu <- function(L) {
+  V <- NeweyWest(lm(R ~ 1), lag = L, prewhite = FALSE)        # 3 x 3 HAC covariance of the means
+  W <- drop(t(d_mu) %*% solve(C_mu %*% V %*% t(C_mu)) %*% d_mu)
+  list(V = V, W = W, p = pchisq(W, 2, lower.tail = FALSE))
+}
+wm <- wald_mu(nw_lag); V_mu <- wm$V; W_mu <- wm$W; p_mu <- wm$p
+p_mu_lags <- map_dbl(c(0, 2, 4, 6, 12), \(L) wald_mu(L)$p)
 se_mu <- sqrt(diag(V_mu))
 cor_R <- cor(R)
 ```
@@ -165,7 +169,7 @@ tibble(Market = mk, `Mean (p.a.)` = pct(12 * mu), `SE (p.a.)` = pct(12 * se_mu),
   kable(align = "lrrrr")
 ```
 
-The joint test of equal premia gives χ²(2) = `r num(W_mu)`, p = `r num(p_mu)`. The standard error on each market's annual premium is around `r pct(12 * mean(se_mu), 0)`, so even the `r pct(12 * (max(mu) - min(mu)))`-a-year gap between Singapore and Hong Kong is well within sampling noise. The markets are highly correlated (ASX–SGX `r num(cor_R["ASX", "SGX"])`, HKEX–SGX `r num(cor_R["HKEX", "SGX"])`, ASX–HKEX `r num(cor_R["ASX", "HKEX"])`), which the joint test accounts for.
+The joint test of equal premia gives χ²(2) = `r num(W_mu)`, p = `r num(p_mu)`. With anywhere from 0 to 12 Newey–West lags, p stays between `r num(min(p_mu_lags))` and `r num(max(p_mu_lags))`. The standard error on each market's annual premium is around `r pct(12 * mean(se_mu), 0)`, so even the `r pct(12 * (max(mu) - min(mu)))`-a-year gap between Singapore and Hong Kong is well within sampling noise. The markets are highly correlated (ASX–SGX `r num(cor_R["ASX", "SGX"])`, HKEX–SGX `r num(cor_R["HKEX", "SGX"])`, ASX–HKEX `r num(cor_R["ASX", "HKEX"])`), which the joint test accounts for.
 
 ### Exposures: very different
 

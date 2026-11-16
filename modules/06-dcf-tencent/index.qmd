@@ -85,10 +85,17 @@ p_base <- list(growth_mult = 1, g_terminal = 0.02, ebitda_margin_target = margin
                capex_intensity_ss = 0.10, tax = tax_base, lease_pct = lease_pct,
                wacc = w$wacc, n = 10, k_norm = 5)
 hd_base <- 0.20                                             # holding discount on investments
+# The DCF and balance sheet are at 30 June 2026; the price is later. Roll the
+# equity value forward to the price date at the cost of equity implied by each
+# WACC (no dividend was paid between the two dates).
+val_date <- as.Date("2026-06-30"); price_date <- as.Date(mkt_in$as_of[mkt_in$item == "price_0700_hk"])
+dt_roll <- as.numeric(price_date - val_date) / 365
+ke_of_wacc <- function(wacc) (wacc - w$w_d * w$kd_after_tax) / (1 - w$w_d)
 run <- function(p, hd = hd_base) {
   r <- tencent_dcf(base, p)
   b <- sotp_bridge(r$pv$ev, bs, hd, fx, shares)
-  list(dcf = r, bridge = b, value = b$per_share_hkd)
+  roll <- (1 + ke_of_wacc(p$wacc))^dt_roll
+  list(dcf = r, bridge = b, value_valdate = b$per_share_hkd, roll = roll, value = b$per_share_hkd * roll)
 }
 bc <- run(p_base)
 val_at <- function(...) run(modifyList(p_base, list(...)))$value
@@ -106,6 +113,9 @@ imp_erp <- (imp_ke - rf) / beta_base
 imp_capex <- implied(\(x) val_at(capex_intensity_ss = x), 0.05, 0.45)
 imp_growth <- implied(\(x) val_at(growth_mult = x), -4, 1.5)
 wacc_of <- function(e) wacc_calc(beta_base, rf, e, kd, tax_base, equity_val, debt_val)$wacc
+# Steady-state capex that reproduces the price at a given equity risk premium
+cap_at_erp <- function(e) implied(\(x) val_at(wacc = wacc_of(e), capex_intensity_ss = x), 0.05, 0.45)
+cap8 <- cap_at_erp(0.08); cap10 <- cap_at_erp(0.10)
 
 grid <- expand_grid(erp = seq(0.04, 0.11, by = 0.0025), capex = seq(0.08, 0.30, by = 0.005)) |>
   mutate(value = map2_dbl(erp, capex, \(e, c) val_at(wacc = wacc_of(e), capex_intensity_ss = c)))
@@ -144,7 +154,7 @@ drv <- tibble(term = names(coef(drivers))[-1], coef = coef(drivers)[-1]) |>
 ::: {.callout-tip title="Answer first"}
 - **On standard inputs, Tencent is worth well above its share price.** A sum-of-the-parts DCF gives **HK$`r round(bc$value)` per share** against a price of HK$`r price` (`r format(as.Date(mkt_in$as_of[1]), "%d %b %Y")`). That uses China's 10-year bond yield (`r pct(rf, 2)`), Damodaran's China equity risk premium (`r pct(erp, 2)`) and Tencent's own beta from Module 01. The operating business accounts for `r pct(bc$bridge$parts["operations"] / bc$bridge$equity_rmb_m, 0)` of the value. The investment portfolio, net of a `r pct(hd_base, 0)` holding discount, adds `r pct(sum(bc$bridge$parts[c("listed_investments", "unlisted_investments")]) / bc$bridge$equity_rmb_m, 0)`, and net cash and minority interests roughly offset each other.
 - **There is no "valuation premium"; the market applies a large discount.** To justify today's price you would need a discount rate of **`r pct(imp_wacc)`** (a cost of equity near `r pct(imp_ke, 0)`, an equity risk premium of about `r pct(imp_erp, 0)`). Alternatively, AI capital spending would have to stay at **`r pct(imp_capex, 0)` of revenue forever**, against `r pct(capex_pre_ai, 0)` before the AI build-out.
-- **The realistic reading is a mix of both.** An equity risk premium of 8% with capex settling at 20% of revenue, or 10% with 15%, roughly reproduces the price (see the chart below). Across 10,000 Monte Carlo draws over plausible ranges, the median value is HK$`r round(q["50%"])` (90% interval HK$`r round(q["5%"])`–`r round(q["95%"])`), and `r pct(p_above, 0)` of draws exceed the price.
+- **The realistic reading is a mix of both.** An equity risk premium of 8% with capex settling at `r pct(cap8, 0)` of revenue, or 10% with `r pct(cap10, 0)`, reproduces the price (see the chart below). Across 10,000 Monte Carlo draws over plausible ranges, the median value is HK$`r round(q["50%"])` (90% interval HK$`r round(q["5%"])`–`r round(q["95%"])`), and `r pct(p_above, 0)` of draws exceed the price.
 - **So what:** Tencent's price is not a bet on growth; it is a bet on *risk* and *capital intensity*. An investor buying at today's price is being paid to bear China-specific risk (regulation, the VIE structure, geopolitics) and the risk that AI spending permanently absorbs cash. Whether that is a good trade depends on views of those risks, not on Tencent's operating performance, which is strong.
 :::
 
@@ -190,7 +200,7 @@ Three features of the history drive the valuation. **Growth has resumed**: reven
 
 **Capital spending and depreciation.** FY2026 capex is set to twice the first-half figure plus media-content spending at its 2025 level (RMB `r round(capex2026 / 1000)` billion, `r pct(capex2026 / sum(rev2025 * (1 + g2026)), 0)` of revenue). It then fades to a steady-state share of revenue by FY2030 (base case `r pct(p_base$capex_intensity_ss, 0)`, close to the pre-AI average of `r pct(capex_pre_ai, 1)`). Depreciation is five-year straight-line on actual and forecast capex. Free cash flow is $\text{EBITDA} - \text{tax on EBIT} - \text{capex} - \text{lease payments}$, with tax at `r pct(tax_base, 0)` (Tencent's effective rate on operating profit in 2024–25: `r paste(pct(tax_eff, 1), collapse = " and ")`).
 
-**Discounting.** The valuation date is 30 June 2026, the latest balance sheet. Only the second half of FY2026 is counted, then mid-year flows, and a Gordon terminal value from FY2035 at `r pct(p_base$g_terminal, 0)` growth.
+**Discounting.** The valuation date is 30 June 2026, the latest balance sheet. Only the second half of FY2026 is counted, then mid-year flows, and a Gordon terminal value from FY2035 at `r pct(p_base$g_terminal, 0)` growth. The timeline, in years from the valuation date: the second half of FY2026 is discounted at t = 0.25, FY2027 at t = 1, and FY2035 at t = 9. FY2035 ends at t = 9.5. Terminal-period flows are also mid-year, with the first (FY2036) at t = 10. So the Gordon value $F_{2036}/(r-g)$ sits at t = 9 and is discounted by $(1+r)^9$. This is the same as a year-end terminal value at t = 9.5 grossed up by $(1+r)^{0.5}$.
 
 ```{r}
 #| label: tbl-wacc
@@ -316,7 +326,7 @@ Holding everything else at the base case, the price is justified by any one of t
 - **steady-state capex of `r pct(imp_capex, 0)` of revenue**, permanently, against `r pct(capex_pre_ai, 0)` before the AI build-out and about `r pct(capex2026 / sum(rev2025 * (1 + g2026)), 0)` at the 2026 peak;
 - **revenue growth that reverses**: the FY2026 growth rates would have to be multiplied by `r num(imp_growth)` from FY2027 onward, meaning several years of shrinking revenue.
 
-Each of these alone is extreme. In combination they are not. The contour shows, for example, that a 10% equity risk premium with capex at 15% of revenue, or 8% with 20%, both land close to the price. A gap of 3–5 points over the rating-based risk premium is what a specific "China discount" on offshore-listed Chinese companies would look like. Plausible sources are regulatory risk (as in the 2021 platform crackdown), the VIE ownership structure (foreign shareholders own contractual claims, not the Chinese operating companies themselves), and US–China tensions. This analysis measures the size of the gap but does not test its causes.
+Each of these alone is extreme. In combination they are not. The contour shows, for example, that a 10% equity risk premium with capex at `r pct(cap10, 0)` of revenue, or 8% with `r pct(cap8, 0)`, both reproduce the price. A gap of 3–5 points over the rating-based risk premium is what a specific "China discount" on offshore-listed Chinese companies would look like. Plausible sources are regulatory risk (as in the 2021 platform crackdown), the VIE ownership structure (foreign shareholders own contractual claims, not the Chinese operating companies themselves), and US–China tensions. This analysis measures the size of the gap but does not test its causes.
 
 ### Monte Carlo
 
@@ -369,7 +379,8 @@ The ranges are deliberately wide, and the equity risk premium range extends well
 - **AI capex is unprecedented.** No history exists for how long the current spending lasts or what it earns. The model assumes it normalises by FY2030; the reverse DCF shows how much depends on that.
 - **No consensus forecasts.** The forecast is built from Tencent's reported trends, not analyst estimates, which would usually be a cross-check.
 - **Investments are marked at one date.** The listed portfolio's fair value fell by RMB `r round(tv("listed_investments_fv_bn", "2025") - bs$listed_bn)` billion in the first half of 2026 alone. Every RMB 100 billion is worth about HK$`r round(100e3 * (1 - hd_base) / shares * fx)` per share.
-- **Simplifications.** Minority interests are at book value. Working-capital changes are set to zero (Tencent's deferred revenue makes working capital a small source of cash). Lease payments are treated as an operating cost rather than debt. The valuation is as at 30 June 2026 and is compared with a November 2026 price without rolling forward. Rolling forward to the price date would raise it by about `r pct((1 + w$wacc)^(as.numeric(as.Date(mkt_in$as_of[1]) - as.Date("2026-06-30")) / 365) - 1, 1)`.
+- **Simplifications.** Minority interests are at book value. Working-capital changes are set to zero (Tencent's deferred revenue makes working capital a small source of cash). Lease payments are treated as an operating cost rather than debt.
+- **Two dates.** Cash flows and the balance sheet are as at 30 June 2026. The price, risk-free rate and exchange rate are from `r format(price_date, "%d %B %Y")`. To compare like with like, the equity value is rolled forward to the price date at the cost of equity: a factor of `r num(bc$roll, 3)`, from HK$`r round(bc$value_valdate)` to HK$`r round(bc$value)`. No dividend was paid in between. This treats cash and investments as earning the cost of equity, and it ignores the listed portfolio's actual moves and share buybacks since June. The share count is the second-quarter diluted average. Against the 30 June close of HK$`r m_in[["price_0700_hk_valdate"]]`, the unrolled value is `r pct(bc$value_valdate / m_in[["price_0700_hk_valdate"]] - 1, 0)` above the price.
 - **Not investment advice.** This is an analytical exercise in valuation methods using public information.
 
 ## References

@@ -301,13 +301,17 @@ window.Quarto = {
 <details class="code-fold">
 <summary>Market premia and a joint HAC test of equality</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>mu <span class="ot">&lt;-</span> <span class="fu">colMeans</span>(R)</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>V_mu <span class="ot">&lt;-</span> <span class="fu">NeweyWest</span>(<span class="fu">lm</span>(R <span class="sc">~</span> <span class="dv">1</span>), <span class="at">lag =</span> nw_lag, <span class="at">prewhite =</span> <span class="cn">FALSE</span>)   <span class="co"># 3 x 3 HAC covariance of the means</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>C_mu <span class="ot">&lt;-</span> <span class="fu">rbind</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="sc">-</span><span class="dv">1</span>, <span class="dv">0</span>), <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">0</span>, <span class="sc">-</span><span class="dv">1</span>))</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>d_mu <span class="ot">&lt;-</span> C_mu <span class="sc">%*%</span> mu</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>W_mu <span class="ot">&lt;-</span> <span class="fu">drop</span>(<span class="fu">t</span>(d_mu) <span class="sc">%*%</span> <span class="fu">solve</span>(C_mu <span class="sc">%*%</span> V_mu <span class="sc">%*%</span> <span class="fu">t</span>(C_mu)) <span class="sc">%*%</span> d_mu)</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>p_mu <span class="ot">&lt;-</span> <span class="fu">pchisq</span>(W_mu, <span class="dv">2</span>, <span class="at">lower.tail =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>se_mu <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">diag</span>(V_mu))</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>cor_R <span class="ot">&lt;-</span> <span class="fu">cor</span>(R)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>C_mu <span class="ot">&lt;-</span> <span class="fu">rbind</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="sc">-</span><span class="dv">1</span>, <span class="dv">0</span>), <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">0</span>, <span class="sc">-</span><span class="dv">1</span>))</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>d_mu <span class="ot">&lt;-</span> C_mu <span class="sc">%*%</span> mu</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>wald_mu <span class="ot">&lt;-</span> <span class="cf">function</span>(L) {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  V <span class="ot">&lt;-</span> <span class="fu">NeweyWest</span>(<span class="fu">lm</span>(R <span class="sc">~</span> <span class="dv">1</span>), <span class="at">lag =</span> L, <span class="at">prewhite =</span> <span class="cn">FALSE</span>)        <span class="co"># 3 x 3 HAC covariance of the means</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  W <span class="ot">&lt;-</span> <span class="fu">drop</span>(<span class="fu">t</span>(d_mu) <span class="sc">%*%</span> <span class="fu">solve</span>(C_mu <span class="sc">%*%</span> V <span class="sc">%*%</span> <span class="fu">t</span>(C_mu)) <span class="sc">%*%</span> d_mu)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">V =</span> V, <span class="at">W =</span> W, <span class="at">p =</span> <span class="fu">pchisq</span>(W, <span class="dv">2</span>, <span class="at">lower.tail =</span> <span class="cn">FALSE</span>))</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>wm <span class="ot">&lt;-</span> <span class="fu">wald_mu</span>(nw_lag); V_mu <span class="ot">&lt;-</span> wm<span class="sc">$</span>V; W_mu <span class="ot">&lt;-</span> wm<span class="sc">$</span>W; p_mu <span class="ot">&lt;-</span> wm<span class="sc">$</span>p</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>p_mu_lags <span class="ot">&lt;-</span> <span class="fu">map_dbl</span>(<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">4</span>, <span class="dv">6</span>, <span class="dv">12</span>), \(L) <span class="fu">wald_mu</span>(L)<span class="sc">$</span>p)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>se_mu <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">diag</span>(V_mu))</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>cor_R <span class="ot">&lt;-</span> <span class="fu">cor</span>(R)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <div class="cell">
@@ -468,7 +472,7 @@ Table&nbsp;1: Market excess returns over the US T-bill, in USD, annualised. Stan
 </figure>
 </div>
 </div>
-<p>The joint test of equal premia gives χ²(2) = 0.23, p = 0.89. The standard error on each market’s annual premium is around 4%, so even the 1.5%-a-year gap between Singapore and Hong Kong is well within sampling noise. The markets are highly correlated (ASX–SGX 0.76, HKEX–SGX 0.70, ASX–HKEX 0.54), which the joint test accounts for.</p>
+<p>The joint test of equal premia gives χ²(2) = 0.23, p = 0.89. With anywhere from 0 to 12 Newey–West lags, p stays between 0.89 and 0.92. The standard error on each market’s annual premium is around 4%, so even the 1.5%-a-year gap between Singapore and Hong Kong is well within sampling noise. The markets are highly correlated (ASX–SGX 0.76, HKEX–SGX 0.70, ASX–HKEX 0.54), which the joint test accounts for.</p>
 </section>
 <section id="exposures-very-different" class="level3">
 <h3 class="anchored" data-anchor-id="exposures-very-different">Exposures: very different</h3>

@@ -111,3 +111,19 @@ test_that("fama_macbeth slopes equal a pooled cross-sectional OLS each month", {
   t5 <- coef(lm(s$Y[5, ] ~ b[, 1]))
   expect_equal(unname(G[5, ]), unname(t5), tolerance = 1e-10)
 })
+
+test_that("nw_mean_vcov matches sandwich::NeweyWest on an intercept-only regression", {
+  skip_if_not_installed("sandwich")
+  set.seed(11)
+  g <- as.numeric(arima.sim(list(ar = 0.4), n = 300))
+  for (L in c(0, 4, 12)) {
+    ref <- sandwich::NeweyWest(lm(g ~ 1), lag = L, prewhite = FALSE, adjust = FALSE)
+    expect_equal(drop(nw_mean_vcov(matrix(g), L)), drop(ref), tolerance = 1e-10)
+  }
+})
+
+test_that("fama_macbeth Newey-West errors at lag 0 equal plain FM up to the T/(T-1) factor", {
+  s <- sim_panel(120, 15, 2)
+  fm <- fama_macbeth(s$Y, s$F, nw_lag = 0)
+  expect_equal(fm$se_nw^2 * 120 / 119, fm$se_fm^2, tolerance = 1e-10)
+})

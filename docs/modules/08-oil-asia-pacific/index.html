@@ -224,6 +224,7 @@ window.Quarto = {
   <li><a href="#do-regional-fundamentals-predict-oil" id="toc-do-regional-fundamentals-predict-oil" class="nav-link" data-scroll-target="#do-regional-fundamentals-predict-oil">Do regional fundamentals predict oil?</a></li>
   <li><a href="#energy-equities-exposure-in-the-expected-order" id="toc-energy-equities-exposure-in-the-expected-order" class="nav-link" data-scroll-target="#energy-equities-exposure-in-the-expected-order">Energy equities: exposure in the expected order</a></li>
   <li><a href="#is-oil-risk-priced" id="toc-is-oil-risk-priced" class="nav-link" data-scroll-target="#is-oil-risk-priced">Is oil risk priced?</a></li>
+  <li><a href="#robustness-the-neweywest-lag" id="toc-robustness-the-neweywest-lag" class="nav-link" data-scroll-target="#robustness-the-neweywest-lag">Robustness: the Newey–West lag</a></li>
   </ul></li>
   <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations">Limitations</a></li>
   <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
@@ -286,15 +287,16 @@ window.Quarto = {
 <span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>ff <span class="ot">&lt;-</span> <span class="fu">get_french_apac</span>(<span class="st">"../../data/raw/french"</span>)</span>
 <span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>sg_ipi <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">file.path</span>(data_dir, <span class="st">"sg_import_prices.csv"</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>ema_file <span class="ot">&lt;-</span> <span class="st">"../../data/raw/ema/SES_tidy.xlsx"</span></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>nw <span class="ot">&lt;-</span> <span class="cf">function</span>(m) <span class="fu">NeweyWest</span>(m, <span class="at">lag =</span> <span class="dv">4</span>, <span class="at">prewhite =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>o <span class="ot">&lt;-</span> o <span class="sc">|&gt;</span> <span class="fu">mutate</span>(</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">spread =</span> brent_wb_avg <span class="sc">-</span> dubai_wb_avg,                                   <span class="co"># Brent–Dubai, both World Bank averages</span></span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">r_brent =</span> brent_price_end <span class="sc">/</span> <span class="fu">lag</span>(brent_price_end) <span class="sc">-</span> <span class="dv">1</span>,                   <span class="co"># month-end (FRED daily)</span></span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">bunker_yoy =</span> <span class="fu">log</span>(sg_bunker_sales_kt <span class="sc">/</span> <span class="fu">lag</span>(sg_bunker_sales_kt, <span class="dv">12</span>)),     <span class="co"># seasonally neutral growth</span></span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">dcover =</span> aus_iea_days_cover <span class="sc">-</span> <span class="fu">lag</span>(aus_iea_days_cover),</span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>  <span class="at">stocks_yoy =</span> <span class="fu">log</span>(aus_stocks_total_ml <span class="sc">/</span> <span class="fu">lag</span>(aus_stocks_total_ml, <span class="dv">12</span>)),</span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>  <span class="at">dspread =</span> spread <span class="sc">-</span> <span class="fu">lag</span>(spread))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>nw_lag <span class="ot">&lt;-</span> <span class="dv">4</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>nw <span class="ot">&lt;-</span> <span class="cf">function</span>(m, <span class="at">lag =</span> nw_lag) <span class="fu">NeweyWest</span>(m, <span class="at">lag =</span> lag, <span class="at">prewhite =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>o <span class="ot">&lt;-</span> o <span class="sc">|&gt;</span> <span class="fu">mutate</span>(</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">spread =</span> brent_wb_avg <span class="sc">-</span> dubai_wb_avg,                                   <span class="co"># Brent–Dubai, both World Bank averages</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">r_brent =</span> brent_price_end <span class="sc">/</span> <span class="fu">lag</span>(brent_price_end) <span class="sc">-</span> <span class="dv">1</span>,                   <span class="co"># month-end (FRED daily)</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">bunker_yoy =</span> <span class="fu">log</span>(sg_bunker_sales_kt <span class="sc">/</span> <span class="fu">lag</span>(sg_bunker_sales_kt, <span class="dv">12</span>)),     <span class="co"># seasonally neutral growth</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>  <span class="at">dcover =</span> aus_iea_days_cover <span class="sc">-</span> <span class="fu">lag</span>(aus_iea_days_cover),</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>  <span class="at">stocks_yoy =</span> <span class="fu">log</span>(aus_stocks_total_ml <span class="sc">/</span> <span class="fu">lag</span>(aus_stocks_total_ml, <span class="dv">12</span>)),</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>  <span class="at">dspread =</span> spread <span class="sc">-</span> <span class="fu">lag</span>(spread))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <div class="cell">
@@ -331,12 +333,16 @@ window.Quarto = {
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>pred <span class="ot">&lt;-</span> <span class="fu">lm</span>(r_brent <span class="sc">~</span> bunker_yoy_l1 <span class="sc">+</span> dcover_l1 <span class="sc">+</span> stocks_yoy_l1, dd)</span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>V_pred <span class="ot">&lt;-</span> <span class="fu">nw</span>(pred)</span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>C3 <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="dv">0</span>, <span class="fu">diag</span>(<span class="dv">3</span>))</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>W_pred <span class="ot">&lt;-</span> <span class="fu">drop</span>(<span class="fu">t</span>(C3 <span class="sc">%*%</span> <span class="fu">coef</span>(pred)) <span class="sc">%*%</span> <span class="fu">solve</span>(C3 <span class="sc">%*%</span> V_pred <span class="sc">%*%</span> <span class="fu">t</span>(C3)) <span class="sc">%*%</span> (C3 <span class="sc">%*%</span> <span class="fu">coef</span>(pred)))</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>p_pred <span class="ot">&lt;-</span> <span class="fu">pchisq</span>(W_pred, <span class="dv">3</span>, <span class="at">lower.tail =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>pred_tbl <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">term =</span> <span class="fu">names</span>(<span class="fu">coef</span>(pred))[<span class="sc">-</span><span class="dv">1</span>], <span class="at">est =</span> <span class="fu">coef</span>(pred)[<span class="sc">-</span><span class="dv">1</span>], <span class="at">t =</span> <span class="fu">coef</span>(pred)[<span class="sc">-</span><span class="dv">1</span>] <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="fu">diag</span>(V_pred))[<span class="sc">-</span><span class="dv">1</span>])</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>spread_stats <span class="ot">&lt;-</span> o <span class="sc">|&gt;</span> <span class="fu">filter</span>(month <span class="sc">&lt;</span> <span class="fu">as.Date</span>(<span class="st">"2026-01-01"</span>)) <span class="sc">|&gt;</span> <span class="fu">summarise</span>(<span class="at">m =</span> <span class="fu">mean</span>(spread), <span class="at">s =</span> <span class="fu">sd</span>(spread))</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>spread_2026 <span class="ot">&lt;-</span> o <span class="sc">|&gt;</span> <span class="fu">filter</span>(month <span class="sc">&gt;=</span> <span class="fu">as.Date</span>(<span class="st">"2026-01-01"</span>))</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>spread_max <span class="ot">&lt;-</span> spread_2026 <span class="sc">|&gt;</span> <span class="fu">slice_max</span>(spread, <span class="at">n =</span> <span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>pred_p <span class="ot">&lt;-</span> <span class="cf">function</span>(L) {</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  V <span class="ot">&lt;-</span> <span class="fu">nw</span>(pred, L)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  W <span class="ot">&lt;-</span> <span class="fu">drop</span>(<span class="fu">t</span>(C3 <span class="sc">%*%</span> <span class="fu">coef</span>(pred)) <span class="sc">%*%</span> <span class="fu">solve</span>(C3 <span class="sc">%*%</span> V <span class="sc">%*%</span> <span class="fu">t</span>(C3)) <span class="sc">%*%</span> (C3 <span class="sc">%*%</span> <span class="fu">coef</span>(pred)))</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pchisq</span>(W, <span class="dv">3</span>, <span class="at">lower.tail =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>p_pred <span class="ot">&lt;-</span> <span class="fu">pred_p</span>(nw_lag)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>pred_tbl <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">term =</span> <span class="fu">names</span>(<span class="fu">coef</span>(pred))[<span class="sc">-</span><span class="dv">1</span>], <span class="at">est =</span> <span class="fu">coef</span>(pred)[<span class="sc">-</span><span class="dv">1</span>], <span class="at">t =</span> <span class="fu">coef</span>(pred)[<span class="sc">-</span><span class="dv">1</span>] <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="fu">diag</span>(V_pred))[<span class="sc">-</span><span class="dv">1</span>])</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>spread_stats <span class="ot">&lt;-</span> o <span class="sc">|&gt;</span> <span class="fu">filter</span>(month <span class="sc">&lt;</span> <span class="fu">as.Date</span>(<span class="st">"2026-01-01"</span>)) <span class="sc">|&gt;</span> <span class="fu">summarise</span>(<span class="at">m =</span> <span class="fu">mean</span>(spread), <span class="at">s =</span> <span class="fu">sd</span>(spread))</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>spread_2026 <span class="ot">&lt;-</span> o <span class="sc">|&gt;</span> <span class="fu">filter</span>(month <span class="sc">&gt;=</span> <span class="fu">as.Date</span>(<span class="st">"2026-01-01"</span>))</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>spread_max <span class="ot">&lt;-</span> spread_2026 <span class="sc">|&gt;</span> <span class="fu">slice_max</span>(spread, <span class="at">n =</span> <span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <div class="cell">
@@ -418,15 +424,15 @@ window.Quarto = {
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">"0883.HK"</span>, <span class="st">"CNOOC"</span>, <span class="st">"Producer"</span>, <span class="st">"0857.HK"</span>, <span class="st">"PetroChina"</span>, <span class="st">"Integrated"</span>, <span class="st">"0386.HK"</span>, <span class="st">"Sinopec"</span>, <span class="st">"Integrated (refining-heavy)"</span>,</span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">"ALD.AX"</span>, <span class="st">"Ampol"</span>, <span class="st">"Refiner &amp; fuel distributor"</span>, <span class="st">"VEA.AX"</span>, <span class="st">"Viva Energy"</span>, <span class="st">"Refiner &amp; fuel distributor"</span>)</span>
 <span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>eres <span class="ot">&lt;-</span> <span class="fu">map_dfr</span>(names_tbl<span class="sc">$</span>symbol, <span class="cf">function</span>(s) {</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>energy_tests <span class="ot">&lt;-</span> <span class="cf">function</span>(<span class="at">L =</span> nw_lag) <span class="fu">map_dfr</span>(names_tbl<span class="sc">$</span>symbol, <span class="cf">function</span>(s) {</span>
 <span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  d <span class="ot">&lt;-</span> eq <span class="sc">|&gt;</span> <span class="fu">filter</span>(symbol <span class="sc">==</span> s) <span class="sc">|&gt;</span> <span class="fu">inner_join</span>(mk, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"market"</span>, <span class="st">"month"</span>)) <span class="sc">|&gt;</span> <span class="fu">inner_join</span>(rf, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"market"</span>, <span class="st">"month"</span>)) <span class="sc">|&gt;</span></span>
 <span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">inner_join</span>(dd, <span class="at">by =</span> <span class="st">"month"</span>) <span class="sc">|&gt;</span></span>
 <span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">ex =</span> ret <span class="sc">-</span> rf, <span class="at">mex =</span> mkt <span class="sc">-</span> rf, <span class="at">up =</span> <span class="fu">pmax</span>(r_brent, <span class="dv">0</span>), <span class="at">dn =</span> <span class="fu">pmin</span>(r_brent, <span class="dv">0</span>)) <span class="sc">|&gt;</span></span>
 <span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(bunker_yoy), <span class="sc">!</span><span class="fu">is.na</span>(dcover), <span class="sc">!</span><span class="fu">is.na</span>(dspread))</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  m1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(ex <span class="sc">~</span> mex <span class="sc">+</span> r_brent, d); V1 <span class="ot">&lt;-</span> <span class="fu">nw</span>(m1)</span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  m2 <span class="ot">&lt;-</span> <span class="fu">lm</span>(ex <span class="sc">~</span> mex <span class="sc">+</span> up <span class="sc">+</span> dn, d); V2 <span class="ot">&lt;-</span> <span class="fu">nw</span>(m2)</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  m1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(ex <span class="sc">~</span> mex <span class="sc">+</span> r_brent, d); V1 <span class="ot">&lt;-</span> <span class="fu">nw</span>(m1, L)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  m2 <span class="ot">&lt;-</span> <span class="fu">lm</span>(ex <span class="sc">~</span> mex <span class="sc">+</span> up <span class="sc">+</span> dn, d); V2 <span class="ot">&lt;-</span> <span class="fu">nw</span>(m2, L)</span>
 <span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  ca <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="sc">-</span><span class="dv">1</span>), <span class="dv">1</span>); p_asym <span class="ot">&lt;-</span> <span class="dv">2</span> <span class="sc">*</span> <span class="fu">pnorm</span>(<span class="sc">-</span><span class="fu">abs</span>(<span class="fu">drop</span>(ca <span class="sc">%*%</span> <span class="fu">coef</span>(m2)) <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="fu">drop</span>(ca <span class="sc">%*%</span> V2 <span class="sc">%*%</span> <span class="fu">t</span>(ca)))))</span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  m3 <span class="ot">&lt;-</span> <span class="fu">lm</span>(ex <span class="sc">~</span> mex <span class="sc">+</span> r_brent <span class="sc">+</span> dspread <span class="sc">+</span> bunker_yoy <span class="sc">+</span> dcover, d); V3 <span class="ot">&lt;-</span> <span class="fu">nw</span>(m3)</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  m3 <span class="ot">&lt;-</span> <span class="fu">lm</span>(ex <span class="sc">~</span> mex <span class="sc">+</span> r_brent <span class="sc">+</span> dspread <span class="sc">+</span> bunker_yoy <span class="sc">+</span> dcover, d); V3 <span class="ot">&lt;-</span> <span class="fu">nw</span>(m3, L)</span>
 <span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  cj <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="fu">matrix</span>(<span class="dv">0</span>, <span class="dv">3</span>, <span class="dv">3</span>), <span class="fu">diag</span>(<span class="dv">3</span>)); dj <span class="ot">&lt;-</span> cj <span class="sc">%*%</span> <span class="fu">coef</span>(m3)</span>
 <span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  p_reg <span class="ot">&lt;-</span> <span class="fu">pchisq</span>(<span class="fu">drop</span>(<span class="fu">t</span>(dj) <span class="sc">%*%</span> <span class="fu">solve</span>(cj <span class="sc">%*%</span> V3 <span class="sc">%*%</span> <span class="fu">t</span>(cj)) <span class="sc">%*%</span> dj), <span class="dv">3</span>, <span class="at">lower.tail =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(<span class="at">symbol =</span> s, <span class="at">months =</span> <span class="fu">nrow</span>(d), <span class="at">from =</span> <span class="fu">min</span>(d<span class="sc">$</span>month),</span>
@@ -434,37 +440,38 @@ window.Quarto = {
 <span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>         <span class="at">b_up =</span> <span class="fu">coef</span>(m2)[[<span class="st">"up"</span>]], <span class="at">b_dn =</span> <span class="fu">coef</span>(m2)[[<span class="st">"dn"</span>]], <span class="at">p_asym =</span> p_asym, <span class="at">p_regional =</span> p_reg)</span>
 <span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span> <span class="fu">left_join</span>(names_tbl, <span class="at">by =</span> <span class="st">"symbol"</span>) <span class="sc">|&gt;</span></span>
 <span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">p_regional_bh =</span> <span class="fu">p.adjust</span>(p_regional, <span class="st">"BH"</span>), <span class="at">p_asym_bh =</span> <span class="fu">p.adjust</span>(p_asym, <span class="st">"BH"</span>))</span>
-<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>prod_b <span class="ot">&lt;-</span> eres <span class="sc">|&gt;</span> <span class="fu">filter</span>(role <span class="sc">==</span> <span class="st">"Producer"</span>)</span>
-<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Asymmetry robustness: simple vs log oil returns, with and without the two most extreme crash months</span></span>
-<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>o_log <span class="ot">&lt;-</span> o <span class="sc">|&gt;</span> <span class="fu">mutate</span>(<span class="at">r_brent_log =</span> <span class="fu">log</span>(brent_price_end <span class="sc">/</span> <span class="fu">lag</span>(brent_price_end)))</span>
-<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>asym <span class="ot">&lt;-</span> <span class="cf">function</span>(s, var, drop_crash) {</span>
-<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>  d <span class="ot">&lt;-</span> eq <span class="sc">|&gt;</span> <span class="fu">filter</span>(symbol <span class="sc">==</span> s) <span class="sc">|&gt;</span> <span class="fu">inner_join</span>(mk, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"market"</span>, <span class="st">"month"</span>)) <span class="sc">|&gt;</span> <span class="fu">inner_join</span>(rf, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"market"</span>, <span class="st">"month"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>    <span class="fu">inner_join</span>(o_log, <span class="at">by =</span> <span class="st">"month"</span>) <span class="sc">|&gt;</span> <span class="fu">filter</span>(month <span class="sc">&gt;=</span> <span class="fu">as.Date</span>(<span class="st">"2011-02-01"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">ex =</span> ret <span class="sc">-</span> rf, <span class="at">mex =</span> mkt <span class="sc">-</span> rf, <span class="at">x =</span> .data[[var]], <span class="at">up =</span> <span class="fu">pmax</span>(x, <span class="dv">0</span>), <span class="at">dn =</span> <span class="fu">pmin</span>(x, <span class="dv">0</span>))</span>
-<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (drop_crash) d <span class="ot">&lt;-</span> d <span class="sc">|&gt;</span> <span class="fu">filter</span>(<span class="sc">!</span>month <span class="sc">%in%</span> <span class="fu">as.Date</span>(<span class="fu">c</span>(<span class="st">"2020-03-01"</span>, <span class="st">"2020-04-01"</span>)))</span>
-<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>  m <span class="ot">&lt;-</span> <span class="fu">lm</span>(ex <span class="sc">~</span> mex <span class="sc">+</span> up <span class="sc">+</span> dn, d); V <span class="ot">&lt;-</span> <span class="fu">nw</span>(m); ca <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="sc">-</span><span class="dv">1</span>), <span class="dv">1</span>)</span>
-<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">c</span>(<span class="at">up =</span> <span class="fu">coef</span>(m)[[<span class="st">"up"</span>]], <span class="at">dn =</span> <span class="fu">coef</span>(m)[[<span class="st">"dn"</span>]],</span>
-<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>    <span class="at">p =</span> <span class="dv">2</span> <span class="sc">*</span> <span class="fu">pnorm</span>(<span class="sc">-</span><span class="fu">abs</span>(<span class="fu">drop</span>(ca <span class="sc">%*%</span> <span class="fu">coef</span>(m)) <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="fu">drop</span>(ca <span class="sc">%*%</span> V <span class="sc">%*%</span> <span class="fu">t</span>(ca))))))</span>
-<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>specs <span class="ot">&lt;-</span> <span class="fu">tribble</span>(<span class="sc">~</span>spec, <span class="sc">~</span>var, <span class="sc">~</span>drop,</span>
-<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Simple returns"</span>, <span class="st">"r_brent"</span>, <span class="cn">FALSE</span>, <span class="st">"Log returns"</span>, <span class="st">"r_brent_log"</span>, <span class="cn">FALSE</span>,</span>
-<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Simple, excl. Mar–Apr 2020"</span>, <span class="st">"r_brent"</span>, <span class="cn">TRUE</span>, <span class="st">"Log, excl. Mar–Apr 2020"</span>, <span class="st">"r_brent_log"</span>, <span class="cn">TRUE</span>)</span>
-<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>asym_all <span class="ot">&lt;-</span> <span class="fu">pmap_dfr</span>(specs, <span class="cf">function</span>(spec, var, drop) <span class="fu">map_dfr</span>(names_tbl<span class="sc">$</span>symbol, <span class="cf">function</span>(s) {</span>
-<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>  a <span class="ot">&lt;-</span> <span class="fu">asym</span>(s, var, drop); <span class="fu">tibble</span>(<span class="at">spec =</span> spec, <span class="at">symbol =</span> s, <span class="at">up =</span> a[[<span class="st">"up"</span>]], <span class="at">dn =</span> a[[<span class="st">"dn"</span>]], <span class="at">p =</span> a[[<span class="st">"p"</span>]])</span>
-<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>}))</span>
-<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>asym_sum <span class="ot">&lt;-</span> asym_all <span class="sc">|&gt;</span> <span class="fu">group_by</span>(spec) <span class="sc">|&gt;</span></span>
-<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">n_up_bigger =</span> <span class="fu">sum</span>(up <span class="sc">&gt;</span> dn), <span class="at">n_sig =</span> <span class="fu">sum</span>(<span class="fu">p.adjust</span>(p, <span class="st">"BH"</span>) <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(spec, specs<span class="sc">$</span>spec))</span>
-<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>extreme <span class="ot">&lt;-</span> o_log <span class="sc">|&gt;</span> <span class="fu">filter</span>(month <span class="sc">&gt;=</span> <span class="fu">as.Date</span>(<span class="st">"2011-02-01"</span>)) <span class="sc">|&gt;</span> <span class="fu">slice_max</span>(<span class="fu">abs</span>(r_brent), <span class="at">n =</span> <span class="dv">3</span>)</span>
-<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a><span class="co"># Overall oil beta under log returns, to check it is robust (unlike the up/down split)</span></span>
-<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>b_log <span class="ot">&lt;-</span> <span class="fu">map_dbl</span>(names_tbl<span class="sc">$</span>symbol, <span class="cf">function</span>(s) {</span>
-<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>  d <span class="ot">&lt;-</span> eq <span class="sc">|&gt;</span> <span class="fu">filter</span>(symbol <span class="sc">==</span> s) <span class="sc">|&gt;</span> <span class="fu">inner_join</span>(mk, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"market"</span>, <span class="st">"month"</span>)) <span class="sc">|&gt;</span> <span class="fu">inner_join</span>(rf, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"market"</span>, <span class="st">"month"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a>    <span class="fu">inner_join</span>(o_log, <span class="at">by =</span> <span class="st">"month"</span>) <span class="sc">|&gt;</span> <span class="fu">filter</span>(month <span class="sc">&gt;=</span> <span class="fu">as.Date</span>(<span class="st">"2011-02-01"</span>)) <span class="sc">|&gt;</span> <span class="fu">mutate</span>(<span class="at">ex =</span> ret <span class="sc">-</span> rf, <span class="at">mex =</span> mkt <span class="sc">-</span> rf)</span>
-<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coef</span>(<span class="fu">lm</span>(ex <span class="sc">~</span> mex <span class="sc">+</span> r_brent_log, d))[[<span class="st">"r_brent_log"</span>]]</span>
-<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a>beta_shift <span class="ot">&lt;-</span> <span class="fu">max</span>(<span class="fu">abs</span>(b_log <span class="sc">-</span> eres<span class="sc">$</span>b_oil[<span class="fu">match</span>(names_tbl<span class="sc">$</span>symbol, eres<span class="sc">$</span>symbol)]))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>eres <span class="ot">&lt;-</span> <span class="fu">energy_tests</span>()</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>prod_b <span class="ot">&lt;-</span> eres <span class="sc">|&gt;</span> <span class="fu">filter</span>(role <span class="sc">==</span> <span class="st">"Producer"</span>)</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="co"># Asymmetry robustness: simple vs log oil returns, with and without the two most extreme crash months</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>o_log <span class="ot">&lt;-</span> o <span class="sc">|&gt;</span> <span class="fu">mutate</span>(<span class="at">r_brent_log =</span> <span class="fu">log</span>(brent_price_end <span class="sc">/</span> <span class="fu">lag</span>(brent_price_end)))</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>asym <span class="ot">&lt;-</span> <span class="cf">function</span>(s, var, drop_crash) {</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>  d <span class="ot">&lt;-</span> eq <span class="sc">|&gt;</span> <span class="fu">filter</span>(symbol <span class="sc">==</span> s) <span class="sc">|&gt;</span> <span class="fu">inner_join</span>(mk, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"market"</span>, <span class="st">"month"</span>)) <span class="sc">|&gt;</span> <span class="fu">inner_join</span>(rf, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"market"</span>, <span class="st">"month"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>    <span class="fu">inner_join</span>(o_log, <span class="at">by =</span> <span class="st">"month"</span>) <span class="sc">|&gt;</span> <span class="fu">filter</span>(month <span class="sc">&gt;=</span> <span class="fu">as.Date</span>(<span class="st">"2011-02-01"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">ex =</span> ret <span class="sc">-</span> rf, <span class="at">mex =</span> mkt <span class="sc">-</span> rf, <span class="at">x =</span> .data[[var]], <span class="at">up =</span> <span class="fu">pmax</span>(x, <span class="dv">0</span>), <span class="at">dn =</span> <span class="fu">pmin</span>(x, <span class="dv">0</span>))</span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (drop_crash) d <span class="ot">&lt;-</span> d <span class="sc">|&gt;</span> <span class="fu">filter</span>(<span class="sc">!</span>month <span class="sc">%in%</span> <span class="fu">as.Date</span>(<span class="fu">c</span>(<span class="st">"2020-03-01"</span>, <span class="st">"2020-04-01"</span>)))</span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>  m <span class="ot">&lt;-</span> <span class="fu">lm</span>(ex <span class="sc">~</span> mex <span class="sc">+</span> up <span class="sc">+</span> dn, d); V <span class="ot">&lt;-</span> <span class="fu">nw</span>(m); ca <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="sc">-</span><span class="dv">1</span>), <span class="dv">1</span>)</span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>  <span class="fu">c</span>(<span class="at">up =</span> <span class="fu">coef</span>(m)[[<span class="st">"up"</span>]], <span class="at">dn =</span> <span class="fu">coef</span>(m)[[<span class="st">"dn"</span>]],</span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>    <span class="at">p =</span> <span class="dv">2</span> <span class="sc">*</span> <span class="fu">pnorm</span>(<span class="sc">-</span><span class="fu">abs</span>(<span class="fu">drop</span>(ca <span class="sc">%*%</span> <span class="fu">coef</span>(m)) <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="fu">drop</span>(ca <span class="sc">%*%</span> V <span class="sc">%*%</span> <span class="fu">t</span>(ca))))))</span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>specs <span class="ot">&lt;-</span> <span class="fu">tribble</span>(<span class="sc">~</span>spec, <span class="sc">~</span>var, <span class="sc">~</span>drop,</span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Simple returns"</span>, <span class="st">"r_brent"</span>, <span class="cn">FALSE</span>, <span class="st">"Log returns"</span>, <span class="st">"r_brent_log"</span>, <span class="cn">FALSE</span>,</span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Simple, excl. Mar–Apr 2020"</span>, <span class="st">"r_brent"</span>, <span class="cn">TRUE</span>, <span class="st">"Log, excl. Mar–Apr 2020"</span>, <span class="st">"r_brent_log"</span>, <span class="cn">TRUE</span>)</span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>asym_all <span class="ot">&lt;-</span> <span class="fu">pmap_dfr</span>(specs, <span class="cf">function</span>(spec, var, drop) <span class="fu">map_dfr</span>(names_tbl<span class="sc">$</span>symbol, <span class="cf">function</span>(s) {</span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>  a <span class="ot">&lt;-</span> <span class="fu">asym</span>(s, var, drop); <span class="fu">tibble</span>(<span class="at">spec =</span> spec, <span class="at">symbol =</span> s, <span class="at">up =</span> a[[<span class="st">"up"</span>]], <span class="at">dn =</span> a[[<span class="st">"dn"</span>]], <span class="at">p =</span> a[[<span class="st">"p"</span>]])</span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>}))</span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>asym_sum <span class="ot">&lt;-</span> asym_all <span class="sc">|&gt;</span> <span class="fu">group_by</span>(spec) <span class="sc">|&gt;</span></span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">n_up_bigger =</span> <span class="fu">sum</span>(up <span class="sc">&gt;</span> dn), <span class="at">n_sig =</span> <span class="fu">sum</span>(<span class="fu">p.adjust</span>(p, <span class="st">"BH"</span>) <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(spec, specs<span class="sc">$</span>spec))</span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a>extreme <span class="ot">&lt;-</span> o_log <span class="sc">|&gt;</span> <span class="fu">filter</span>(month <span class="sc">&gt;=</span> <span class="fu">as.Date</span>(<span class="st">"2011-02-01"</span>)) <span class="sc">|&gt;</span> <span class="fu">slice_max</span>(<span class="fu">abs</span>(r_brent), <span class="at">n =</span> <span class="dv">3</span>)</span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a><span class="co"># Overall oil beta under log returns, to check it is robust (unlike the up/down split)</span></span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>b_log <span class="ot">&lt;-</span> <span class="fu">map_dbl</span>(names_tbl<span class="sc">$</span>symbol, <span class="cf">function</span>(s) {</span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a>  d <span class="ot">&lt;-</span> eq <span class="sc">|&gt;</span> <span class="fu">filter</span>(symbol <span class="sc">==</span> s) <span class="sc">|&gt;</span> <span class="fu">inner_join</span>(mk, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"market"</span>, <span class="st">"month"</span>)) <span class="sc">|&gt;</span> <span class="fu">inner_join</span>(rf, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"market"</span>, <span class="st">"month"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a>    <span class="fu">inner_join</span>(o_log, <span class="at">by =</span> <span class="st">"month"</span>) <span class="sc">|&gt;</span> <span class="fu">filter</span>(month <span class="sc">&gt;=</span> <span class="fu">as.Date</span>(<span class="st">"2011-02-01"</span>)) <span class="sc">|&gt;</span> <span class="fu">mutate</span>(<span class="at">ex =</span> ret <span class="sc">-</span> rf, <span class="at">mex =</span> mkt <span class="sc">-</span> rf)</span>
+<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coef</span>(<span class="fu">lm</span>(ex <span class="sc">~</span> mex <span class="sc">+</span> r_brent_log, d))[[<span class="st">"r_brent_log"</span>]]</span>
+<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb5-55"><a href="#cb5-55" aria-hidden="true" tabindex="-1"></a>beta_shift <span class="ot">&lt;-</span> <span class="fu">max</span>(<span class="fu">abs</span>(b_log <span class="sc">-</span> eres<span class="sc">$</span>b_oil[<span class="fu">match</span>(names_tbl<span class="sc">$</span>symbol, eres<span class="sc">$</span>symbol)]))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <div class="cell">
@@ -502,7 +509,7 @@ window.Quarto = {
 <li><strong>Asia’s crude benchmark broke away from Brent in 2026, but Singapore’s import bill did not.</strong> The Brent–Dubai spread, normally 1.9 dollars a barrel, reached 27.7 dollars in April 2026. Over 2011–26, Singapore’s actual crude import prices (SingStat) track Dubai most closely, yet in the 2026 shock they rose roughly in line with Brent, far more than Dubai (up 88% by September 2026). Asian buyers paid for the spike regardless of benchmark.</li>
 <li><strong>APAC energy stocks are exposed to oil, in the expected order.</strong> Monthly oil betas (controlling for each home market) run from 0.34 for upstream producers down to 0.04 for refining-heavy Sinopec. Whether they react more to oil rises or falls is not robust. The answer flips with how returns are measured and with a few extreme months.</li>
 <li><strong>Regional fundamentals add little beyond the price.</strong> Singapore bunker demand, Australian stock cover and the Brent–Dubai spread neither predict oil returns (joint p = 0.62) nor explain energy-stock returns once Brent is controlled for (no stock significant after a multiple-testing correction).</li>
-<li><strong>Oil exposure is not rewarded.</strong> Across all 51 stocks, the Fama–MacBeth price of oil risk is -0.42% a month (Shanken t = -0.25). <strong>So what:</strong> in APAC equities, oil is a risk to hedge or diversify, not a source of expected return. Investors are not paid for holding it.</li>
+<li><strong>No evidence that oil exposure is rewarded.</strong> Across all 51 stocks, the Fama–MacBeth price of oil risk is -0.42% a month (Shanken t = -0.25). The standard error is wide, so a modest premium cannot be ruled out. <strong>So what:</strong> in this sample, oil looks like a risk to hedge or diversify, not a reliable source of expected return.</li>
 </ul>
 </div>
 </div>
@@ -887,7 +894,7 @@ Table&nbsp;3: Monthly Brent return regressed on last month’s regional fundamen
 </figure>
 </div>
 </div>
-<p>None of the three predicts next month’s oil return, individually or jointly (joint p = 0.62, R² = 1.4%). This is what an efficient global market implies: Australia and Singapore are price-takers, and their published volumes are already reflected in the price by the time they are released.</p>
+<p>None of the three predicts next month’s oil return, individually or jointly (joint p = 0.62, R² = 1.4%). That fits Australia and Singapore being price-takers whose published volumes are already in the price when released. It says nothing about richer regional data (refinery runs, futures curves, crack spreads, freight), which were not tested.</p>
 </section>
 <section id="energy-equities-exposure-in-the-expected-order" class="level3">
 <h3 class="anchored" data-anchor-id="energy-equities-exposure-in-the-expected-order">Energy equities: exposure in the expected order</h3>
@@ -1109,22 +1116,24 @@ Table&nbsp;5: Separate betas in months when Brent rose and fell, under four reas
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">bind_rows</span>(fm2 <span class="sc">|&gt;</span> <span class="fu">mutate</span>(<span class="at">Model =</span> <span class="st">"Market + oil"</span>), fm4 <span class="sc">|&gt;</span> <span class="fu">mutate</span>(<span class="at">Model =</span> <span class="st">"Market + oil + iron ore + AUD"</span>)) <span class="sc">|&gt;</span></span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(Model, <span class="at">Factor =</span> <span class="fu">recode</span>(term, <span class="at">gamma0 =</span> <span class="st">"Intercept"</span>, <span class="at">MKT =</span> <span class="st">"Market (regional)"</span>, <span class="at">oil =</span> <span class="st">"Oil (Brent)"</span>,</span>
 <span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>                                   <span class="at">iron =</span> <span class="st">"Iron ore"</span>, <span class="at">aud =</span> <span class="st">"AUD/USD"</span>),</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Premium (monthly)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(estimate, <span class="dv">2</span>), <span class="st">`</span><span class="at">t (Shanken)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(t_shanken)) <span class="sc">|&gt;</span></span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"llrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Premium (monthly)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(estimate, <span class="dv">2</span>), <span class="st">`</span><span class="at">t (Shanken)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(t_shanken),</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">t (Shanken + NW)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(t_nw_shanken)) <span class="sc">|&gt;</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"llrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div id="tbl-fm" class="cell quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
 <figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-fm-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Table&nbsp;6: Fama–MacBeth risk premia (monthly) across the 51-stock universe in USD, with Shanken-corrected t-statistics. Oil, iron ore and the Australian dollar are non-traded factors, so their premia are not directly comparable with their average returns.
+Table&nbsp;6: Fama–MacBeth risk premia (monthly) across the 51-stock universe in USD, with Shanken-corrected t-statistics, also with Newey–West errors on the monthly slopes (4 lags). Oil, iron ore and the Australian dollar are non-traded factors, so their premia are not directly comparable with their average returns.
 </figcaption>
 <div aria-describedby="tbl-fm-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <div class="cell-output-display">
 <table class="do-not-create-environment cell caption-top table table-sm table-striped small">
 <colgroup>
-<col style="width: 38%">
-<col style="width: 23%">
-<col style="width: 23%">
-<col style="width: 15%">
+<col style="width: 31%">
+<col style="width: 18%">
+<col style="width: 18%">
+<col style="width: 12%">
+<col style="width: 17%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -1132,6 +1141,7 @@ Table&nbsp;6: Fama–MacBeth risk premia (monthly) across the 51-stock universe 
 <th style="text-align: left;">Factor</th>
 <th style="text-align: right;">Premium (monthly)</th>
 <th style="text-align: right;">t (Shanken)</th>
+<th style="text-align: right;">t (Shanken + NW)</th>
 </tr>
 </thead>
 <tbody>
@@ -1140,48 +1150,56 @@ Table&nbsp;6: Fama–MacBeth risk premia (monthly) across the 51-stock universe 
 <td style="text-align: left;">Intercept</td>
 <td style="text-align: right;">0.07%</td>
 <td style="text-align: right;">0.21</td>
+<td style="text-align: right;">0.19</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Market + oil</td>
 <td style="text-align: left;">Market (regional)</td>
 <td style="text-align: right;">0.73%</td>
 <td style="text-align: right;">1.14</td>
+<td style="text-align: right;">1.13</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Market + oil</td>
 <td style="text-align: left;">Oil (Brent)</td>
 <td style="text-align: right;">-0.59%</td>
 <td style="text-align: right;">-0.33</td>
+<td style="text-align: right;">-0.35</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Market + oil + iron ore + AUD</td>
 <td style="text-align: left;">Intercept</td>
 <td style="text-align: right;">0.18%</td>
 <td style="text-align: right;">0.54</td>
+<td style="text-align: right;">0.55</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Market + oil + iron ore + AUD</td>
 <td style="text-align: left;">Market (regional)</td>
 <td style="text-align: right;">0.62%</td>
 <td style="text-align: right;">1.01</td>
+<td style="text-align: right;">1.06</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Market + oil + iron ore + AUD</td>
 <td style="text-align: left;">Oil (Brent)</td>
 <td style="text-align: right;">-0.42%</td>
 <td style="text-align: right;">-0.25</td>
+<td style="text-align: right;">-0.26</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Market + oil + iron ore + AUD</td>
 <td style="text-align: left;">Iron ore</td>
 <td style="text-align: right;">0.79%</td>
 <td style="text-align: right;">0.42</td>
+<td style="text-align: right;">0.43</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Market + oil + iron ore + AUD</td>
 <td style="text-align: left;">AUD/USD</td>
 <td style="text-align: right;">0.10%</td>
 <td style="text-align: right;">0.21</td>
+<td style="text-align: right;">0.23</td>
 </tr>
 </tbody>
 </table>
@@ -1190,7 +1208,110 @@ Table&nbsp;6: Fama–MacBeth risk premia (monthly) across the 51-stock universe 
 </figure>
 </div>
 </div>
-<p>Stocks differ in their oil exposure (betas range from -0.14 to 0.39 across the universe), but higher exposure has not come with higher average returns. The estimated oil premium is -0.42% a month, with a Shanken t-statistic of -0.25. Iron ore and the Australian dollar, Australia’s other big commodity exposures, are not priced either. The test has limited power: the standard error on the oil premium is about 1.7% a month, so a modest premium cannot be ruled out. But there is no evidence that APAC investors are paid for bearing commodity risk, consistent with Chen, Roll and Ross’s (1986) finding for oil in US data. The market factor and the Australian dollar are highly correlated in USD returns (0.81), which makes their separate premia hard to distinguish.</p>
+<p>Stocks differ in their oil exposure (betas range from -0.14 to 0.39 across the universe), but higher exposure has not come with higher average returns. The estimated oil premium is -0.42% a month, with a Shanken t-statistic of -0.25. Allowing for serial correlation in the monthly slopes (Newey–West, 4 lags) gives t = -0.26. Iron ore and the Australian dollar, Australia’s other big commodity exposures, are not priced either. The test has limited power: the standard error on the oil premium is about 1.7% a month, so a modest premium cannot be ruled out. But there is no evidence that APAC investors are paid for bearing commodity risk, consistent with Chen, Roll and Ross’s (1986) finding for oil in US data. The market factor and the Australian dollar are highly correlated in USD returns (0.81), which makes their separate premia hard to distinguish.</p>
+</section>
+<section id="robustness-the-neweywest-lag" class="level3">
+<h3 class="anchored" data-anchor-id="robustness-the-neweywest-lag">Robustness: the Newey–West lag</h3>
+<div class="cell">
+<details class="code-fold">
+<summary>Re-run the HAC-based tests at other Newey–West lags</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>lag_check <span class="ot">&lt;-</span> <span class="fu">map_dfr</span>(<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">4</span>, <span class="dv">6</span>, <span class="dv">12</span>), <span class="cf">function</span>(L) {</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  e <span class="ot">&lt;-</span> <span class="fu">energy_tests</span>(L)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  f <span class="ot">&lt;-</span> <span class="fu">fama_macbeth</span>(Yp, <span class="fu">as.matrix</span>(Fm[, <span class="fu">c</span>(<span class="st">"MKT"</span>, <span class="st">"oil"</span>, <span class="st">"iron"</span>, <span class="st">"aud"</span>)]), <span class="at">nw_lag =</span> L)</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(<span class="at">lag =</span> L, <span class="at">p_pred =</span> <span class="fu">pred_p</span>(L),</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>         <span class="at">oil_sig =</span> <span class="fu">sum</span>(<span class="fu">abs</span>(e<span class="sc">$</span>b_oil <span class="sc">/</span> e<span class="sc">$</span>se_oil) <span class="sc">&gt;</span> <span class="fl">1.96</span>),</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>         <span class="at">regional_bh =</span> <span class="fu">sum</span>(e<span class="sc">$</span>p_regional_bh <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">asym_bh =</span> <span class="fu">sum</span>(e<span class="sc">$</span>p_asym_bh <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>         <span class="at">t_oil_fm =</span> f<span class="sc">$</span>t_nw_shanken[f<span class="sc">$</span>term <span class="sc">==</span> <span class="st">"oil"</span>])</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>b4 <span class="ot">&lt;-</span> lag_check <span class="sc">|&gt;</span> <span class="fu">filter</span>(lag <span class="sc">==</span> nw_lag)</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">isTRUE</span>(<span class="fu">all.equal</span>(b4<span class="sc">$</span>p_pred, p_pred)), b4<span class="sc">$</span>regional_bh <span class="sc">==</span> <span class="fu">sum</span>(eres<span class="sc">$</span>p_regional_bh <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>          <span class="fu">isTRUE</span>(<span class="fu">all.equal</span>(b4<span class="sc">$</span>t_oil_fm, oil_lam<span class="sc">$</span>t_nw_shanken)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Show code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>lag_check <span class="sc">|&gt;</span> <span class="fu">transmute</span>(<span class="st">`</span><span class="at">NW lag</span><span class="st">`</span> <span class="ot">=</span> lag, <span class="st">`</span><span class="at">Fundamentals predict oil: joint p</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(p_pred, <span class="dv">2</span>),</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>                       <span class="st">`</span><span class="at">Oil beta significant</span><span class="st">`</span> <span class="ot">=</span> oil_sig, <span class="st">`</span><span class="at">Regional terms significant (BH)</span><span class="st">`</span> <span class="ot">=</span> regional_bh,</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>                       <span class="st">`</span><span class="at">Up/down asymmetry significant (BH)</span><span class="st">`</span> <span class="ot">=</span> asym_bh,</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>                       <span class="st">`</span><span class="at">Oil premium t (Shanken + NW)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(t_oil_fm)) <span class="sc">|&gt;</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"rrrrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div id="tbl-lag-check" class="cell quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-lag-check-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;7: HAC-based results by Newey–West truncation lag. The main analysis uses 4 lags. Counts are out of the eight energy stocks.
+</figcaption>
+<div aria-describedby="tbl-lag-check-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<colgroup>
+<col style="width: 4%">
+<col style="width: 21%">
+<col style="width: 13%">
+<col style="width: 20%">
+<col style="width: 22%">
+<col style="width: 18%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: right;">NW lag</th>
+<th style="text-align: right;">Fundamentals predict oil: joint p</th>
+<th style="text-align: right;">Oil beta significant</th>
+<th style="text-align: right;">Regional terms significant (BH)</th>
+<th style="text-align: right;">Up/down asymmetry significant (BH)</th>
+<th style="text-align: right;">Oil premium t (Shanken + NW)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.64</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">-0.25</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0.64</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">-0.25</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">0.62</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">-0.26</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">0.60</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">-0.26</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">0.61</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">-0.25</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>None of the conclusions depends on the lag. Across 0 to 12 lags, the joint p-value for oil predictability stays between 0.60 and 0.64, and the oil premium’s t-statistic between -0.26 and -0.25. The count of significant up/down asymmetries moves between 0 and 2, which is one more sign that the asymmetry is not robust.</p>
 </section>
 </section>
 <section id="limitations" class="level2">

@@ -11,7 +11,7 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 - **Australia's fuel runs through Asian refineries.** Domestic refining halved after the 2021 closures and product imports rose 50%. In 2025, 96% came from Asian refiners (Singapore 26%, South Korea 25%, Malaysia 13%). Stock cover averages 60 IEA days against a 90-day obligation.
 - **Asia's Dubai benchmark broke from Brent in 2026, but Singapore's import bill did not.** The spread reached $27.7 in April. Singapore's actual crude import prices (SingStat) track Dubai over 2011–26 (correlation 0.93), yet in 2026 they rose roughly in line with Brent, peaking 88% above December 2025. EMA data show Singapore's product exports fell 29% from their 2017 peak to 2022.
 - **APAC energy stocks carry oil exposure in the expected order** (producers ~0.25–0.34, Sinopec ~0.04), but regional fundamentals add nothing beyond the price, and up/down asymmetry is not robust.
-- **Oil risk is not priced** across the 51-stock universe (Fama–MacBeth premium −0.42% a month, t = −0.25).
+- **No evidence that oil risk is priced** across the 51-stock universe (Fama–MacBeth premium −0.42% a month, t = −0.25), though the test has little power.
 
 [Full write-up](https://kyanite03.github.io/apac-asset-pricing/modules/08-oil-asia-pacific/) · [source](modules/08-oil-asia-pacific/index.qmd)
 
@@ -19,9 +19,9 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 
 ![DCF value per share of Tencent by equity risk premium and steady-state capex, with the current price as a contour](modules/06-dcf-tencent/figures/key_chart.png)
 
-- **On standard inputs Tencent is worth about HK$827 a share, against a price of HK$386.6.** The sum-of-the-parts DCF uses China's 10-year yield, Damodaran's China risk premium and Module 01's beta, with figures extracted (and cross-checked) from Tencent's 2022–25 annual and 2026 interim reports.
-- **The price implies either a 13.6% WACC (an equity risk premium near 12%) or AI capex at 28% of revenue forever.** Realistic combinations, such as an 8% premium with 20% capex, reproduce it.
-- **Monte Carlo** (10,000 draws): median HK$559, 90% interval HK$391–840. The equity risk premium and steady-state capex drive most of the uncertainty; growth matters less.
+- **On standard inputs Tencent is worth about HK$850 a share, against a price of HK$386.6 (13 Nov 2026; the 30 June valuation is rolled forward at the cost of equity).** The sum-of-the-parts DCF uses China's 10-year yield, Damodaran's China risk premium and Module 01's beta, with figures extracted (and cross-checked) from Tencent's 2022–25 annual and 2026 interim reports.
+- **The price implies either a 14.4% WACC (an equity risk premium near 12%) or AI capex at 29% of revenue forever.** Realistic combinations, such as an 8% premium with 22% capex, reproduce it.
+- **Monte Carlo** (10,000 draws): median HK$577, 90% interval HK$406–863. The equity risk premium and steady-state capex drive most of the uncertainty; growth matters less.
 
 [Full write-up](https://kyanite03.github.io/apac-asset-pricing/modules/06-dcf-tencent/) · [source](modules/06-dcf-tencent/index.qmd)
 
@@ -49,7 +49,7 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 
 ![Realised vs predicted average returns for 51 APAC large caps under four pricing models](modules/03-testing-pricing-models/figures/key_chart.png)
 
-- **All four models are rejected** (CAPM, Fama–French 3, FF3 + momentum, FF5; GRS p ≤ 0.005). But 88% of CAPM alphas are positive, averaging 4.6% a year. That is the signature of a survivor sample, not of a missing factor.
+- **All four models are rejected** (CAPM, Fama–French 3, FF3 + momentum, FF5; GRS p ≤ 0.005). But 88% of CAPM alphas are positive, averaging 4.6% a year. That pattern is consistent with survivorship bias, though this sample cannot separate it from a missing factor.
 - **Extra factors explain more variance but price no better.** R² rises from 40% to 47%, yet the CAPM has the smallest root-mean-square alpha.
 - **Beta is priced roughly as the CAPM says** (7.1% a year vs a 4.5% market premium, with an insignificant zero-beta intercept). This overturns an earlier flat-line result from a 16-stock ASX sample, though with low power (t = 0.94).
 

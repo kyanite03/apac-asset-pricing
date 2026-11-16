@@ -114,14 +114,17 @@ grs_test <- function(Y, F) {
 #' Pass 2: each month, regress the cross-section of excess returns on the
 #' betas; the risk premia are the time averages of the monthly slopes.
 #' Reports plain FM standard errors and Shanken (1992) errors-in-variables
-#' corrected ones.
+#' corrected ones. It also reports Newey-West errors on the monthly slopes
+#' (`se_nw`, robust to serial correlation in the slopes), and the same with the
+#' Shanken adjustment applied (`se_nw_shanken`).
 #'
 #' @param Y T x N excess returns; F T x K factor excess returns.
 #' @param intercept include a cross-sectional intercept (zero-beta excess
 #'   rate) in pass 2?
 #' @param betas optional N x K matrix of pre-estimated betas (skips pass 1,
 #'   and the Shanken correction is then not applied).
-fama_macbeth <- function(Y, F, intercept = TRUE, betas = NULL) {
+#' @param nw_lag Newey-West truncation lag for `se_nw`.
+fama_macbeth <- function(Y, F, intercept = TRUE, betas = NULL, nw_lag = 4) {
   Y <- as.matrix(Y); F <- as.matrix(F)
   T_ <- nrow(Y); N <- ncol(Y); K <- ncol(F)
   shanken_ok <- is.null(betas)
@@ -136,8 +139,10 @@ fama_macbeth <- function(Y, F, intercept = TRUE, betas = NULL) {
   lambda <- colMeans(G)
   V_fm <- crossprod(sweep(G, 2, lambda)) / (T_ * (T_ - 1))
   se_fm <- sqrt(diag(V_fm))
+  V_nw <- nw_mean_vcov(G, nw_lag)
   out <- data.frame(term = colnames(Z), estimate = lambda, se_fm = se_fm,
-                    t_fm = lambda / se_fm, row.names = NULL)
+                    t_fm = lambda / se_fm, se_nw = sqrt(diag(V_nw)), row.names = NULL)
+  out$t_nw <- lambda / out$se_nw
   if (shanken_ok) {
     f_bar <- colMeans(F)
     Sigma_f <- crossprod(sweep(F, 2, f_bar)) / (T_ - 1)
@@ -148,10 +153,27 @@ fama_macbeth <- function(Y, F, intercept = TRUE, betas = NULL) {
     V_sh <- (1 + c_sh) * V_fm + add
     out$se_shanken <- sqrt(diag(V_sh))
     out$t_shanken <- lambda / out$se_shanken
+    out$se_nw_shanken <- sqrt(diag((1 + c_sh) * V_nw + add))
+    out$t_nw_shanken <- lambda / out$se_nw_shanken
   }
   attr(out, "gammas") <- G
   attr(out, "betas") <- betas
   out
+}
+
+#' Newey-West (Bartlett) covariance of the column means of a T x k matrix.
+#'
+#' Equals hac_vcov() for a regression of each column on a constant, i.e.
+#' sandwich::NeweyWest(lm(g ~ 1), lag = L, prewhite = FALSE, adjust = FALSE).
+nw_mean_vcov <- function(G, lag) {
+  G <- as.matrix(G); n <- nrow(G)
+  u <- sweep(G, 2, colMeans(G))
+  S <- crossprod(u)
+  if (lag > 0) for (l in seq_len(lag)) {
+    A <- crossprod(u[(l + 1):n, , drop = FALSE], u[1:(n - l), , drop = FALSE])
+    S <- S + (1 - l / (lag + 1)) * (A + t(A))
+  }
+  S / n^2
 }
 
 `%||%` <- function(a, b) if (is.null(a)) b else a

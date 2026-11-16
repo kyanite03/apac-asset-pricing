@@ -224,6 +224,7 @@ window.Quarto = {
   <li><a href="#stability-betas-drift-and-sometimes-jump" id="toc-stability-betas-drift-and-sometimes-jump" class="nav-link" data-scroll-target="#stability-betas-drift-and-sometimes-jump">Stability: betas drift, and sometimes jump</a></li>
   <li><a href="#simple-vs-full-specification-does-the-set-up-matter" id="toc-simple-vs-full-specification-does-the-set-up-matter" class="nav-link" data-scroll-target="#simple-vs-full-specification-does-the-set-up-matter">Simple vs full specification: does the set-up matter?</a></li>
   <li><a href="#beta-inputs-for-valuation-used-in-module-06" id="toc-beta-inputs-for-valuation-used-in-module-06" class="nav-link" data-scroll-target="#beta-inputs-for-valuation-used-in-module-06">Beta inputs for valuation (used in Module 06)</a></li>
+  <li><a href="#robustness-the-neweywest-lag" id="toc-robustness-the-neweywest-lag" class="nav-link" data-scroll-target="#robustness-the-neweywest-lag">Robustness: the Newey–West lag</a></li>
   </ul></li>
   <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations">Limitations</a></li>
   <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
@@ -380,6 +381,27 @@ window.Quarto = {
 <span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>roll_range <span class="ot">&lt;-</span> roll <span class="sc">|&gt;</span> <span class="fu">group_by</span>(symbol) <span class="sc">|&gt;</span> <span class="fu">summarise</span>(<span class="at">range =</span> <span class="fu">max</span>(beta) <span class="sc">-</span> <span class="fu">min</span>(beta))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
+<div class="cell">
+<details class="code-fold">
+<summary>Re-run the alpha and beta-stability tests at other Newey–West lags</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>lags <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">4</span>, <span class="dv">6</span>, <span class="dv">12</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>lag_check <span class="ot">&lt;-</span> <span class="fu">map_dfr</span>(lags, <span class="cf">function</span>(L) {</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  per_stock <span class="ot">&lt;-</span> panel <span class="sc">|&gt;</span> <span class="fu">group_by</span>(symbol) <span class="sc">|&gt;</span> <span class="fu">group_modify</span>(<span class="cf">function</span>(d, key) {</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    fa <span class="ot">&lt;-</span> <span class="fu">ols_matrix</span>(d<span class="sc">$</span>ex, <span class="fu">cbind</span>(<span class="at">const =</span> <span class="dv">1</span>, <span class="at">mex =</span> d<span class="sc">$</span>mex))</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    post <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(d<span class="sc">$</span>month <span class="sc">&gt;=</span> break_month)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    fs <span class="ot">&lt;-</span> <span class="fu">ols_matrix</span>(d<span class="sc">$</span>ex, <span class="fu">cbind</span>(<span class="at">const =</span> <span class="dv">1</span>, <span class="at">mex =</span> d<span class="sc">$</span>mex, <span class="at">post =</span> post, <span class="at">mex_post =</span> d<span class="sc">$</span>mex <span class="sc">*</span> post))</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(<span class="at">p_alpha =</span> <span class="fu">coef_table</span>(fa, <span class="fu">hac_vcov</span>(fa, L))<span class="sc">$</span>p[<span class="dv">1</span>],</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>           <span class="at">p_change =</span> <span class="fu">linear_hypothesis</span>(fs, <span class="fu">rbind</span>(<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">1</span>)), <span class="at">V =</span> <span class="fu">hac_vcov</span>(fs, L))[<span class="st">"p"</span>])</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span> <span class="fu">ungroup</span>()</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(<span class="at">lag =</span> L, <span class="at">alpha_raw =</span> <span class="fu">sum</span>(per_stock<span class="sc">$</span>p_alpha <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>         <span class="at">alpha_bh =</span> <span class="fu">sum</span>(<span class="fu">p.adjust</span>(per_stock<span class="sc">$</span>p_alpha, <span class="st">"BH"</span>) <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>         <span class="at">shift_bh =</span> <span class="fu">sum</span>(<span class="fu">p.adjust</span>(per_stock<span class="sc">$</span>p_change, <span class="st">"BH"</span>) <span class="sc">&lt;</span> <span class="fl">0.05</span>))</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>base_row <span class="ot">&lt;-</span> lag_check <span class="sc">|&gt;</span> <span class="fu">filter</span>(lag <span class="sc">==</span> nw_lag)</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(base_row<span class="sc">$</span>alpha_raw <span class="sc">==</span> n_alpha_raw, base_row<span class="sc">$</span>alpha_bh <span class="sc">==</span> n_alpha_bh,</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>          base_row<span class="sc">$</span>shift_bh <span class="sc">==</span> n_shift_bh)                 <span class="co"># reproduces the main results</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
 <div class="callout callout-style-default callout-tip callout-titled" title="Answer first">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -393,7 +415,7 @@ window.Quarto = {
 <ul>
 <li><strong>Most APAC large caps move less than their market.</strong> 31 of 51 stocks have a beta below 1. The median beta is 0.99 on the ASX, 0.83 in Hong Kong and 0.93 in Singapore. Financials (banks, insurers, exchanges) sit above 1. Utilities, telecoms and health care sit well below, and so, perhaps surprisingly, do most resource and energy stocks.</li>
 <li><strong>The market explains only part of the risk.</strong> The median R² is 26% on the ASX, 47% in Hong Kong and 34% in Singapore. Most single-stock volatility is idiosyncratic, so beta describes only one slice of risk.</li>
-<li><strong>Betas shifted after 2020, by sector.</strong> China’s three big state banks decoupled from the Hang Seng (beta roughly 1.23 → 0.48). All 8 resource and energy names became less market-sensitive, and all four Australian major banks became more so. The median stock’s beta moved by 0.28 between 2011–19 and 2020–26. For 9 of 51 stocks the change survives a false-discovery-rate correction.</li>
+<li><strong>Betas shifted after 2020, by sector.</strong> China’s three big state banks decoupled from the Hang Seng (beta roughly 1.23 → 0.48). All 8 resource and energy names became less market-sensitive, and all four Australian major banks became more so. The median stock’s beta moved by 0.28 between 2011–19 and 2020–26. For 9 of 51 stocks the change survives a false-discovery-rate correction (5–11 depending on the Newey–West lag).</li>
 <li><strong>So what:</strong> a cost-of-equity estimate should use a shrunk (Blume-adjusted) beta, quote a range, and say which window it came from. For the Chinese state banks, the full-sample beta is about 69% higher than the 2020–26 one. The betas here feed the WACC in Module 06.</li>
 </ul>
 </div>
@@ -411,20 +433,20 @@ r_{i,t} - r_{f,t} \;=\; \alpha_i + \beta_i\,(r_{m,t} - r_{f,t}) + \varepsilon_{i
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>rf_raw <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">file.path</span>(data_dir, <span class="st">"rf_rates_raw.csv"</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>mkt_stats <span class="ot">&lt;-</span> panel <span class="sc">|&gt;</span> <span class="fu">distinct</span>(market, month, mex, rf) <span class="sc">|&gt;</span> <span class="fu">group_by</span>(market) <span class="sc">|&gt;</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="st">`</span><span class="at">Market excess return (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="dv">12</span> <span class="sc">*</span> <span class="fu">mean</span>(mex)),</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Market volatility (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="fu">sqrt</span>(<span class="dv">12</span>) <span class="sc">*</span> <span class="fu">sd</span>(mex)),</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Mean risk-free (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="dv">12</span> <span class="sc">*</span> <span class="fu">mean</span>(rf)), <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(<span class="at">market =</span> <span class="fu">factor</span>(<span class="fu">names</span>(market_cols), <span class="at">levels =</span> <span class="fu">names</span>(market_cols)),</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">Stocks =</span> <span class="fu">as.integer</span>(n_stock[<span class="fu">names</span>(market_cols)]),</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>       <span class="st">`</span><span class="at">Market proxy</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"SPDR S&amp;P/ASX 200 ETF (STW)"</span>, <span class="st">"Tracker Fund of HK, Hang Seng (2800)"</span>,</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>                          <span class="st">"SPDR Straits Times Index ETF (ES3)"</span>),</span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>       <span class="st">`</span><span class="at">Risk-free rate</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"1-month bank bills (RBA F1)"</span>, <span class="st">"1-month HIBOR (HKMA)"</span>,</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>                            <span class="st">"SORA (MAS, via SingStat)"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(mkt_stats, <span class="at">by =</span> <span class="st">"market"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">Market =</span> market) <span class="sc">|&gt;</span></span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"lrllrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>rf_raw <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">file.path</span>(data_dir, <span class="st">"rf_rates_raw.csv"</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>mkt_stats <span class="ot">&lt;-</span> panel <span class="sc">|&gt;</span> <span class="fu">distinct</span>(market, month, mex, rf) <span class="sc">|&gt;</span> <span class="fu">group_by</span>(market) <span class="sc">|&gt;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="st">`</span><span class="at">Market excess return (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="dv">12</span> <span class="sc">*</span> <span class="fu">mean</span>(mex)),</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Market volatility (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="fu">sqrt</span>(<span class="dv">12</span>) <span class="sc">*</span> <span class="fu">sd</span>(mex)),</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Mean risk-free (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="dv">12</span> <span class="sc">*</span> <span class="fu">mean</span>(rf)), <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(<span class="at">market =</span> <span class="fu">factor</span>(<span class="fu">names</span>(market_cols), <span class="at">levels =</span> <span class="fu">names</span>(market_cols)),</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">Stocks =</span> <span class="fu">as.integer</span>(n_stock[<span class="fu">names</span>(market_cols)]),</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>       <span class="st">`</span><span class="at">Market proxy</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"SPDR S&amp;P/ASX 200 ETF (STW)"</span>, <span class="st">"Tracker Fund of HK, Hang Seng (2800)"</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>                          <span class="st">"SPDR Straits Times Index ETF (ES3)"</span>),</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>       <span class="st">`</span><span class="at">Risk-free rate</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"1-month bank bills (RBA F1)"</span>, <span class="st">"1-month HIBOR (HKMA)"</span>,</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>                            <span class="st">"SORA (MAS, via SingStat)"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(mkt_stats, <span class="at">by =</span> <span class="st">"market"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">Market =</span> market) <span class="sc">|&gt;</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"lrllrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div id="tbl-sample" class="cell quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
@@ -515,23 +537,23 @@ Table&nbsp;1: Sample by market. Returns are monthly, in local currency, in exces
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>p_beta <span class="ot">&lt;-</span> est <span class="sc">|&gt;</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">label =</span> <span class="fu">paste0</span>(ticker, <span class="st">"  "</span>, name), <span class="at">label =</span> <span class="fu">fct_reorder</span>(label, beta)) <span class="sc">|&gt;</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(beta, label, <span class="at">colour =</span> market)) <span class="sc">+</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">1</span>, <span class="at">colour =</span> <span class="st">"#c3c2b7"</span>, <span class="at">linewidth =</span> <span class="fl">0.4</span>) <span class="sc">+</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_errorbarh</span>(<span class="fu">aes</span>(<span class="at">xmin =</span> beta_lo, <span class="at">xmax =</span> beta_hi), <span class="at">height =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.6</span>, <span class="at">alpha =</span> <span class="fl">0.6</span>) <span class="sc">+</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="fl">2.2</span>) <span class="sc">+</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_grid</span>(market <span class="sc">~</span> ., <span class="at">scales =</span> <span class="st">"free_y"</span>, <span class="at">space =</span> <span class="st">"free_y"</span>) <span class="sc">+</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_colour_manual</span>(<span class="at">values =</span> market_cols, <span class="at">guide =</span> <span class="st">"none"</span>) <span class="sc">+</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Most APAC large caps are less market-sensitive than their index"</span>,</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">subtitle =</span> <span class="fu">sprintf</span>(<span class="st">"CAPM beta vs local total-return index, monthly, %s–%s"</span>, first_m, last_m),</span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Beta (95% Newey–West CI)"</span>, <span class="at">y =</span> <span class="cn">NULL</span>,</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">caption =</span> <span class="st">"Local-currency excess returns. Market proxies: STW (ASX 200), 2800.HK (Hang Seng), ES3 (STI)."</span>) <span class="sc">+</span></span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_report</span>() <span class="sc">+</span></span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">panel.grid.major.y =</span> <span class="fu">element_blank</span>(), <span class="at">strip.text.y =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">0</span>, <span class="at">face =</span> <span class="st">"bold"</span>))</span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(<span class="st">"figures"</span>, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="st">"figures/key_chart.png"</span>, p_beta, <span class="at">width =</span> <span class="dv">9</span>, <span class="at">height =</span> <span class="dv">9</span>, <span class="at">dpi =</span> <span class="dv">200</span>, <span class="at">bg =</span> <span class="st">"white"</span>)</span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>p_beta</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>p_beta <span class="ot">&lt;-</span> est <span class="sc">|&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">label =</span> <span class="fu">paste0</span>(ticker, <span class="st">"  "</span>, name), <span class="at">label =</span> <span class="fu">fct_reorder</span>(label, beta)) <span class="sc">|&gt;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(beta, label, <span class="at">colour =</span> market)) <span class="sc">+</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">1</span>, <span class="at">colour =</span> <span class="st">"#c3c2b7"</span>, <span class="at">linewidth =</span> <span class="fl">0.4</span>) <span class="sc">+</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_errorbarh</span>(<span class="fu">aes</span>(<span class="at">xmin =</span> beta_lo, <span class="at">xmax =</span> beta_hi), <span class="at">height =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.6</span>, <span class="at">alpha =</span> <span class="fl">0.6</span>) <span class="sc">+</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="fl">2.2</span>) <span class="sc">+</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_grid</span>(market <span class="sc">~</span> ., <span class="at">scales =</span> <span class="st">"free_y"</span>, <span class="at">space =</span> <span class="st">"free_y"</span>) <span class="sc">+</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_colour_manual</span>(<span class="at">values =</span> market_cols, <span class="at">guide =</span> <span class="st">"none"</span>) <span class="sc">+</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Most APAC large caps are less market-sensitive than their index"</span>,</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">subtitle =</span> <span class="fu">sprintf</span>(<span class="st">"CAPM beta vs local total-return index, monthly, %s–%s"</span>, first_m, last_m),</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Beta (95% Newey–West CI)"</span>, <span class="at">y =</span> <span class="cn">NULL</span>,</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">caption =</span> <span class="st">"Local-currency excess returns. Market proxies: STW (ASX 200), 2800.HK (Hang Seng), ES3 (STI)."</span>) <span class="sc">+</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_report</span>() <span class="sc">+</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">panel.grid.major.y =</span> <span class="fu">element_blank</span>(), <span class="at">strip.text.y =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">0</span>, <span class="at">face =</span> <span class="st">"bold"</span>))</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(<span class="st">"figures"</span>, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="st">"figures/key_chart.png"</span>, p_beta, <span class="at">width =</span> <span class="dv">9</span>, <span class="at">height =</span> <span class="dv">9</span>, <span class="at">dpi =</span> <span class="dv">200</span>, <span class="at">bg =</span> <span class="st">"white"</span>)</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>p_beta</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div id="fig-betas" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -555,11 +577,11 @@ Figure&nbsp;1: Market-model beta with 95% Newey–West confidence interval, by m
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>est <span class="sc">|&gt;</span> <span class="fu">group_by</span>(<span class="at">Sector =</span> sector) <span class="sc">|&gt;</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">Stocks =</span> <span class="fu">n</span>(), <span class="st">`</span><span class="at">Median beta</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(<span class="fu">median</span>(beta)), <span class="st">`</span><span class="at">Median R²</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="fu">median</span>(r2), <span class="dv">0</span>),</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Median idiosyncratic vol (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="fu">median</span>(idio_vol), <span class="dv">0</span>), <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(<span class="st">`</span><span class="at">Median beta</span><span class="st">`</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"lrrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>est <span class="sc">|&gt;</span> <span class="fu">group_by</span>(<span class="at">Sector =</span> sector) <span class="sc">|&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">Stocks =</span> <span class="fu">n</span>(), <span class="st">`</span><span class="at">Median beta</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(<span class="fu">median</span>(beta)), <span class="st">`</span><span class="at">Median R²</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="fu">median</span>(r2), <span class="dv">0</span>),</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Median idiosyncratic vol (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="fu">median</span>(idio_vol), <span class="dv">0</span>), <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(<span class="st">`</span><span class="at">Median beta</span><span class="st">`</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"lrrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div id="tbl-sector" class="cell quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
@@ -671,11 +693,11 @@ Table&nbsp;2: Median beta and median R² by sector (all three markets pooled).
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>est <span class="sc">|&gt;</span> <span class="fu">arrange</span>(p_alpha) <span class="sc">|&gt;</span> <span class="fu">head</span>(<span class="dv">8</span>) <span class="sc">|&gt;</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(<span class="at">Stock =</span> <span class="fu">paste0</span>(ticker, <span class="st">" "</span>, name), <span class="at">Market =</span> market,</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Alpha (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="dv">12</span> <span class="sc">*</span> alpha), <span class="st">`</span><span class="at">SE (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="dv">12</span> <span class="sc">*</span> se_alpha),</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>            <span class="at">p =</span> <span class="fu">num</span>(p_alpha, <span class="dv">3</span>), <span class="st">`</span><span class="at">p (BH)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(p_alpha_bh, <span class="dv">3</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"llrrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>est <span class="sc">|&gt;</span> <span class="fu">arrange</span>(p_alpha) <span class="sc">|&gt;</span> <span class="fu">head</span>(<span class="dv">8</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(<span class="at">Stock =</span> <span class="fu">paste0</span>(ticker, <span class="st">" "</span>, name), <span class="at">Market =</span> market,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Alpha (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="dv">12</span> <span class="sc">*</span> alpha), <span class="st">`</span><span class="at">SE (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="dv">12</span> <span class="sc">*</span> se_alpha),</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>            <span class="at">p =</span> <span class="fu">num</span>(p_alpha, <span class="dv">3</span>), <span class="st">`</span><span class="at">p (BH)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(p_alpha_bh, <span class="dv">3</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"llrrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div id="tbl-alpha" class="cell quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
@@ -782,18 +804,18 @@ Table&nbsp;3: Stocks with the largest absolute alphas. Alpha is annualised; p-va
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>pick <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"CBA.AX"</span>, <span class="st">"BHP.AX"</span>, <span class="st">"CSL.AX"</span>, <span class="st">"0700.HK"</span>, <span class="st">"0005.HK"</span>, <span class="st">"0883.HK"</span>, <span class="st">"D05.SI"</span>, <span class="st">"C6L.SI"</span>, <span class="st">"Z74.SI"</span>)</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>roll <span class="sc">|&gt;</span> <span class="fu">filter</span>(symbol <span class="sc">%in%</span> pick) <span class="sc">|&gt;</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">lab =</span> <span class="fu">paste0</span>(<span class="fu">sub</span>(<span class="st">"</span><span class="sc">\\</span><span class="st">.(AX|HK|SI)$"</span>, <span class="st">""</span>, symbol), <span class="st">" "</span>, name),</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>         <span class="at">lab =</span> <span class="fu">factor</span>(lab, <span class="at">levels =</span> <span class="fu">unique</span>(lab[<span class="fu">order</span>(<span class="fu">match</span>(symbol, pick))]))) <span class="sc">|&gt;</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(month, beta, <span class="at">colour =</span> market)) <span class="sc">+</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">1</span>, <span class="at">colour =</span> <span class="st">"#c3c2b7"</span>, <span class="at">linewidth =</span> <span class="fl">0.4</span>) <span class="sc">+</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">linewidth =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span> lab, <span class="at">ncol =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_colour_manual</span>(<span class="at">values =</span> market_cols) <span class="sc">+</span></span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Rolling betas swing widely, even for the largest companies"</span>,</span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">"60-month rolling beta"</span>) <span class="sc">+</span></span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_report</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>pick <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"CBA.AX"</span>, <span class="st">"BHP.AX"</span>, <span class="st">"CSL.AX"</span>, <span class="st">"0700.HK"</span>, <span class="st">"0005.HK"</span>, <span class="st">"0883.HK"</span>, <span class="st">"D05.SI"</span>, <span class="st">"C6L.SI"</span>, <span class="st">"Z74.SI"</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>roll <span class="sc">|&gt;</span> <span class="fu">filter</span>(symbol <span class="sc">%in%</span> pick) <span class="sc">|&gt;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">lab =</span> <span class="fu">paste0</span>(<span class="fu">sub</span>(<span class="st">"</span><span class="sc">\\</span><span class="st">.(AX|HK|SI)$"</span>, <span class="st">""</span>, symbol), <span class="st">" "</span>, name),</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>         <span class="at">lab =</span> <span class="fu">factor</span>(lab, <span class="at">levels =</span> <span class="fu">unique</span>(lab[<span class="fu">order</span>(<span class="fu">match</span>(symbol, pick))]))) <span class="sc">|&gt;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(month, beta, <span class="at">colour =</span> market)) <span class="sc">+</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">1</span>, <span class="at">colour =</span> <span class="st">"#c3c2b7"</span>, <span class="at">linewidth =</span> <span class="fl">0.4</span>) <span class="sc">+</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">linewidth =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span> lab, <span class="at">ncol =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_colour_manual</span>(<span class="at">values =</span> market_cols) <span class="sc">+</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Rolling betas swing widely, even for the largest companies"</span>,</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">"60-month rolling beta"</span>) <span class="sc">+</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_report</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div id="fig-rolling" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -817,12 +839,12 @@ Figure&nbsp;2: Rolling 60-month betas for selected stocks. Each point uses the p
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">bind_rows</span>(shift_up, shift_dn) <span class="sc">|&gt;</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(universe <span class="sc">|&gt;</span> <span class="fu">select</span>(ticker, name), <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"symbol"</span> <span class="ot">=</span> <span class="st">"ticker"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(<span class="at">Stock =</span> <span class="fu">paste0</span>(ticker, <span class="st">" "</span>, name), <span class="at">Market =</span> market,</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Beta 2011–19</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(beta_pre), <span class="st">`</span><span class="at">Beta 2020–26</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(beta_post),</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>            <span class="at">Change =</span> <span class="fu">sprintf</span>(<span class="st">"%+.2f"</span>, d_beta), <span class="st">`</span><span class="at">p (BH)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(p_change_bh, <span class="dv">3</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"llrrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">bind_rows</span>(shift_up, shift_dn) <span class="sc">|&gt;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(universe <span class="sc">|&gt;</span> <span class="fu">select</span>(ticker, name), <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"symbol"</span> <span class="ot">=</span> <span class="st">"ticker"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(<span class="at">Stock =</span> <span class="fu">paste0</span>(ticker, <span class="st">" "</span>, name), <span class="at">Market =</span> market,</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Beta 2011–19</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(beta_pre), <span class="st">`</span><span class="at">Beta 2020–26</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(beta_post),</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>            <span class="at">Change =</span> <span class="fu">sprintf</span>(<span class="st">"%+.2f"</span>, d_beta), <span class="st">`</span><span class="at">p (BH)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(p_change_bh, <span class="dv">3</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"llrrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div id="tbl-stability" class="cell quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
@@ -944,34 +966,34 @@ Table&nbsp;4: Stocks whose beta changed significantly between 2011–19 and 2020
 <div class="cell">
 <details class="code-fold">
 <summary>Simple specification: leave-one-out equal-weight market, constant risk-free rate</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>rf_const <span class="ot">&lt;-</span> <span class="fl">0.024</span> <span class="sc">/</span> <span class="dv">12</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>simple <span class="ot">&lt;-</span> panel <span class="sc">|&gt;</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(market, month) <span class="sc">|&gt;</span></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">mkt_loo =</span> (<span class="fu">sum</span>(ret) <span class="sc">-</span> ret) <span class="sc">/</span> (<span class="fu">n</span>() <span class="sc">-</span> <span class="dv">1</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">|&gt;</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">ex_s =</span> ret <span class="sc">-</span> rf_const, <span class="at">mex_s =</span> mkt_loo <span class="sc">-</span> rf_const) <span class="sc">|&gt;</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(market, symbol) <span class="sc">|&gt;</span></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_modify</span>(<span class="cf">function</span>(d, key) {</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    fit <span class="ot">&lt;-</span> <span class="fu">ols_matrix</span>(d<span class="sc">$</span>ex_s, <span class="fu">cbind</span>(<span class="dv">1</span>, d<span class="sc">$</span>mex_s))</span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(<span class="at">beta_simple =</span> fit<span class="sc">$</span>coef[<span class="dv">2</span>], <span class="at">alpha_simple =</span> fit<span class="sc">$</span>coef[<span class="dv">1</span>],</span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>           <span class="at">r2_simple =</span> <span class="dv">1</span> <span class="sc">-</span> <span class="fu">sum</span>(fit<span class="sc">$</span>resid<span class="sc">^</span><span class="dv">2</span>) <span class="sc">/</span> <span class="fu">sum</span>((d<span class="sc">$</span>ex_s <span class="sc">-</span> <span class="fu">mean</span>(d<span class="sc">$</span>ex_s))<span class="sc">^</span><span class="dv">2</span>))</span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span> <span class="fu">ungroup</span>() <span class="sc">|&gt;</span></span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(est <span class="sc">|&gt;</span> <span class="fu">select</span>(symbol, beta, alpha, r2, sector), <span class="at">by =</span> <span class="st">"symbol"</span>)</span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>cmp <span class="ot">&lt;-</span> simple <span class="sc">|&gt;</span> <span class="fu">group_by</span>(<span class="at">Market =</span> market) <span class="sc">|&gt;</span></span>
-<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="st">`</span><span class="at">Median beta, simple</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(<span class="fu">median</span>(beta_simple)),</span>
-<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Median beta, full</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(<span class="fu">median</span>(beta)),</span>
-<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Median R², simple</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="fu">median</span>(r2_simple), <span class="dv">0</span>),</span>
-<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Median R², full</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="fu">median</span>(r2), <span class="dv">0</span>),</span>
-<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Beta correlation</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(<span class="fu">cor</span>(beta_simple, beta)),</span>
-<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Largest beta gap</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">sprintf</span>(<span class="st">"%s (%+.2f)"</span>,</span>
-<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>                                         <span class="fu">sub</span>(<span class="st">"</span><span class="sc">\\</span><span class="st">.(AX|HK|SI)$"</span>, <span class="st">""</span>, symbol[<span class="fu">which.max</span>(<span class="fu">abs</span>(beta <span class="sc">-</span> beta_simple))]),</span>
-<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>                                         (beta <span class="sc">-</span> beta_simple)[<span class="fu">which.max</span>(<span class="fu">abs</span>(beta <span class="sc">-</span> beta_simple))]),</span>
-<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>            <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
-<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>beta_cor_all <span class="ot">&lt;-</span> <span class="fu">cor</span>(simple<span class="sc">$</span>beta_simple, simple<span class="sc">$</span>beta)</span>
-<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>alpha_gap <span class="ot">&lt;-</span> <span class="fu">median</span>(<span class="fu">abs</span>(<span class="dv">12</span> <span class="sc">*</span> (simple<span class="sc">$</span>alpha <span class="sc">-</span> simple<span class="sc">$</span>alpha_simple)))</span>
-<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(cmp, <span class="at">align =</span> <span class="st">"lrrrrrl"</span>,</span>
-<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>      <span class="at">caption =</span> <span class="st">"Market-model estimates under the simple and full specifications, same 51 stocks and months."</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>rf_const <span class="ot">&lt;-</span> <span class="fl">0.024</span> <span class="sc">/</span> <span class="dv">12</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>simple <span class="ot">&lt;-</span> panel <span class="sc">|&gt;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(market, month) <span class="sc">|&gt;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">mkt_loo =</span> (<span class="fu">sum</span>(ret) <span class="sc">-</span> ret) <span class="sc">/</span> (<span class="fu">n</span>() <span class="sc">-</span> <span class="dv">1</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">|&gt;</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">ex_s =</span> ret <span class="sc">-</span> rf_const, <span class="at">mex_s =</span> mkt_loo <span class="sc">-</span> rf_const) <span class="sc">|&gt;</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(market, symbol) <span class="sc">|&gt;</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_modify</span>(<span class="cf">function</span>(d, key) {</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    fit <span class="ot">&lt;-</span> <span class="fu">ols_matrix</span>(d<span class="sc">$</span>ex_s, <span class="fu">cbind</span>(<span class="dv">1</span>, d<span class="sc">$</span>mex_s))</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(<span class="at">beta_simple =</span> fit<span class="sc">$</span>coef[<span class="dv">2</span>], <span class="at">alpha_simple =</span> fit<span class="sc">$</span>coef[<span class="dv">1</span>],</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>           <span class="at">r2_simple =</span> <span class="dv">1</span> <span class="sc">-</span> <span class="fu">sum</span>(fit<span class="sc">$</span>resid<span class="sc">^</span><span class="dv">2</span>) <span class="sc">/</span> <span class="fu">sum</span>((d<span class="sc">$</span>ex_s <span class="sc">-</span> <span class="fu">mean</span>(d<span class="sc">$</span>ex_s))<span class="sc">^</span><span class="dv">2</span>))</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span> <span class="fu">ungroup</span>() <span class="sc">|&gt;</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(est <span class="sc">|&gt;</span> <span class="fu">select</span>(symbol, beta, alpha, r2, sector), <span class="at">by =</span> <span class="st">"symbol"</span>)</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>cmp <span class="ot">&lt;-</span> simple <span class="sc">|&gt;</span> <span class="fu">group_by</span>(<span class="at">Market =</span> market) <span class="sc">|&gt;</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="st">`</span><span class="at">Median beta, simple</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(<span class="fu">median</span>(beta_simple)),</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Median beta, full</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(<span class="fu">median</span>(beta)),</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Median R², simple</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="fu">median</span>(r2_simple), <span class="dv">0</span>),</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Median R², full</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="fu">median</span>(r2), <span class="dv">0</span>),</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Beta correlation</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(<span class="fu">cor</span>(beta_simple, beta)),</span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">Largest beta gap</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">sprintf</span>(<span class="st">"%s (%+.2f)"</span>,</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>                                         <span class="fu">sub</span>(<span class="st">"</span><span class="sc">\\</span><span class="st">.(AX|HK|SI)$"</span>, <span class="st">""</span>, symbol[<span class="fu">which.max</span>(<span class="fu">abs</span>(beta <span class="sc">-</span> beta_simple))]),</span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>                                         (beta <span class="sc">-</span> beta_simple)[<span class="fu">which.max</span>(<span class="fu">abs</span>(beta <span class="sc">-</span> beta_simple))]),</span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>            <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>beta_cor_all <span class="ot">&lt;-</span> <span class="fu">cor</span>(simple<span class="sc">$</span>beta_simple, simple<span class="sc">$</span>beta)</span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>alpha_gap <span class="ot">&lt;-</span> <span class="fu">median</span>(<span class="fu">abs</span>(<span class="dv">12</span> <span class="sc">*</span> (simple<span class="sc">$</span>alpha <span class="sc">-</span> simple<span class="sc">$</span>alpha_simple)))</span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(cmp, <span class="at">align =</span> <span class="st">"lrrrrrl"</span>,</span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>      <span class="at">caption =</span> <span class="st">"Market-model estimates under the simple and full specifications, same 51 stocks and months."</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <table class="caption-top table table-sm table-striped small">
@@ -1035,18 +1057,18 @@ Table&nbsp;4: Stocks whose beta changed significantly between 2011–19 and 2020
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>val_names <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"0700.HK"</span>, <span class="st">"0939.HK"</span>, <span class="st">"1398.HK"</span>, <span class="st">"3988.HK"</span>, <span class="st">"0005.HK"</span>, <span class="st">"D05.SI"</span>, <span class="st">"O39.SI"</span>, <span class="st">"U11.SI"</span>,</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>               <span class="st">"0883.HK"</span>, <span class="st">"0857.HK"</span>, <span class="st">"0386.HK"</span>, <span class="st">"WDS.AX"</span>, <span class="st">"STO.AX"</span>)</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>est <span class="sc">|&gt;</span> <span class="fu">filter</span>(symbol <span class="sc">%in%</span> val_names) <span class="sc">|&gt;</span> <span class="fu">arrange</span>(<span class="fu">match</span>(symbol, val_names)) <span class="sc">|&gt;</span></span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(stab <span class="sc">|&gt;</span> <span class="fu">select</span>(symbol, beta_post), <span class="at">by =</span> <span class="st">"symbol"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(<span class="at">Stock =</span> <span class="fu">paste0</span>(ticker, <span class="st">" "</span>, name), <span class="st">`</span><span class="at">Full-sample beta</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(beta),</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">95% CI</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">sprintf</span>(<span class="st">"%.2f–%.2f"</span>, beta_lo, beta_hi),</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">2020–26 beta</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(beta_post), <span class="st">`</span><span class="at">Blume-adjusted</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(beta_blume)) <span class="sc">|&gt;</span></span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"lrrrr"</span>)</span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(est <span class="sc">|&gt;</span> <span class="fu">left_join</span>(stab <span class="sc">|&gt;</span> <span class="fu">select</span>(symbol, beta_pre, beta_post, p_change, p_change_bh), <span class="at">by =</span> <span class="st">"symbol"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>            <span class="fu">select</span>(symbol, name, market, sector, alpha, se_alpha, beta, se_beta, beta_blume,</span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>                   beta_pre, beta_post, p_change_bh, r2, idio_vol),</span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>          <span class="fu">file.path</span>(data_dir, <span class="st">"betas_module01.csv"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>val_names <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"0700.HK"</span>, <span class="st">"0939.HK"</span>, <span class="st">"1398.HK"</span>, <span class="st">"3988.HK"</span>, <span class="st">"0005.HK"</span>, <span class="st">"D05.SI"</span>, <span class="st">"O39.SI"</span>, <span class="st">"U11.SI"</span>,</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>               <span class="st">"0883.HK"</span>, <span class="st">"0857.HK"</span>, <span class="st">"0386.HK"</span>, <span class="st">"WDS.AX"</span>, <span class="st">"STO.AX"</span>)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>est <span class="sc">|&gt;</span> <span class="fu">filter</span>(symbol <span class="sc">%in%</span> val_names) <span class="sc">|&gt;</span> <span class="fu">arrange</span>(<span class="fu">match</span>(symbol, val_names)) <span class="sc">|&gt;</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(stab <span class="sc">|&gt;</span> <span class="fu">select</span>(symbol, beta_post), <span class="at">by =</span> <span class="st">"symbol"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(<span class="at">Stock =</span> <span class="fu">paste0</span>(ticker, <span class="st">" "</span>, name), <span class="st">`</span><span class="at">Full-sample beta</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(beta),</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">95% CI</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">sprintf</span>(<span class="st">"%.2f–%.2f"</span>, beta_lo, beta_hi),</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>            <span class="st">`</span><span class="at">2020–26 beta</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(beta_post), <span class="st">`</span><span class="at">Blume-adjusted</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(beta_blume)) <span class="sc">|&gt;</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"lrrrr"</span>)</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(est <span class="sc">|&gt;</span> <span class="fu">left_join</span>(stab <span class="sc">|&gt;</span> <span class="fu">select</span>(symbol, beta_pre, beta_post, p_change, p_change_bh), <span class="at">by =</span> <span class="st">"symbol"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>            <span class="fu">select</span>(symbol, name, market, sector, alpha, se_alpha, beta, se_beta, beta_blume,</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>                   beta_pre, beta_post, p_change_bh, r2, idio_vol),</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>          <span class="fu">file.path</span>(data_dir, <span class="st">"betas_module01.csv"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div id="tbl-blume" class="cell quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
@@ -1171,6 +1193,77 @@ Table&nbsp;5: Raw and Blume-adjusted betas for the names valued in later modules
 </figure>
 </div>
 </div>
+</section>
+<section id="robustness-the-neweywest-lag" class="level3">
+<h3 class="anchored" data-anchor-id="robustness-the-neweywest-lag">Robustness: the Newey–West lag</h3>
+<div class="cell">
+<details class="code-fold">
+<summary>Show code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>lag_check <span class="sc">|&gt;</span> <span class="fu">transmute</span>(<span class="st">`</span><span class="at">NW lag</span><span class="st">`</span> <span class="ot">=</span> lag, <span class="st">`</span><span class="at">Alphas p &lt; 0.05</span><span class="st">`</span> <span class="ot">=</span> alpha_raw,</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>                       <span class="st">`</span><span class="at">Alphas (BH) p &lt; 0.05</span><span class="st">`</span> <span class="ot">=</span> alpha_bh, <span class="st">`</span><span class="at">Beta shifts (BH) p &lt; 0.05</span><span class="st">`</span> <span class="ot">=</span> shift_bh) <span class="sc">|&gt;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"rrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div id="tbl-lag-check" class="cell quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-lag-check-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;6: Counts of significant results (of 51 stocks) by Newey–West truncation lag. The main analysis uses 4 lags.
+</figcaption>
+<div aria-describedby="tbl-lag-check-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 22%">
+<col style="width: 30%">
+<col style="width: 37%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: right;">NW lag</th>
+<th style="text-align: right;">Alphas p &lt; 0.05</th>
+<th style="text-align: right;">Alphas (BH) p &lt; 0.05</th>
+<th style="text-align: right;">Beta shifts (BH) p &lt; 0.05</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">5</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">11</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">9</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">10</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">10</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>The automatic rule gives 4 lags for 188 months. Across 0 to 12 lags, the number of alphas that survive the false-discovery-rate correction ranges from 0 to 1, and the number of significant beta shifts from 5 to 11. The alpha conclusion does not depend on the lag. The exact count of beta shifts does, so treat it as approximate. The sector pattern rests on the size and direction of the changes, not on the count.</p>
 </section>
 </section>
 <section id="limitations" class="level2">

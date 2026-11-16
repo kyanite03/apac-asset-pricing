@@ -123,10 +123,32 @@ roll <- panel |> group_by(symbol) |> arrange(month) |> group_modify(function(d, 
 roll_range <- roll |> group_by(symbol) |> summarise(range = max(beta) - min(beta))
 ```
 
+```{r}
+#| label: lag-check
+#| code-summary: "Re-run the alpha and beta-stability tests at other Newey–West lags"
+
+lags <- c(0, 2, 4, 6, 12)
+lag_check <- map_dfr(lags, function(L) {
+  per_stock <- panel |> group_by(symbol) |> group_modify(function(d, key) {
+    fa <- ols_matrix(d$ex, cbind(const = 1, mex = d$mex))
+    post <- as.numeric(d$month >= break_month)
+    fs <- ols_matrix(d$ex, cbind(const = 1, mex = d$mex, post = post, mex_post = d$mex * post))
+    tibble(p_alpha = coef_table(fa, hac_vcov(fa, L))$p[1],
+           p_change = linear_hypothesis(fs, rbind(c(0, 0, 0, 1)), V = hac_vcov(fs, L))["p"])
+  }) |> ungroup()
+  tibble(lag = L, alpha_raw = sum(per_stock$p_alpha < 0.05),
+         alpha_bh = sum(p.adjust(per_stock$p_alpha, "BH") < 0.05),
+         shift_bh = sum(p.adjust(per_stock$p_change, "BH") < 0.05))
+})
+base_row <- lag_check |> filter(lag == nw_lag)
+stopifnot(base_row$alpha_raw == n_alpha_raw, base_row$alpha_bh == n_alpha_bh,
+          base_row$shift_bh == n_shift_bh)                 # reproduces the main results
+```
+
 ::: {.callout-tip title="Answer first"}
 - **Most APAC large caps move less than their market.** `r sum(est$beta < 1)` of `r nrow(est)` stocks have a beta below 1. The median beta is `r num(mkt_summary$median_beta[1])` on the ASX, `r num(mkt_summary$median_beta[2])` in Hong Kong and `r num(mkt_summary$median_beta[3])` in Singapore. Financials (banks, insurers, exchanges) sit above 1. Utilities, telecoms and health care sit well below, and so, perhaps surprisingly, do most resource and energy stocks.
 - **The market explains only part of the risk.** The median R² is `r pct(mkt_summary$median_r2[1], 0)` on the ASX, `r pct(mkt_summary$median_r2[2], 0)` in Hong Kong and `r pct(mkt_summary$median_r2[3], 0)` in Singapore. Most single-stock volatility is idiosyncratic, so beta describes only one slice of risk.
-- **Betas shifted after 2020, by sector.** China's three big state banks decoupled from the Hang Seng (beta roughly `r num(cn_banks_pre)` → `r num(cn_banks_post)`). All `r n_res` resource and energy names became less market-sensitive, and all four Australian major banks became more so. The median stock's beta moved by `r num(med_abs_shift)` between 2011–19 and 2020–26. For `r n_shift_bh` of `r nrow(stab)` stocks the change survives a false-discovery-rate correction.
+- **Betas shifted after 2020, by sector.** China's three big state banks decoupled from the Hang Seng (beta roughly `r num(cn_banks_pre)` → `r num(cn_banks_post)`). All `r n_res` resource and energy names became less market-sensitive, and all four Australian major banks became more so. The median stock's beta moved by `r num(med_abs_shift)` between 2011–19 and 2020–26. For `r n_shift_bh` of `r nrow(stab)` stocks the change survives a false-discovery-rate correction (`r min(lag_check$shift_bh)`–`r max(lag_check$shift_bh)` depending on the Newey–West lag).
 - **So what:** a cost-of-equity estimate should use a shrunk (Blume-adjusted) beta, quote a range, and say which window it came from. For the Chinese state banks, the full-sample beta is about `r pct(cn_full / cn_banks_post - 1, 0)` higher than the 2020–26 one. The betas here feed the WACC in Module 06.
 :::
 
@@ -356,6 +378,19 @@ write_csv(est |> left_join(stab |> select(symbol, beta_pre, beta_post, p_change,
                    beta_pre, beta_post, p_change_bh, r2, idio_vol),
           file.path(data_dir, "betas_module01.csv"))
 ```
+
+### Robustness: the Newey–West lag
+
+```{r}
+#| label: tbl-lag-check
+#| tbl-cap: "Counts of significant results (of 51 stocks) by Newey–West truncation lag. The main analysis uses 4 lags."
+
+lag_check |> transmute(`NW lag` = lag, `Alphas p < 0.05` = alpha_raw,
+                       `Alphas (BH) p < 0.05` = alpha_bh, `Beta shifts (BH) p < 0.05` = shift_bh) |>
+  kable(align = "rrrr")
+```
+
+The automatic rule gives 4 lags for `r n_months` months. Across 0 to 12 lags, the number of alphas that survive the false-discovery-rate correction ranges from `r min(lag_check$alpha_bh)` to `r max(lag_check$alpha_bh)`, and the number of significant beta shifts from `r min(lag_check$shift_bh)` to `r max(lag_check$shift_bh)`. The alpha conclusion does not depend on the lag. The exact count of beta shifts does, so treat it as approximate. The sector pattern rests on the size and direction of the changes, not on the count.
 
 ## Limitations
 

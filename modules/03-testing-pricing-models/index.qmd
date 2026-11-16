@@ -50,6 +50,7 @@ fac_label <- c(MKT = "Market", SMB3 = "Size (SMB)", SMB = "Size (SMB)", HML = "V
 #| label: time-series
 #| code-summary: "Time-series tests: alphas and GRS for each model"
 
+nw_lag <- 4
 ts_res <- imap(models, function(f, nm) {
   F <- as.matrix(Fac[, f])
   g <- grs_test(Y, F)
@@ -57,7 +58,7 @@ ts_res <- imap(models, function(f, nm) {
   r2 <- 1 - colSums(fit$resid^2) / colSums(sweep(Y, 2, colMeans(Y))^2)
   # per-stock HAC t-stats on alpha
   p_alpha <- map_dbl(seq_len(N_), function(j) {
-    fj <- ols_matrix(Y[, j], cbind(1, F)); coef_table(fj, hac_vcov(fj, 4))$p[1]
+    fj <- ols_matrix(Y[, j], cbind(1, F)); coef_table(fj, hac_vcov(fj, nw_lag))$p[1]
   })
   list(grs = g, alpha = g$alpha, r2 = r2, p_alpha = p_alpha,
        predicted = drop(t(fit$coef[-1, , drop = FALSE]) %*% colMeans(F)),  # beta' * mean factor
@@ -118,7 +119,7 @@ hi_lo <- c(lo = mean(mu[b_capm < median(b_capm)]), hi = mean(mu[b_capm >= median
 ```
 
 ::: {.callout-tip title="Answer first"}
-- **Every model is rejected, and mostly for the same reason.** The GRS test rejects all four models jointly (p ≤ `r num(max(grs_tbl$p), 3)`). But the pricing errors are one-sided: under the CAPM, `r pct(capm_pos, 0)` of stocks have a positive alpha, averaging `r pct(capm_mean_alpha)` a year, in all three markets. That is the signature of a sample of survivors (today's large caps beat what their risk predicted), not of a missing risk factor.
+- **Every model is rejected, and mostly for the same reason.** The GRS test rejects all four models jointly (p ≤ `r num(max(grs_tbl$p), 3)`). But the pricing errors are one-sided: under the CAPM, `r pct(capm_pos, 0)` of stocks have a positive alpha, averaging `r pct(capm_mean_alpha)` a year, in all three markets. That is consistent with a sample of survivors (today's large caps beat what their risk predicted). This sample cannot rule out a missing factor, though.
 - **Extra factors explain more variance but price no better.** The Fama–French factors raise the average R² from `r pct(capm_row$"Mean R²", 0)` (CAPM) to `r pct(max(grs_tbl$"Mean R²"), 0)`. But the root-mean-square alpha is lowest for the CAPM itself (`r pct(capm_row$"RMS α (p.a.)")` a year, against `r pct(min(grs_tbl$"RMS α (p.a.)"[-1]))`–`r pct(max(grs_tbl$"RMS α (p.a.)"[-1]))` for the multi-factor models).
 - **Beta is rewarded in the cross-section, roughly as the CAPM says.** In Fama–MacBeth regressions the price of beta is `r pct(12 * g1$estimate)` a year, against a realised market premium of `r pct(12 * mkt_mean)`, and the zero-beta intercept of `r pct(12 * g0$estimate)` is insignificant (t = `r num(g0$t_shanken)`). The flat security market line found earlier in a 16-stock ASX sample does not survive three markets and proper factors. The test has little power, though: the beta premium itself has t = `r num(g1$t_shanken)`.
 - **So what:** for cost-of-capital work on APAC large caps, the regional Fama–French factors do not earn their extra complexity. A CAPM beta (Module 01) is as defensible as any model tested here, provided the uncertainty is stated: a 95% interval on the regional market premium over these 15 years is `r pct(12 * mkt_mean)` ± `r pct(1.96 * sqrt(12) * sd(Fac$MKT) / sqrt(T_ / 12))` a year.
@@ -167,7 +168,7 @@ $$
 
 It has a useful reading in terms of Sharpe ratios. GRS is large when the best portfolio of the test assets *and* the factors (the tangency portfolio) has a much higher Sharpe ratio than the factors alone.
 
-**Cross section.** Fama–MacBeth two-pass regressions. Pass 1 estimates each stock's betas over the full sample. Pass 2 regresses each month's excess returns on those betas, $r_{i,t} = \gamma_{0,t} + \boldsymbol\beta_i'\boldsymbol\gamma_t + \eta_{i,t}$, and averages the slopes. Standard errors use the Shanken (1992) correction for the fact that the betas are estimated. If a model holds, $\gamma_0 = 0$ and each premium equals its factor's mean return. A positive $\gamma_0$ with a beta premium below the market premium is the zero-beta (Black, 1972) CAPM. A GLS version of the cross-sectional regression, weighting by the inverse residual covariance, is reported for the CAPM as a check.
+**Cross section.** Fama–MacBeth two-pass regressions. Pass 1 estimates each stock's betas over the full sample. Pass 2 regresses each month's excess returns on those betas, $r_{i,t} = \gamma_{0,t} + \boldsymbol\beta_i'\boldsymbol\gamma_t + \eta_{i,t}$, and averages the slopes. Standard errors use the Shanken (1992) correction for the fact that the betas are estimated. Because the monthly slopes can be serially correlated, the table also shows Shanken errors built on a Newey–West (4-lag) variance of the slopes. No conclusion changes. If a model holds, $\gamma_0 = 0$ and each premium equals its factor's mean return. A positive $\gamma_0$ with a beta premium below the market premium is the zero-beta (Black, 1972) CAPM. A GLS version of the cross-sectional regression, weighting by the inverse residual covariance, is reported for the CAPM as a check.
 
 ## Results
 
@@ -225,7 +226,7 @@ $\bar x_i$ stock $i$'s average monthly USD excess return · $\hat{\boldsymbol\be
 :::
 :::
 
-The GRS statistics reject every model. @fig-pred shows the shape of the failure: points sit mostly *above* the 45° line under every model. The share of positive alphas ranges from `r pct(min(alpha_sign$share_pos), 0)` to `r pct(max(alpha_sign$share_pos), 0)` across the four models, and the mean alpha is positive in each market. A missing risk factor would push some stocks up and others down. A common upward shift is what **survivorship** produces: the sample is today's large caps, which are large partly *because* their returns beat what their risk exposures predicted.
+The GRS statistics reject every model. @fig-pred shows the shape of the failure: points sit mostly *above* the 45° line under every model. The share of positive alphas ranges from `r pct(min(alpha_sign$share_pos), 0)` to `r pct(max(alpha_sign$share_pos), 0)` across the four models, and the mean alpha is positive in each market. A common upward shift is what **survivorship** would produce: the sample is today's large caps, which are large partly *because* their returns beat what their risk exposures predicted. A missing factor that all these stocks load on positively could produce the same pattern, though. Telling the two apart needs a point-in-time universe that includes delisted firms.
 
 The Sharpe-ratio columns need care. The "tangency" Sharpe ratio is the best in-sample combination of 51 stocks and the factors. With that many assets it is heavily overfitted, which is exactly why GRS is a formal test rather than a comparison of these two numbers.
 
@@ -235,15 +236,15 @@ Adding factors changes the picture surprisingly little. The multi-factor models 
 
 ```{r}
 #| label: tbl-fm
-#| tbl-cap: "Fama–MacBeth risk premia (annualised) with Shanken-corrected t-statistics, compared with each factor's realised average return. Under the model, γ₀ = 0 and each premium equals its factor mean."
+#| tbl-cap: "Fama–MacBeth risk premia (annualised) with Shanken-corrected t-statistics (also with Newey–West errors on the monthly slopes, 4 lags), compared with each factor's realised average return. Under the model, γ₀ = 0 and each premium equals its factor mean."
 
 fm_tbl |>
   mutate(Term = if_else(term == "gamma0", "Intercept γ₀ (zero-beta excess return)", fac_label[term]),
          `Premium (p.a.)` = pct(12 * estimate), `t (Shanken)` = num(t_shanken),
-         `t (plain FM)` = num(t_fm),
+         `t (plain FM)` = num(t_fm), `t (Shanken + NW)` = num(t_nw_shanken),
          `Factor mean (p.a.)` = if_else(is.na(factor_mean), "0 (model)", pct(12 * factor_mean))) |>
-  select(Model = model, Term, `Premium (p.a.)`, `t (Shanken)`, `t (plain FM)`, `Factor mean (p.a.)`) |>
-  kable(align = "llrrrr")
+  select(Model = model, Term, `Premium (p.a.)`, `t (Shanken)`, `t (Shanken + NW)`, `t (plain FM)`, `Factor mean (p.a.)`) |>
+  kable(align = "llrrrrr")
 ```
 
 **The CAPM cross-section.** The price of beta is `r pct(12 * g1$estimate)` a year, against a market premium of `r pct(12 * mkt_mean)` over the same months. The gap (`r sprintf("%+.1f%%", 1200 * mean(gap_series))` a year, t = `r num(gap_t)`) is not significant. The intercept, the excess return of a zero-beta portfolio, is `r pct(12 * g0$estimate)` a year (Shanken t = `r num(g0$t_shanken)`), also indistinguishable from zero. The GLS cross-sectional regression agrees: an intercept of `r pct(12 * gls$coef[1])` (t = `r num(gls$coef[1] / se_gls[1])`) and a beta premium of `r pct(12 * gls$coef[2])` (t = `r num(gls$coef[2] / se_gls[2])`). Put simply, the higher-beta half of the sample earned `r pct(12 * hi_lo["hi"])` a year in excess of T-bills and the lower-beta half `r pct(12 * hi_lo["lo"])`.
@@ -251,6 +252,28 @@ fm_tbl |>
 This **overturns the earlier ASX-only result.** A 16-stock ASX study, measured against an equal-weighted proxy, found a flat security market line, which pointed to Black's zero-beta CAPM and the "betting against beta" anomaly. With three markets, USD returns and a proper regional market factor, the evidence is instead consistent with the standard Sharpe–Lintner CAPM: zero intercept, slope near the market premium. The honest caveat is power. With `r N_` stocks and `r round(T_ / 12)` years, the beta premium is not significantly different from zero either (t = `r num(g1$t_shanken)`), so the data cannot reject a flat line strongly.
 
 **The multi-factor cross-sections** do not line up with the factors' own returns. Value (HML) earned `r pct(12 * mean(Fac$HML))` a year as a factor, but its price among these stocks is negative in every specification. Investment (CMA) gets a significantly *negative* price in the five-factor model (`r pct(12 * fm_tbl$estimate[fm_tbl$model == "Fama–French 5" & fm_tbl$term == "CMA"])`, Shanken t = `r num(fm_tbl$t_shanken[fm_tbl$model == "Fama–French 5" & fm_tbl$term == "CMA"])`), against a factor mean of `r pct(12 * mean(Fac$CMA))`. The factors are built from all listed stocks in the region, small caps included, and their premia do not show up across 51 large caps.
+
+### Robustness: the Newey–West lag
+
+```{r}
+#| label: tbl-lag-check
+#| tbl-cap: "Stocks (of 51) whose Newey–West alpha survives a Benjamini–Hochberg correction at 5%, by truncation lag. The main analysis uses 4 lags. The GRS test does not use HAC errors."
+
+lag_check <- expand_grid(lag = c(0, 2, 4, 6, 12), model = names(models)) |>
+  mutate(n_sig = map2_int(lag, model, function(L, nm) {
+    F <- as.matrix(Fac[, models[[nm]]])
+    p <- map_dbl(seq_len(N_), function(j) {
+      fj <- ols_matrix(Y[, j], cbind(1, F)); coef_table(fj, hac_vcov(fj, L))$p[1]
+    })
+    sum(p.adjust(p, "BH") < 0.05)
+  }))
+stopifnot(all(lag_check |> filter(lag == nw_lag) |> pull(n_sig) ==
+              map_int(ts_res, \(r) sum(p.adjust(r$p_alpha, "BH") < 0.05))))
+lag_check |> pivot_wider(names_from = model, values_from = n_sig) |> rename(`NW lag` = lag) |>
+  kable(align = "rrrrr")
+```
+
+Across 0 to 12 lags, at most `r max(lag_check$n_sig)` of `r N_` alphas are individually significant after the correction under any model. The rejections come from the joint GRS test and the one-sided pattern of the alphas, not from a few large ones.
 
 ## Limitations
 

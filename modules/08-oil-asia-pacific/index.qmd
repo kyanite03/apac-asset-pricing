@@ -27,7 +27,8 @@ fx <- read_csv(file.path(data_dir, "fx_monthly.csv"), show_col_types = FALSE)
 ff <- get_french_apac("../../data/raw/french")
 sg_ipi <- read_csv(file.path(data_dir, "sg_import_prices.csv"), show_col_types = FALSE)
 ema_file <- "../../data/raw/ema/SES_tidy.xlsx"
-nw <- function(m) NeweyWest(m, lag = 4, prewhite = FALSE)
+nw_lag <- 4
+nw <- function(m, lag = nw_lag) NeweyWest(m, lag = lag, prewhite = FALSE)
 
 o <- o |> mutate(
   spread = brent_wb_avg - dubai_wb_avg,                                   # Brent–Dubai, both World Bank averages
@@ -74,8 +75,12 @@ dd <- o |> filter(month >= as.Date("2011-02-01")) |>
 pred <- lm(r_brent ~ bunker_yoy_l1 + dcover_l1 + stocks_yoy_l1, dd)
 V_pred <- nw(pred)
 C3 <- cbind(0, diag(3))
-W_pred <- drop(t(C3 %*% coef(pred)) %*% solve(C3 %*% V_pred %*% t(C3)) %*% (C3 %*% coef(pred)))
-p_pred <- pchisq(W_pred, 3, lower.tail = FALSE)
+pred_p <- function(L) {
+  V <- nw(pred, L)
+  W <- drop(t(C3 %*% coef(pred)) %*% solve(C3 %*% V %*% t(C3)) %*% (C3 %*% coef(pred)))
+  pchisq(W, 3, lower.tail = FALSE)
+}
+p_pred <- pred_p(nw_lag)
 pred_tbl <- tibble(term = names(coef(pred))[-1], est = coef(pred)[-1], t = coef(pred)[-1] / sqrt(diag(V_pred))[-1])
 spread_stats <- o |> filter(month < as.Date("2026-01-01")) |> summarise(m = mean(spread), s = sd(spread))
 spread_2026 <- o |> filter(month >= as.Date("2026-01-01"))
@@ -163,15 +168,15 @@ names_tbl <- tribble(~symbol, ~name, ~role,
   "0883.HK", "CNOOC", "Producer", "0857.HK", "PetroChina", "Integrated", "0386.HK", "Sinopec", "Integrated (refining-heavy)",
   "ALD.AX", "Ampol", "Refiner & fuel distributor", "VEA.AX", "Viva Energy", "Refiner & fuel distributor")
 
-eres <- map_dfr(names_tbl$symbol, function(s) {
+energy_tests <- function(L = nw_lag) map_dfr(names_tbl$symbol, function(s) {
   d <- eq |> filter(symbol == s) |> inner_join(mk, by = c("market", "month")) |> inner_join(rf, by = c("market", "month")) |>
     inner_join(dd, by = "month") |>
     mutate(ex = ret - rf, mex = mkt - rf, up = pmax(r_brent, 0), dn = pmin(r_brent, 0)) |>
     filter(!is.na(bunker_yoy), !is.na(dcover), !is.na(dspread))
-  m1 <- lm(ex ~ mex + r_brent, d); V1 <- nw(m1)
-  m2 <- lm(ex ~ mex + up + dn, d); V2 <- nw(m2)
+  m1 <- lm(ex ~ mex + r_brent, d); V1 <- nw(m1, L)
+  m2 <- lm(ex ~ mex + up + dn, d); V2 <- nw(m2, L)
   ca <- matrix(c(0, 0, 1, -1), 1); p_asym <- 2 * pnorm(-abs(drop(ca %*% coef(m2)) / sqrt(drop(ca %*% V2 %*% t(ca)))))
-  m3 <- lm(ex ~ mex + r_brent + dspread + bunker_yoy + dcover, d); V3 <- nw(m3)
+  m3 <- lm(ex ~ mex + r_brent + dspread + bunker_yoy + dcover, d); V3 <- nw(m3, L)
   cj <- cbind(matrix(0, 3, 3), diag(3)); dj <- cj %*% coef(m3)
   p_reg <- pchisq(drop(t(dj) %*% solve(cj %*% V3 %*% t(cj)) %*% dj), 3, lower.tail = FALSE)
   tibble(symbol = s, months = nrow(d), from = min(d$month),
@@ -179,6 +184,7 @@ eres <- map_dfr(names_tbl$symbol, function(s) {
          b_up = coef(m2)[["up"]], b_dn = coef(m2)[["dn"]], p_asym = p_asym, p_regional = p_reg)
 }) |> left_join(names_tbl, by = "symbol") |>
   mutate(p_regional_bh = p.adjust(p_regional, "BH"), p_asym_bh = p.adjust(p_asym, "BH"))
+eres <- energy_tests()
 
 prod_b <- eres |> filter(role == "Producer")
 
@@ -238,7 +244,7 @@ cor_mkt_aud <- cor(Fm$MKT, Fm$aud)
 - **Asia's crude benchmark broke away from Brent in 2026, but Singapore's import bill did not.** The Brent–Dubai spread, normally `r num(spread_stats$m, 1)` dollars a barrel, reached `r num(spread_max$spread, 1)` dollars in `r format(spread_max$month, "%B %Y")`. Over 2011–26, Singapore's actual crude import prices (SingStat) track Dubai most closely, yet in the 2026 shock they rose roughly in line with Brent, far more than Dubai (up `r round(peak26_pct)`% by `r format(peak26$month, "%B %Y")`). Asian buyers paid for the spike regardless of benchmark.
 - **APAC energy stocks are exposed to oil, in the expected order.** Monthly oil betas (controlling for each home market) run from `r num(max(prod_b$b_oil))` for upstream producers down to `r num(eres$b_oil[eres$symbol == "0386.HK"])` for refining-heavy Sinopec. Whether they react more to oil rises or falls is not robust. The answer flips with how returns are measured and with a few extreme months.
 - **Regional fundamentals add little beyond the price.** Singapore bunker demand, Australian stock cover and the Brent–Dubai spread neither predict oil returns (joint p = `r num(p_pred)`) nor explain energy-stock returns once Brent is controlled for (no stock significant after a multiple-testing correction).
-- **Oil exposure is not rewarded.** Across all 51 stocks, the Fama–MacBeth price of oil risk is `r pct(oil_lam$estimate, 2)` a month (Shanken t = `r num(oil_lam$t_shanken)`). **So what:** in APAC equities, oil is a risk to hedge or diversify, not a source of expected return. Investors are not paid for holding it.
+- **No evidence that oil exposure is rewarded.** Across all 51 stocks, the Fama–MacBeth price of oil risk is `r pct(oil_lam$estimate, 2)` a month (Shanken t = `r num(oil_lam$t_shanken)`). The standard error is wide, so a modest premium cannot be ruled out. **So what:** in this sample, oil looks like a risk to hedge or diversify, not a reliable source of expected return.
 :::
 
 ## Question
@@ -450,7 +456,7 @@ pred_tbl |> mutate(Predictor = recode(term, bunker_yoy_l1 = "Singapore bunker sa
   select(Predictor, Coefficient, t) |> kable(align = "lrr")
 ```
 
-None of the three predicts next month's oil return, individually or jointly (joint p = `r num(p_pred)`, R² = `r pct(summary(pred)$r.squared, 1)`). This is what an efficient global market implies: Australia and Singapore are price-takers, and their published volumes are already reflected in the price by the time they are released.
+None of the three predicts next month's oil return, individually or jointly (joint p = `r num(p_pred)`, R² = `r pct(summary(pred)$r.squared, 1)`). That fits Australia and Singapore being price-takers whose published volumes are already in the price when released. It says nothing about richer regional data (refinery runs, futures curves, crack spreads, freight), which were not tested.
 
 ### Energy equities: exposure in the expected order
 
@@ -507,16 +513,49 @@ The answer depends on choices that should not matter. With simple returns over t
 
 ```{r}
 #| label: tbl-fm
-#| tbl-cap: "Fama–MacBeth risk premia (monthly) across the 51-stock universe in USD, with Shanken-corrected t-statistics. Oil, iron ore and the Australian dollar are non-traded factors, so their premia are not directly comparable with their average returns."
+#| tbl-cap: "Fama–MacBeth risk premia (monthly) across the 51-stock universe in USD, with Shanken-corrected t-statistics, also with Newey–West errors on the monthly slopes (4 lags). Oil, iron ore and the Australian dollar are non-traded factors, so their premia are not directly comparable with their average returns."
 
 bind_rows(fm2 |> mutate(Model = "Market + oil"), fm4 |> mutate(Model = "Market + oil + iron ore + AUD")) |>
   transmute(Model, Factor = recode(term, gamma0 = "Intercept", MKT = "Market (regional)", oil = "Oil (Brent)",
                                    iron = "Iron ore", aud = "AUD/USD"),
-            `Premium (monthly)` = pct(estimate, 2), `t (Shanken)` = num(t_shanken)) |>
-  kable(align = "llrr")
+            `Premium (monthly)` = pct(estimate, 2), `t (Shanken)` = num(t_shanken),
+            `t (Shanken + NW)` = num(t_nw_shanken)) |>
+  kable(align = "llrrr")
 ```
 
-Stocks differ in their oil exposure (betas range from `r num(min(B4[, "oil"]))` to `r num(max(B4[, "oil"]))` across the universe), but higher exposure has not come with higher average returns. The estimated oil premium is `r pct(oil_lam$estimate, 2)` a month, with a Shanken t-statistic of `r num(oil_lam$t_shanken)`. Iron ore and the Australian dollar, Australia's other big commodity exposures, are not priced either. The test has limited power: the standard error on the oil premium is about `r pct(oil_lam$se_shanken, 1)` a month, so a modest premium cannot be ruled out. But there is no evidence that APAC investors are paid for bearing commodity risk, consistent with Chen, Roll and Ross's (1986) finding for oil in US data. The market factor and the Australian dollar are highly correlated in USD returns (`r num(cor_mkt_aud)`), which makes their separate premia hard to distinguish.
+Stocks differ in their oil exposure (betas range from `r num(min(B4[, "oil"]))` to `r num(max(B4[, "oil"]))` across the universe), but higher exposure has not come with higher average returns. The estimated oil premium is `r pct(oil_lam$estimate, 2)` a month, with a Shanken t-statistic of `r num(oil_lam$t_shanken)`. Allowing for serial correlation in the monthly slopes (Newey–West, 4 lags) gives t = `r num(oil_lam$t_nw_shanken)`. Iron ore and the Australian dollar, Australia's other big commodity exposures, are not priced either. The test has limited power: the standard error on the oil premium is about `r pct(oil_lam$se_shanken, 1)` a month, so a modest premium cannot be ruled out. But there is no evidence that APAC investors are paid for bearing commodity risk, consistent with Chen, Roll and Ross's (1986) finding for oil in US data. The market factor and the Australian dollar are highly correlated in USD returns (`r num(cor_mkt_aud)`), which makes their separate premia hard to distinguish.
+
+### Robustness: the Newey–West lag
+
+```{r}
+#| label: lag-check
+#| code-summary: "Re-run the HAC-based tests at other Newey–West lags"
+
+lag_check <- map_dfr(c(0, 2, 4, 6, 12), function(L) {
+  e <- energy_tests(L)
+  f <- fama_macbeth(Yp, as.matrix(Fm[, c("MKT", "oil", "iron", "aud")]), nw_lag = L)
+  tibble(lag = L, p_pred = pred_p(L),
+         oil_sig = sum(abs(e$b_oil / e$se_oil) > 1.96),
+         regional_bh = sum(e$p_regional_bh < 0.05), asym_bh = sum(e$p_asym_bh < 0.05),
+         t_oil_fm = f$t_nw_shanken[f$term == "oil"])
+})
+b4 <- lag_check |> filter(lag == nw_lag)
+stopifnot(isTRUE(all.equal(b4$p_pred, p_pred)), b4$regional_bh == sum(eres$p_regional_bh < 0.05),
+          isTRUE(all.equal(b4$t_oil_fm, oil_lam$t_nw_shanken)))
+```
+
+```{r}
+#| label: tbl-lag-check
+#| tbl-cap: "HAC-based results by Newey–West truncation lag. The main analysis uses 4 lags. Counts are out of the eight energy stocks."
+
+lag_check |> transmute(`NW lag` = lag, `Fundamentals predict oil: joint p` = num(p_pred, 2),
+                       `Oil beta significant` = oil_sig, `Regional terms significant (BH)` = regional_bh,
+                       `Up/down asymmetry significant (BH)` = asym_bh,
+                       `Oil premium t (Shanken + NW)` = num(t_oil_fm)) |>
+  kable(align = "rrrrrr")
+```
+
+None of the conclusions depends on the lag. Across 0 to 12 lags, the joint p-value for oil predictability stays between `r num(min(lag_check$p_pred), 2)` and `r num(max(lag_check$p_pred), 2)`, and the oil premium's t-statistic between `r num(min(lag_check$t_oil_fm))` and `r num(max(lag_check$t_oil_fm))`. The count of significant up/down asymmetries moves between `r min(lag_check$asym_bh)` and `r max(lag_check$asym_bh)`, which is one more sign that the asymmetry is not robust.
 
 ## Limitations
 

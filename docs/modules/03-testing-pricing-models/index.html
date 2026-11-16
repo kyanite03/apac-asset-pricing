@@ -221,6 +221,7 @@ window.Quarto = {
   <ul class="collapse">
   <li><a href="#time-series-tests-all-four-models-are-rejected" id="toc-time-series-tests-all-four-models-are-rejected" class="nav-link" data-scroll-target="#time-series-tests-all-four-models-are-rejected">Time-series tests: all four models are rejected</a></li>
   <li><a href="#cross-sectional-tests-beta-is-priced-the-other-factors-are-not" id="toc-cross-sectional-tests-beta-is-priced-the-other-factors-are-not" class="nav-link" data-scroll-target="#cross-sectional-tests-beta-is-priced-the-other-factors-are-not">Cross-sectional tests: beta is priced; the other factors are not</a></li>
+  <li><a href="#robustness-the-neweywest-lag" id="toc-robustness-the-neweywest-lag" class="nav-link" data-scroll-target="#robustness-the-neweywest-lag">Robustness: the Newey–West lag</a></li>
   </ul></li>
   <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations">Limitations</a></li>
   <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
@@ -305,29 +306,30 @@ window.Quarto = {
 <div class="cell">
 <details class="code-fold">
 <summary>Time-series tests: alphas and GRS for each model</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>ts_res <span class="ot">&lt;-</span> <span class="fu">imap</span>(models, <span class="cf">function</span>(f, nm) {</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  F <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(Fac[, f])</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  g <span class="ot">&lt;-</span> <span class="fu">grs_test</span>(Y, F)</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  fit <span class="ot">&lt;-</span> <span class="fu">ols_matrix</span>(Y, <span class="fu">cbind</span>(<span class="dv">1</span>, F))</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  r2 <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> <span class="fu">colSums</span>(fit<span class="sc">$</span>resid<span class="sc">^</span><span class="dv">2</span>) <span class="sc">/</span> <span class="fu">colSums</span>(<span class="fu">sweep</span>(Y, <span class="dv">2</span>, <span class="fu">colMeans</span>(Y))<span class="sc">^</span><span class="dv">2</span>)</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># per-stock HAC t-stats on alpha</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  p_alpha <span class="ot">&lt;-</span> <span class="fu">map_dbl</span>(<span class="fu">seq_len</span>(N_), <span class="cf">function</span>(j) {</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    fj <span class="ot">&lt;-</span> <span class="fu">ols_matrix</span>(Y[, j], <span class="fu">cbind</span>(<span class="dv">1</span>, F)); <span class="fu">coef_table</span>(fj, <span class="fu">hac_vcov</span>(fj, <span class="dv">4</span>))<span class="sc">$</span>p[<span class="dv">1</span>]</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  })</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">grs =</span> g, <span class="at">alpha =</span> g<span class="sc">$</span>alpha, <span class="at">r2 =</span> r2, <span class="at">p_alpha =</span> p_alpha,</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">predicted =</span> <span class="fu">drop</span>(<span class="fu">t</span>(fit<span class="sc">$</span>coef[<span class="sc">-</span><span class="dv">1</span>, , <span class="at">drop =</span> <span class="cn">FALSE</span>]) <span class="sc">%*%</span> <span class="fu">colMeans</span>(F)),  <span class="co"># beta' * mean factor</span></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">realised =</span> <span class="fu">colMeans</span>(Y))</span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>grs_tbl <span class="ot">&lt;-</span> <span class="fu">imap_dfr</span>(ts_res, <span class="cf">function</span>(r, nm) <span class="fu">tibble</span>(</span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">Model =</span> nm, <span class="at">Factors =</span> <span class="fu">length</span>(models[[nm]]),</span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">GRS F</span><span class="st">`</span> <span class="ot">=</span> r<span class="sc">$</span>grs<span class="sc">$</span>stat, <span class="at">p =</span> r<span class="sc">$</span>grs<span class="sc">$</span>p,</span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Mean |α| (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">12</span> <span class="sc">*</span> <span class="fu">mean</span>(<span class="fu">abs</span>(r<span class="sc">$</span>alpha)),</span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">RMS α (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">12</span> <span class="sc">*</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>(r<span class="sc">$</span>alpha<span class="sc">^</span><span class="dv">2</span>)),</span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Alphas sig. (BH 5%)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">sum</span>(<span class="fu">p.adjust</span>(r<span class="sc">$</span>p_alpha, <span class="st">"BH"</span>) <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Mean R²</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">mean</span>(r<span class="sc">$</span>r2),</span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Sharpe: factors</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">sqrt</span>(<span class="dv">12</span>) <span class="sc">*</span> r<span class="sc">$</span>grs<span class="sc">$</span>sharpe_factors,</span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Sharpe: tangency</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">sqrt</span>(<span class="dv">12</span>) <span class="sc">*</span> r<span class="sc">$</span>grs<span class="sc">$</span>sharpe_tangency))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>nw_lag <span class="ot">&lt;-</span> <span class="dv">4</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>ts_res <span class="ot">&lt;-</span> <span class="fu">imap</span>(models, <span class="cf">function</span>(f, nm) {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  F <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(Fac[, f])</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  g <span class="ot">&lt;-</span> <span class="fu">grs_test</span>(Y, F)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  fit <span class="ot">&lt;-</span> <span class="fu">ols_matrix</span>(Y, <span class="fu">cbind</span>(<span class="dv">1</span>, F))</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  r2 <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> <span class="fu">colSums</span>(fit<span class="sc">$</span>resid<span class="sc">^</span><span class="dv">2</span>) <span class="sc">/</span> <span class="fu">colSums</span>(<span class="fu">sweep</span>(Y, <span class="dv">2</span>, <span class="fu">colMeans</span>(Y))<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># per-stock HAC t-stats on alpha</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  p_alpha <span class="ot">&lt;-</span> <span class="fu">map_dbl</span>(<span class="fu">seq_len</span>(N_), <span class="cf">function</span>(j) {</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    fj <span class="ot">&lt;-</span> <span class="fu">ols_matrix</span>(Y[, j], <span class="fu">cbind</span>(<span class="dv">1</span>, F)); <span class="fu">coef_table</span>(fj, <span class="fu">hac_vcov</span>(fj, nw_lag))<span class="sc">$</span>p[<span class="dv">1</span>]</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">grs =</span> g, <span class="at">alpha =</span> g<span class="sc">$</span>alpha, <span class="at">r2 =</span> r2, <span class="at">p_alpha =</span> p_alpha,</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">predicted =</span> <span class="fu">drop</span>(<span class="fu">t</span>(fit<span class="sc">$</span>coef[<span class="sc">-</span><span class="dv">1</span>, , <span class="at">drop =</span> <span class="cn">FALSE</span>]) <span class="sc">%*%</span> <span class="fu">colMeans</span>(F)),  <span class="co"># beta' * mean factor</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>       <span class="at">realised =</span> <span class="fu">colMeans</span>(Y))</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>grs_tbl <span class="ot">&lt;-</span> <span class="fu">imap_dfr</span>(ts_res, <span class="cf">function</span>(r, nm) <span class="fu">tibble</span>(</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">Model =</span> nm, <span class="at">Factors =</span> <span class="fu">length</span>(models[[nm]]),</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">GRS F</span><span class="st">`</span> <span class="ot">=</span> r<span class="sc">$</span>grs<span class="sc">$</span>stat, <span class="at">p =</span> r<span class="sc">$</span>grs<span class="sc">$</span>p,</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Mean |α| (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">12</span> <span class="sc">*</span> <span class="fu">mean</span>(<span class="fu">abs</span>(r<span class="sc">$</span>alpha)),</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">RMS α (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">12</span> <span class="sc">*</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>(r<span class="sc">$</span>alpha<span class="sc">^</span><span class="dv">2</span>)),</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Alphas sig. (BH 5%)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">sum</span>(<span class="fu">p.adjust</span>(r<span class="sc">$</span>p_alpha, <span class="st">"BH"</span>) <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Mean R²</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">mean</span>(r<span class="sc">$</span>r2),</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Sharpe: factors</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">sqrt</span>(<span class="dv">12</span>) <span class="sc">*</span> r<span class="sc">$</span>grs<span class="sc">$</span>sharpe_factors,</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Sharpe: tangency</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">sqrt</span>(<span class="dv">12</span>) <span class="sc">*</span> r<span class="sc">$</span>grs<span class="sc">$</span>sharpe_tangency))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <div class="cell">
@@ -382,7 +384,7 @@ window.Quarto = {
 </div>
 <div class="callout-body-container callout-body">
 <ul>
-<li><strong>Every model is rejected, and mostly for the same reason.</strong> The GRS test rejects all four models jointly (p ≤ 0.005). But the pricing errors are one-sided: under the CAPM, 88% of stocks have a positive alpha, averaging 4.6% a year, in all three markets. That is the signature of a sample of survivors (today’s large caps beat what their risk predicted), not of a missing risk factor.</li>
+<li><strong>Every model is rejected, and mostly for the same reason.</strong> The GRS test rejects all four models jointly (p ≤ 0.005). But the pricing errors are one-sided: under the CAPM, 88% of stocks have a positive alpha, averaging 4.6% a year, in all three markets. That is consistent with a sample of survivors (today’s large caps beat what their risk predicted). This sample cannot rule out a missing factor, though.</li>
 <li><strong>Extra factors explain more variance but price no better.</strong> The Fama–French factors raise the average R² from 40% (CAPM) to 47%. But the root-mean-square alpha is lowest for the CAPM itself (6.7% a year, against 7.2%–7.7% for the multi-factor models).</li>
 <li><strong>Beta is rewarded in the cross-section, roughly as the CAPM says.</strong> In Fama–MacBeth regressions the price of beta is 7.1% a year, against a realised market premium of 4.5%, and the zero-beta intercept of 2.2% is insignificant (t = 0.54). The flat security market line found earlier in a 16-stock ASX sample does not survive three markets and proper factors. The test has little power, though: the beta premium itself has t = 0.94.</li>
 <li><strong>So what:</strong> for cost-of-capital work on APAC large caps, the regional Fama–French factors do not earn their extra complexity. A CAPM beta (Module 01) is as defensible as any model tested here, provided the uncertainty is stated: a 95% interval on the regional market premium over these 15 years is 4.5% ± 8.5% a year.</li>
@@ -524,7 +526,7 @@ Table&nbsp;1: Factor premia over the sample: average monthly return, annualised,
 \text{GRS} = \frac{T}{N}\,\frac{T-N-K}{T-K-1}\;\frac{\hat{\boldsymbol\alpha}'\hat{\boldsymbol\Sigma}^{-1}\hat{\boldsymbol\alpha}}{1 + \bar{\mathbf f}'\hat{\boldsymbol\Omega}^{-1}\bar{\mathbf f}} \;\sim\; F_{N,\;T-N-K}.
 \]</span></p>
 <p>It has a useful reading in terms of Sharpe ratios. GRS is large when the best portfolio of the test assets <em>and</em> the factors (the tangency portfolio) has a much higher Sharpe ratio than the factors alone.</p>
-<p><strong>Cross section.</strong> Fama–MacBeth two-pass regressions. Pass 1 estimates each stock’s betas over the full sample. Pass 2 regresses each month’s excess returns on those betas, <span class="math inline">\(r_{i,t} = \gamma_{0,t} + \boldsymbol\beta_i'\boldsymbol\gamma_t + \eta_{i,t}\)</span>, and averages the slopes. Standard errors use the Shanken (1992) correction for the fact that the betas are estimated. If a model holds, <span class="math inline">\(\gamma_0 = 0\)</span> and each premium equals its factor’s mean return. A positive <span class="math inline">\(\gamma_0\)</span> with a beta premium below the market premium is the zero-beta (Black, 1972) CAPM. A GLS version of the cross-sectional regression, weighting by the inverse residual covariance, is reported for the CAPM as a check.</p>
+<p><strong>Cross section.</strong> Fama–MacBeth two-pass regressions. Pass 1 estimates each stock’s betas over the full sample. Pass 2 regresses each month’s excess returns on those betas, <span class="math inline">\(r_{i,t} = \gamma_{0,t} + \boldsymbol\beta_i'\boldsymbol\gamma_t + \eta_{i,t}\)</span>, and averages the slopes. Standard errors use the Shanken (1992) correction for the fact that the betas are estimated. Because the monthly slopes can be serially correlated, the table also shows Shanken errors built on a Newey–West (4-lag) variance of the slopes. No conclusion changes. If a model holds, <span class="math inline">\(\gamma_0 = 0\)</span> and each premium equals its factor’s mean return. A positive <span class="math inline">\(\gamma_0\)</span> with a beta premium below the market premium is the zero-beta (Black, 1972) CAPM. A GLS version of the cross-sectional regression, weighting by the inverse residual covariance, is reported for the CAPM as a check.</p>
 </section>
 <section id="results" class="level2">
 <h2 class="anchored" data-anchor-id="results">Results</h2>
@@ -677,7 +679,7 @@ Figure&nbsp;1: Realised vs model-predicted average excess return for each stock 
 <p><span class="math inline">\(\bar x_i\)</span> stock <span class="math inline">\(i\)</span>’s average monthly USD excess return · <span class="math inline">\(\hat{\boldsymbol\beta}_i\)</span> its factor loadings from the time-series regression <span class="math inline">\(x_{i,t} = \alpha_i + \boldsymbol\beta_i'\mathbf f_t + \varepsilon_{i,t}\)</span> · <span class="math inline">\(\bar{\mathbf f}\)</span> average factor returns (one per factor in the panel’s model) · <span class="math inline">\(\hat\alpha_i\)</span> pricing error, the vertical distance from the 45° line. Multiplying by 12 annualises.</p>
 </div>
 </div>
-<p>The GRS statistics reject every model. <a href="#fig-pred" class="quarto-xref">Figure&nbsp;1</a> shows the shape of the failure: points sit mostly <em>above</em> the 45° line under every model. The share of positive alphas ranges from 71% to 88% across the four models, and the mean alpha is positive in each market. A missing risk factor would push some stocks up and others down. A common upward shift is what <strong>survivorship</strong> produces: the sample is today’s large caps, which are large partly <em>because</em> their returns beat what their risk exposures predicted.</p>
+<p>The GRS statistics reject every model. <a href="#fig-pred" class="quarto-xref">Figure&nbsp;1</a> shows the shape of the failure: points sit mostly <em>above</em> the 45° line under every model. The share of positive alphas ranges from 71% to 88% across the four models, and the mean alpha is positive in each market. A common upward shift is what <strong>survivorship</strong> would produce: the sample is today’s large caps, which are large partly <em>because</em> their returns beat what their risk exposures predicted. A missing factor that all these stocks load on positively could produce the same pattern, though. Telling the two apart needs a point-in-time universe that includes delisted firms.</p>
 <p>The Sharpe-ratio columns need care. The “tangency” Sharpe ratio is the best in-sample combination of 51 stocks and the factors. With that many assets it is heavily overfitted, which is exactly why GRS is a formal test rather than a comparison of these two numbers.</p>
 <p>Adding factors changes the picture surprisingly little. The multi-factor models raise R², so they track month-to-month movements better. But their alphas are not smaller: the CAPM has the lowest root-mean-square alpha of the four. Size, value, momentum, profitability and investment exposures among these large caps do not line up with the gaps between their realised and CAPM-predicted returns.</p>
 </section>
@@ -689,26 +691,27 @@ Figure&nbsp;1: Realised vs model-predicted average excess return for each stock 
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fm_tbl <span class="sc">|&gt;</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Term =</span> <span class="fu">if_else</span>(term <span class="sc">==</span> <span class="st">"gamma0"</span>, <span class="st">"Intercept γ₀ (zero-beta excess return)"</span>, fac_label[term]),</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">Premium (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="dv">12</span> <span class="sc">*</span> estimate), <span class="st">`</span><span class="at">t (Shanken)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(t_shanken),</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">t (plain FM)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(t_fm),</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">t (plain FM)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(t_fm), <span class="st">`</span><span class="at">t (Shanken + NW)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(t_nw_shanken),</span>
 <span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">Factor mean (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">if_else</span>(<span class="fu">is.na</span>(factor_mean), <span class="st">"0 (model)"</span>, <span class="fu">pct</span>(<span class="dv">12</span> <span class="sc">*</span> factor_mean))) <span class="sc">|&gt;</span></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="at">Model =</span> model, Term, <span class="st">`</span><span class="at">Premium (p.a.)</span><span class="st">`</span>, <span class="st">`</span><span class="at">t (Shanken)</span><span class="st">`</span>, <span class="st">`</span><span class="at">t (plain FM)</span><span class="st">`</span>, <span class="st">`</span><span class="at">Factor mean (p.a.)</span><span class="st">`</span>) <span class="sc">|&gt;</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"llrrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="at">Model =</span> model, Term, <span class="st">`</span><span class="at">Premium (p.a.)</span><span class="st">`</span>, <span class="st">`</span><span class="at">t (Shanken)</span><span class="st">`</span>, <span class="st">`</span><span class="at">t (Shanken + NW)</span><span class="st">`</span>, <span class="st">`</span><span class="at">t (plain FM)</span><span class="st">`</span>, <span class="st">`</span><span class="at">Factor mean (p.a.)</span><span class="st">`</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"llrrrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div id="tbl-fm" class="cell quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
 <figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-fm-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-statistics, compared with each factor’s realised average return. Under the model, γ₀ = 0 and each premium equals its factor mean.
+Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-statistics (also with Newey–West errors on the monthly slopes, 4 lags), compared with each factor’s realised average return. Under the model, γ₀ = 0 and each premium equals its factor mean.
 </figcaption>
 <div aria-describedby="tbl-fm-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <div class="cell-output-display">
 <table class="do-not-create-environment cell caption-top table table-sm table-striped small">
 <colgroup>
-<col style="width: 13%">
-<col style="width: 34%">
+<col style="width: 11%">
+<col style="width: 30%">
+<col style="width: 11%">
+<col style="width: 9%">
 <col style="width: 13%">
 <col style="width: 10%">
-<col style="width: 11%">
-<col style="width: 16%">
+<col style="width: 14%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -716,6 +719,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <th style="text-align: left;">Term</th>
 <th style="text-align: right;">Premium (p.a.)</th>
 <th style="text-align: right;">t (Shanken)</th>
+<th style="text-align: right;">t (Shanken + NW)</th>
 <th style="text-align: right;">t (plain FM)</th>
 <th style="text-align: right;">Factor mean (p.a.)</th>
 </tr>
@@ -726,6 +730,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <td style="text-align: left;">Intercept γ₀ (zero-beta excess return)</td>
 <td style="text-align: right;">2.2%</td>
 <td style="text-align: right;">0.54</td>
+<td style="text-align: right;">0.48</td>
 <td style="text-align: right;">0.54</td>
 <td style="text-align: right;">0 (model)</td>
 </tr>
@@ -734,6 +739,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <td style="text-align: left;">Market</td>
 <td style="text-align: right;">7.1%</td>
 <td style="text-align: right;">0.94</td>
+<td style="text-align: right;">0.93</td>
 <td style="text-align: right;">1.16</td>
 <td style="text-align: right;">4.5%</td>
 </tr>
@@ -742,6 +748,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <td style="text-align: left;">Intercept γ₀ (zero-beta excess return)</td>
 <td style="text-align: right;">3.6%</td>
 <td style="text-align: right;">0.84</td>
+<td style="text-align: right;">0.80</td>
 <td style="text-align: right;">0.85</td>
 <td style="text-align: right;">0 (model)</td>
 </tr>
@@ -750,6 +757,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <td style="text-align: left;">Market</td>
 <td style="text-align: right;">6.4%</td>
 <td style="text-align: right;">0.85</td>
+<td style="text-align: right;">0.86</td>
 <td style="text-align: right;">1.06</td>
 <td style="text-align: right;">4.5%</td>
 </tr>
@@ -758,6 +766,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <td style="text-align: left;">Size (SMB)</td>
 <td style="text-align: right;">1.0%</td>
 <td style="text-align: right;">0.18</td>
+<td style="text-align: right;">0.17</td>
 <td style="text-align: right;">0.20</td>
 <td style="text-align: right;">-3.5%</td>
 </tr>
@@ -766,6 +775,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <td style="text-align: left;">Value (HML)</td>
 <td style="text-align: right;">-3.8%</td>
 <td style="text-align: right;">-0.94</td>
+<td style="text-align: right;">-1.01</td>
 <td style="text-align: right;">-1.14</td>
 <td style="text-align: right;">5.3%</td>
 </tr>
@@ -774,6 +784,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <td style="text-align: left;">Intercept γ₀ (zero-beta excess return)</td>
 <td style="text-align: right;">1.9%</td>
 <td style="text-align: right;">0.46</td>
+<td style="text-align: right;">0.45</td>
 <td style="text-align: right;">0.47</td>
 <td style="text-align: right;">0 (model)</td>
 </tr>
@@ -782,6 +793,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <td style="text-align: left;">Market</td>
 <td style="text-align: right;">8.5%</td>
 <td style="text-align: right;">1.15</td>
+<td style="text-align: right;">1.19</td>
 <td style="text-align: right;">1.46</td>
 <td style="text-align: right;">4.5%</td>
 </tr>
@@ -790,6 +802,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <td style="text-align: left;">Size (SMB)</td>
 <td style="text-align: right;">2.0%</td>
 <td style="text-align: right;">0.36</td>
+<td style="text-align: right;">0.35</td>
 <td style="text-align: right;">0.40</td>
 <td style="text-align: right;">-3.5%</td>
 </tr>
@@ -797,6 +810,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <td style="text-align: left;">FF3 + momentum</td>
 <td style="text-align: left;">Value (HML)</td>
 <td style="text-align: right;">-2.8%</td>
+<td style="text-align: right;">-0.65</td>
 <td style="text-align: right;">-0.65</td>
 <td style="text-align: right;">-0.79</td>
 <td style="text-align: right;">5.3%</td>
@@ -806,6 +820,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <td style="text-align: left;">Momentum (WML)</td>
 <td style="text-align: right;">6.9%</td>
 <td style="text-align: right;">0.91</td>
+<td style="text-align: right;">0.92</td>
 <td style="text-align: right;">1.01</td>
 <td style="text-align: right;">13.0%</td>
 </tr>
@@ -814,6 +829,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <td style="text-align: left;">Intercept γ₀ (zero-beta excess return)</td>
 <td style="text-align: right;">1.8%</td>
 <td style="text-align: right;">0.42</td>
+<td style="text-align: right;">0.39</td>
 <td style="text-align: right;">0.45</td>
 <td style="text-align: right;">0 (model)</td>
 </tr>
@@ -822,6 +838,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <td style="text-align: left;">Market</td>
 <td style="text-align: right;">9.2%</td>
 <td style="text-align: right;">1.20</td>
+<td style="text-align: right;">1.21</td>
 <td style="text-align: right;">1.55</td>
 <td style="text-align: right;">4.5%</td>
 </tr>
@@ -829,6 +846,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <td style="text-align: left;">Fama–French 5</td>
 <td style="text-align: left;">Size (SMB)</td>
 <td style="text-align: right;">0.5%</td>
+<td style="text-align: right;">0.10</td>
 <td style="text-align: right;">0.10</td>
 <td style="text-align: right;">0.11</td>
 <td style="text-align: right;">-2.5%</td>
@@ -838,6 +856,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <td style="text-align: left;">Value (HML)</td>
 <td style="text-align: right;">-6.5%</td>
 <td style="text-align: right;">-1.51</td>
+<td style="text-align: right;">-1.45</td>
 <td style="text-align: right;">-1.91</td>
 <td style="text-align: right;">5.3%</td>
 </tr>
@@ -846,6 +865,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <td style="text-align: left;">Profitability (RMW)</td>
 <td style="text-align: right;">-0.7%</td>
 <td style="text-align: right;">-0.16</td>
+<td style="text-align: right;">-0.17</td>
 <td style="text-align: right;">-0.19</td>
 <td style="text-align: right;">5.2%</td>
 </tr>
@@ -854,6 +874,7 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <td style="text-align: left;">Investment (CMA)</td>
 <td style="text-align: right;">-7.6%</td>
 <td style="text-align: right;">-2.23</td>
+<td style="text-align: right;">-2.22</td>
 <td style="text-align: right;">-2.73</td>
 <td style="text-align: right;">1.6%</td>
 </tr>
@@ -867,6 +888,86 @@ Table&nbsp;3: Fama–MacBeth risk premia (annualised) with Shanken-corrected t-s
 <p><strong>The CAPM cross-section.</strong> The price of beta is 7.1% a year, against a market premium of 4.5% over the same months. The gap (+2.6% a year, t = 0.60) is not significant. The intercept, the excess return of a zero-beta portfolio, is 2.2% a year (Shanken t = 0.54), also indistinguishable from zero. The GLS cross-sectional regression agrees: an intercept of 1.3% (t = 0.51) and a beta premium of 9.5% (t = 1.88). Put simply, the higher-beta half of the sample earned 11.0% a year in excess of T-bills and the lower-beta half 6.8%.</p>
 <p>This <strong>overturns the earlier ASX-only result.</strong> A 16-stock ASX study, measured against an equal-weighted proxy, found a flat security market line, which pointed to Black’s zero-beta CAPM and the “betting against beta” anomaly. With three markets, USD returns and a proper regional market factor, the evidence is instead consistent with the standard Sharpe–Lintner CAPM: zero intercept, slope near the market premium. The honest caveat is power. With 51 stocks and 15 years, the beta premium is not significantly different from zero either (t = 0.94), so the data cannot reject a flat line strongly.</p>
 <p><strong>The multi-factor cross-sections</strong> do not line up with the factors’ own returns. Value (HML) earned 5.3% a year as a factor, but its price among these stocks is negative in every specification. Investment (CMA) gets a significantly <em>negative</em> price in the five-factor model (-7.6%, Shanken t = -2.23), against a factor mean of 1.6%. The factors are built from all listed stocks in the region, small caps included, and their premia do not show up across 51 large caps.</p>
+</section>
+<section id="robustness-the-neweywest-lag" class="level3">
+<h3 class="anchored" data-anchor-id="robustness-the-neweywest-lag">Robustness: the Newey–West lag</h3>
+<div class="cell">
+<details class="code-fold">
+<summary>Show code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>lag_check <span class="ot">&lt;-</span> <span class="fu">expand_grid</span>(<span class="at">lag =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">4</span>, <span class="dv">6</span>, <span class="dv">12</span>), <span class="at">model =</span> <span class="fu">names</span>(models)) <span class="sc">|&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">n_sig =</span> <span class="fu">map2_int</span>(lag, model, <span class="cf">function</span>(L, nm) {</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    F <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(Fac[, models[[nm]]])</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    p <span class="ot">&lt;-</span> <span class="fu">map_dbl</span>(<span class="fu">seq_len</span>(N_), <span class="cf">function</span>(j) {</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>      fj <span class="ot">&lt;-</span> <span class="fu">ols_matrix</span>(Y[, j], <span class="fu">cbind</span>(<span class="dv">1</span>, F)); <span class="fu">coef_table</span>(fj, <span class="fu">hac_vcov</span>(fj, L))<span class="sc">$</span>p[<span class="dv">1</span>]</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    })</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sum</span>(<span class="fu">p.adjust</span>(p, <span class="st">"BH"</span>) <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  }))</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">all</span>(lag_check <span class="sc">|&gt;</span> <span class="fu">filter</span>(lag <span class="sc">==</span> nw_lag) <span class="sc">|&gt;</span> <span class="fu">pull</span>(n_sig) <span class="sc">==</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>              <span class="fu">map_int</span>(ts_res, \(r) <span class="fu">sum</span>(<span class="fu">p.adjust</span>(r<span class="sc">$</span>p_alpha, <span class="st">"BH"</span>) <span class="sc">&lt;</span> <span class="fl">0.05</span>))))</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>lag_check <span class="sc">|&gt;</span> <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> model, <span class="at">values_from =</span> n_sig) <span class="sc">|&gt;</span> <span class="fu">rename</span>(<span class="st">`</span><span class="at">NW lag</span><span class="st">`</span> <span class="ot">=</span> lag) <span class="sc">|&gt;</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"rrrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div id="tbl-lag-check" class="cell quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-lag-check-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;4: Stocks (of 51) whose Newey–West alpha survives a Benjamini–Hochberg correction at 5%, by truncation lag. The main analysis uses 4 lags. The GRS test does not use HAC errors.
+</figcaption>
+<div aria-describedby="tbl-lag-check-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: right;">NW lag</th>
+<th style="text-align: right;">CAPM</th>
+<th style="text-align: right;">Fama–French 3</th>
+<th style="text-align: right;">FF3 + momentum</th>
+<th style="text-align: right;">Fama–French 5</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">1</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>Across 0 to 12 lags, at most 4 of 51 alphas are individually significant after the correction under any model. The rejections come from the joint GRS test and the one-sided pattern of the alphas, not from a few large ones.</p>
 </section>
 </section>
 <section id="limitations" class="level2">
