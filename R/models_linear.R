@@ -108,6 +108,44 @@ grs_test <- function(Y, F) {
        sharpe_tangency = sqrt(quad_a + quad_f))
 }
 
+#' Circular moving-block bootstrap: row indices for one resample of length n.
+block_index <- function(n, block) {
+  starts <- sample.int(n, ceiling(n / block), replace = TRUE)
+  idx <- as.vector(outer(0:(block - 1), starts, `+`))[seq_len(n)]
+  (idx - 1) %% n + 1
+}
+
+#' Bootstrap GRS test with the null imposed.
+#'
+#' Builds null data Y* = F* B' + E* (alphas set to zero) by resampling blocks
+#' of whole months of factors and residuals together. That keeps serial
+#' dependence and volatility clustering within blocks, the cross-sectional
+#' dependence of the residuals, and non-normal tails. The p-value is the share
+#' of bootstrap GRS statistics at least as large as the observed one.
+#'
+#' @param n_boot bootstrap replications; @param block block length (months).
+grs_bootstrap <- function(Y, F, n_boot = 1999, block = 6) {
+  Y <- as.matrix(Y); F <- as.matrix(F)
+  g <- grs_test(Y, F)
+  E <- Y - cbind(1, F) %*% rbind(g$alpha, g$betas)
+  B <- g$betas                                                # K x N
+  # A resample needs more distinct months than N + K + 1, otherwise the
+  # residual covariance is singular and GRS is undefined; such draws are redrawn.
+  min_rows <- ncol(Y) + ncol(F) + 2
+  n_redraw <- 0
+  stat_b <- replicate(n_boot, {
+    repeat {
+      i <- block_index(nrow(Y), block)
+      if (length(unique(i)) >= min_rows) break
+      n_redraw <<- n_redraw + 1
+    }
+    Fb <- F[i, , drop = FALSE]
+    grs_test(Fb %*% B + E[i, , drop = FALSE], Fb)$stat
+  })
+  list(stat = g$stat, p_f = g$p, p_boot = (1 + sum(stat_b >= g$stat)) / (n_boot + 1),
+       stat_boot = stat_b, block = block, n_redraw = n_redraw)
+}
+
 #' Fama-MacBeth (1973) two-pass cross-sectional regressions.
 #'
 #' Pass 1: full-sample time-series betas of each asset on the factors.
@@ -206,4 +244,30 @@ sur_fit <- function(ys, Xs) {
   names(b) <- colnames(X)
   R <- matrix(y - X %*% b, T_, M, dimnames = list(NULL, eq))
   list(coef = b, vcov = A, Sigma = Sigma, resid = R, df = M * T_ - length(b), X = X)
+}
+
+#' System Newey-West covariance for equation-by-equation OLS coefficients.
+#'
+#' Stacks each month's scores across equations, u_t = (x_1t e_1t, ..., x_Mt e_Mt),
+#' and takes their Bartlett-kernel long-run variance. That allows for
+#' heteroskedasticity, serial correlation, and correlation across equations at
+#' all lags up to `lag`:
+#'   V = blockdiag((X_m'X_m)^-1) S blockdiag((X_m'X_m)^-1).
+#' The coefficients are the OLS ones. They equal SUR's when every equation has
+#' the same regressors, and the function checks that this holds.
+#'
+#' @param fit result of sur_fit(); @param Xs the same list of design matrices.
+sur_hac_vcov <- function(fit, Xs, lag) {
+  M <- length(Xs); T_ <- nrow(as.matrix(Xs[[1]]))
+  stopifnot(all(vapply(Xs, \(X) isTRUE(all.equal(unname(as.matrix(X)), unname(as.matrix(Xs[[1]])))), logical(1))))
+  U <- do.call(cbind, lapply(seq_len(M), function(m) as.matrix(Xs[[m]]) * fit$resid[, m]))
+  S <- crossprod(U)
+  if (lag > 0) for (l in seq_len(lag)) {
+    G <- crossprod(U[(l + 1):T_, , drop = FALSE], U[1:(T_ - l), , drop = FALSE])
+    S <- S + (1 - l / (lag + 1)) * (G + t(G))
+  }
+  bread <- as.matrix(Matrix::bdiag(lapply(Xs, \(X) solve(crossprod(as.matrix(X))))))
+  V <- bread %*% S %*% bread
+  dimnames(V) <- list(names(fit$coef), names(fit$coef))
+  V
 }

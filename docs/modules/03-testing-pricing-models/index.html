@@ -219,7 +219,7 @@ window.Quarto = {
   <li><a href="#method" id="toc-method" class="nav-link" data-scroll-target="#method">Method</a></li>
   <li><a href="#results" id="toc-results" class="nav-link" data-scroll-target="#results">Results</a>
   <ul class="collapse">
-  <li><a href="#time-series-tests-all-four-models-are-rejected" id="toc-time-series-tests-all-four-models-are-rejected" class="nav-link" data-scroll-target="#time-series-tests-all-four-models-are-rejected">Time-series tests: all four models are rejected</a></li>
+  <li><a href="#time-series-tests-rejected-by-the-f-test-less-clearly-by-the-bootstrap" id="toc-time-series-tests-rejected-by-the-f-test-less-clearly-by-the-bootstrap" class="nav-link" data-scroll-target="#time-series-tests-rejected-by-the-f-test-less-clearly-by-the-bootstrap">Time-series tests: rejected by the F test, less clearly by the bootstrap</a></li>
   <li><a href="#cross-sectional-tests-beta-is-priced-the-other-factors-are-not" id="toc-cross-sectional-tests-beta-is-priced-the-other-factors-are-not" class="nav-link" data-scroll-target="#cross-sectional-tests-beta-is-priced-the-other-factors-are-not">Cross-sectional tests: beta is priced; the other factors are not</a></li>
   <li><a href="#robustness-the-neweywest-lag" id="toc-robustness-the-neweywest-lag" class="nav-link" data-scroll-target="#robustness-the-neweywest-lag">Robustness: the Newey–West lag</a></li>
   </ul></li>
@@ -321,15 +321,21 @@ window.Quarto = {
 <span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>       <span class="at">realised =</span> <span class="fu">colMeans</span>(Y))</span>
 <span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>})</span>
 <span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>grs_tbl <span class="ot">&lt;-</span> <span class="fu">imap_dfr</span>(ts_res, <span class="cf">function</span>(r, nm) <span class="fu">tibble</span>(</span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">Model =</span> nm, <span class="at">Factors =</span> <span class="fu">length</span>(models[[nm]]),</span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">GRS F</span><span class="st">`</span> <span class="ot">=</span> r<span class="sc">$</span>grs<span class="sc">$</span>stat, <span class="at">p =</span> r<span class="sc">$</span>grs<span class="sc">$</span>p,</span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Mean |α| (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">12</span> <span class="sc">*</span> <span class="fu">mean</span>(<span class="fu">abs</span>(r<span class="sc">$</span>alpha)),</span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">RMS α (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">12</span> <span class="sc">*</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>(r<span class="sc">$</span>alpha<span class="sc">^</span><span class="dv">2</span>)),</span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Alphas sig. (BH 5%)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">sum</span>(<span class="fu">p.adjust</span>(r<span class="sc">$</span>p_alpha, <span class="st">"BH"</span>) <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Mean R²</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">mean</span>(r<span class="sc">$</span>r2),</span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Sharpe: factors</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">sqrt</span>(<span class="dv">12</span>) <span class="sc">*</span> r<span class="sc">$</span>grs<span class="sc">$</span>sharpe_factors,</span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Sharpe: tangency</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">sqrt</span>(<span class="dv">12</span>) <span class="sc">*</span> r<span class="sc">$</span>grs<span class="sc">$</span>sharpe_tangency))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Bootstrap GRS with alphas set to zero: 6-month blocks of factors and residuals</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co"># resampled together (keeps serial, cross-sectional and fat-tailed dependence)</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">303</span>)</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>grs_bs <span class="ot">&lt;-</span> <span class="fu">map</span>(models, \(f) <span class="fu">grs_bootstrap</span>(Y, <span class="fu">as.matrix</span>(Fac[, f]), <span class="at">n_boot =</span> <span class="dv">1999</span>, <span class="at">block =</span> <span class="dv">6</span>))</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>grs_bs12 <span class="ot">&lt;-</span> <span class="fu">map</span>(models, \(f) <span class="fu">grs_bootstrap</span>(Y, <span class="fu">as.matrix</span>(Fac[, f]), <span class="at">n_boot =</span> <span class="dv">1999</span>, <span class="at">block =</span> <span class="dv">12</span>))</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>p_bs12 <span class="ot">&lt;-</span> <span class="fu">map_dbl</span>(grs_bs12, <span class="st">"p_boot"</span>)</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>grs_tbl <span class="ot">&lt;-</span> <span class="fu">imap_dfr</span>(ts_res, <span class="cf">function</span>(r, nm) <span class="fu">tibble</span>(</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">Model =</span> nm, <span class="at">Factors =</span> <span class="fu">length</span>(models[[nm]]),</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">GRS F</span><span class="st">`</span> <span class="ot">=</span> r<span class="sc">$</span>grs<span class="sc">$</span>stat, <span class="at">p =</span> r<span class="sc">$</span>grs<span class="sc">$</span>p, <span class="st">`</span><span class="at">p (bootstrap)</span><span class="st">`</span> <span class="ot">=</span> grs_bs[[nm]]<span class="sc">$</span>p_boot,</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Mean |α| (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">12</span> <span class="sc">*</span> <span class="fu">mean</span>(<span class="fu">abs</span>(r<span class="sc">$</span>alpha)),</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">RMS α (p.a.)</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">12</span> <span class="sc">*</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>(r<span class="sc">$</span>alpha<span class="sc">^</span><span class="dv">2</span>)),</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Alphas sig. (BH 5%)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">sum</span>(<span class="fu">p.adjust</span>(r<span class="sc">$</span>p_alpha, <span class="st">"BH"</span>) <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Mean R²</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">mean</span>(r<span class="sc">$</span>r2),</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Sharpe: factors</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">sqrt</span>(<span class="dv">12</span>) <span class="sc">*</span> r<span class="sc">$</span>grs<span class="sc">$</span>sharpe_factors,</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Sharpe: tangency</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">sqrt</span>(<span class="dv">12</span>) <span class="sc">*</span> r<span class="sc">$</span>grs<span class="sc">$</span>sharpe_tangency))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <div class="cell">
@@ -384,7 +390,7 @@ window.Quarto = {
 </div>
 <div class="callout-body-container callout-body">
 <ul>
-<li><strong>Every model is rejected, and mostly for the same reason.</strong> The GRS test rejects all four models jointly (p ≤ 0.005). But the pricing errors are one-sided: under the CAPM, 88% of stocks have a positive alpha, averaging 4.6% a year, in all three markets. That is consistent with a sample of survivors (today’s large caps beat what their risk predicted). This sample cannot rule out a missing factor, though.</li>
+<li><strong>The classic test rejects every model; a robust version only just rejects the simpler two.</strong> The exact GRS F test rejects all four models jointly (p ≤ 0.005). A bootstrap that allows for fat tails and serial dependence rejects the CAPM and Fama–French 3 at 5% (p = 0.029 and 0.025), though only borderline with longer blocks. For the four- and five-factor models it gives only marginal evidence (p = 0.07 and 0.08). Whatever the test, the pricing errors are one-sided: under the CAPM, 88% of stocks have a positive alpha, averaging 4.6% a year, in all three markets. That is consistent with a sample of survivors (today’s large caps beat what their risk predicted). This sample cannot rule out a missing factor, though.</li>
 <li><strong>Extra factors explain more variance but price no better.</strong> The Fama–French factors raise the average R² from 40% (CAPM) to 47%. But the root-mean-square alpha is lowest for the CAPM itself (6.7% a year, against 7.2%–7.7% for the multi-factor models).</li>
 <li><strong>Beta is rewarded in the cross-section, roughly as the CAPM says.</strong> In Fama–MacBeth regressions the price of beta is 7.1% a year, against a realised market premium of 4.5%, and the zero-beta intercept of 2.2% is insignificant (t = 0.54). The flat security market line found earlier in a 16-stock ASX sample does not survive three markets and proper factors. The test has little power, though: the beta premium itself has t = 0.94.</li>
 <li><strong>So what:</strong> for cost-of-capital work on APAC large caps, the regional Fama–French factors do not earn their extra complexity. A CAPM beta (Module 01) is as defensible as any model tested here, provided the uncertainty is stated: a 95% interval on the regional market premium over these 15 years is 4.5% ± 8.5% a year.</li>
@@ -525,42 +531,44 @@ Table&nbsp;1: Factor premia over the sample: average monthly return, annualised,
 <p><span class="math display">\[
 \text{GRS} = \frac{T}{N}\,\frac{T-N-K}{T-K-1}\;\frac{\hat{\boldsymbol\alpha}'\hat{\boldsymbol\Sigma}^{-1}\hat{\boldsymbol\alpha}}{1 + \bar{\mathbf f}'\hat{\boldsymbol\Omega}^{-1}\bar{\mathbf f}} \;\sim\; F_{N,\;T-N-K}.
 \]</span></p>
-<p>It has a useful reading in terms of Sharpe ratios. GRS is large when the best portfolio of the test assets <em>and</em> the factors (the tangency portfolio) has a much higher Sharpe ratio than the factors alone.</p>
+<p>It has a useful reading in terms of Sharpe ratios. GRS is large when the best portfolio of the test assets <em>and</em> the factors (the tangency portfolio) has a much higher Sharpe ratio than the factors alone. The F distribution is exact only for iid normal returns. So each statistic is also compared with a bootstrap null. The model is refitted, its alphas are set to zero, and 1,999 samples are built as <span class="math inline">\(\mathbf Y^* = \mathbf F^*\hat{\mathbf B}' + \mathbf E^*\)</span>. Each sample draws random 6-month blocks of months, taking the factors and all 51 residuals from the same months. This keeps fat tails, volatility clustering, short-run serial dependence and the residuals’ cross-correlation. The p-value is the share of bootstrap statistics at least as large as the observed one.</p>
 <p><strong>Cross section.</strong> Fama–MacBeth two-pass regressions. Pass 1 estimates each stock’s betas over the full sample. Pass 2 regresses each month’s excess returns on those betas, <span class="math inline">\(r_{i,t} = \gamma_{0,t} + \boldsymbol\beta_i'\boldsymbol\gamma_t + \eta_{i,t}\)</span>, and averages the slopes. Standard errors use the Shanken (1992) correction for the fact that the betas are estimated. Because the monthly slopes can be serially correlated, the table also shows Shanken errors built on a Newey–West (4-lag) variance of the slopes. No conclusion changes. If a model holds, <span class="math inline">\(\gamma_0 = 0\)</span> and each premium equals its factor’s mean return. A positive <span class="math inline">\(\gamma_0\)</span> with a beta premium below the market premium is the zero-beta (Black, 1972) CAPM. A GLS version of the cross-sectional regression, weighting by the inverse residual covariance, is reported for the CAPM as a check.</p>
 </section>
 <section id="results" class="level2">
 <h2 class="anchored" data-anchor-id="results">Results</h2>
-<section id="time-series-tests-all-four-models-are-rejected" class="level3">
-<h3 class="anchored" data-anchor-id="time-series-tests-all-four-models-are-rejected">Time-series tests: all four models are rejected</h3>
+<section id="time-series-tests-rejected-by-the-f-test-less-clearly-by-the-bootstrap" class="level3">
+<h3 class="anchored" data-anchor-id="time-series-tests-rejected-by-the-f-test-less-clearly-by-the-bootstrap">Time-series tests: rejected by the F test, less clearly by the bootstrap</h3>
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>grs_tbl <span class="sc">|&gt;</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="st">`</span><span class="at">GRS F</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(<span class="st">`</span><span class="at">GRS F</span><span class="st">`</span>), <span class="at">p =</span> <span class="fu">formatC</span>(p, <span class="at">format =</span> <span class="st">"g"</span>, <span class="at">digits =</span> <span class="dv">2</span>),</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>         <span class="fu">across</span>(<span class="fu">c</span>(<span class="st">`</span><span class="at">Mean |α| (p.a.)</span><span class="st">`</span>, <span class="st">`</span><span class="at">RMS α (p.a.)</span><span class="st">`</span>), \(x) <span class="fu">pct</span>(x)),</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">Mean R²</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="st">`</span><span class="at">Mean R²</span><span class="st">`</span>, <span class="dv">0</span>),</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>         <span class="fu">across</span>(<span class="fu">starts_with</span>(<span class="st">"Sharpe"</span>), \(x) <span class="fu">num</span>(x))) <span class="sc">|&gt;</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"lrrrrrrrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">p (bootstrap)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">formatC</span>(<span class="st">`</span><span class="at">p (bootstrap)</span><span class="st">`</span>, <span class="at">format =</span> <span class="st">"g"</span>, <span class="at">digits =</span> <span class="dv">2</span>),</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>         <span class="fu">across</span>(<span class="fu">c</span>(<span class="st">`</span><span class="at">Mean |α| (p.a.)</span><span class="st">`</span>, <span class="st">`</span><span class="at">RMS α (p.a.)</span><span class="st">`</span>), \(x) <span class="fu">pct</span>(x)),</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">Mean R²</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">pct</span>(<span class="st">`</span><span class="at">Mean R²</span><span class="st">`</span>, <span class="dv">0</span>),</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>         <span class="fu">across</span>(<span class="fu">starts_with</span>(<span class="st">"Sharpe"</span>), \(x) <span class="fu">num</span>(x))) <span class="sc">|&gt;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"lrrrrrrrrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div id="tbl-grs" class="cell quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
 <figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-grs-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Table&nbsp;2: Time-series tests on 51 stocks. Alphas annualised. ‘Alphas sig.’ counts stocks whose Newey–West alpha p-value survives a Benjamini–Hochberg correction. Sharpe ratios annualised.
+Table&nbsp;2: Time-series tests on 51 stocks. Alphas annualised. ‘p’ is the exact F test, which assumes iid normal returns. ‘p (bootstrap)’ imposes zero alphas and resamples 6-month blocks of factors and residuals (1,999 draws), so it allows for fat tails, volatility clustering and serial dependence. ‘Alphas sig.’ counts stocks whose Newey–West alpha p-value survives a Benjamini–Hochberg correction. Sharpe ratios annualised.
 </figcaption>
 <div aria-describedby="tbl-grs-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <div class="cell-output-display">
 <table class="do-not-create-environment cell caption-top table table-sm table-striped small">
 <colgroup>
-<col style="width: 10%">
-<col style="width: 5%">
-<col style="width: 4%">
-<col style="width: 5%">
-<col style="width: 18%">
 <col style="width: 9%">
-<col style="width: 14%">
 <col style="width: 5%">
+<col style="width: 3%">
+<col style="width: 5%">
+<col style="width: 9%">
+<col style="width: 17%">
+<col style="width: 8%">
+<col style="width: 13%">
+<col style="width: 5%">
+<col style="width: 10%">
 <col style="width: 11%">
-<col style="width: 12%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -568,6 +576,7 @@ Table&nbsp;2: Time-series tests on 51 stocks. Alphas annualised. ‘Alphas sig.�
 <th style="text-align: right;">Factors</th>
 <th style="text-align: right;">GRS F</th>
 <th style="text-align: right;">p</th>
+<th style="text-align: right;">p (bootstrap)</th>
 <th style="text-align: right;">Mean |α| (p.a.)</th>
 <th style="text-align: right;">RMS α (p.a.)</th>
 <th style="text-align: right;">Alphas sig. (BH 5%)</th>
@@ -582,6 +591,7 @@ Table&nbsp;2: Time-series tests on 51 stocks. Alphas annualised. ‘Alphas sig.�
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">1.99</td>
 <td style="text-align: right;">0.001</td>
+<td style="text-align: right;">0.029</td>
 <td style="text-align: right;">5.5%</td>
 <td style="text-align: right;">6.7%</td>
 <td style="text-align: right;">0</td>
@@ -594,6 +604,7 @@ Table&nbsp;2: Time-series tests on 51 stocks. Alphas annualised. ‘Alphas sig.�
 <td style="text-align: right;">3</td>
 <td style="text-align: right;">2.21</td>
 <td style="text-align: right;">0.00019</td>
+<td style="text-align: right;">0.025</td>
 <td style="text-align: right;">5.2%</td>
 <td style="text-align: right;">7.2%</td>
 <td style="text-align: right;">4</td>
@@ -606,6 +617,7 @@ Table&nbsp;2: Time-series tests on 51 stocks. Alphas annualised. ‘Alphas sig.�
 <td style="text-align: right;">4</td>
 <td style="text-align: right;">1.78</td>
 <td style="text-align: right;">0.0052</td>
+<td style="text-align: right;">0.074</td>
 <td style="text-align: right;">5.6%</td>
 <td style="text-align: right;">7.7%</td>
 <td style="text-align: right;">2</td>
@@ -618,6 +630,7 @@ Table&nbsp;2: Time-series tests on 51 stocks. Alphas annualised. ‘Alphas sig.�
 <td style="text-align: right;">5</td>
 <td style="text-align: right;">1.86</td>
 <td style="text-align: right;">0.0029</td>
+<td style="text-align: right;">0.08</td>
 <td style="text-align: right;">5.6%</td>
 <td style="text-align: right;">7.5%</td>
 <td style="text-align: right;">1</td>
@@ -679,7 +692,7 @@ Figure&nbsp;1: Realised vs model-predicted average excess return for each stock 
 <p><span class="math inline">\(\bar x_i\)</span> stock <span class="math inline">\(i\)</span>’s average monthly USD excess return · <span class="math inline">\(\hat{\boldsymbol\beta}_i\)</span> its factor loadings from the time-series regression <span class="math inline">\(x_{i,t} = \alpha_i + \boldsymbol\beta_i'\mathbf f_t + \varepsilon_{i,t}\)</span> · <span class="math inline">\(\bar{\mathbf f}\)</span> average factor returns (one per factor in the panel’s model) · <span class="math inline">\(\hat\alpha_i\)</span> pricing error, the vertical distance from the 45° line. Multiplying by 12 annualises.</p>
 </div>
 </div>
-<p>The GRS statistics reject every model. <a href="#fig-pred" class="quarto-xref">Figure&nbsp;1</a> shows the shape of the failure: points sit mostly <em>above</em> the 45° line under every model. The share of positive alphas ranges from 71% to 88% across the four models, and the mean alpha is positive in each market. A common upward shift is what <strong>survivorship</strong> would produce: the sample is today’s large caps, which are large partly <em>because</em> their returns beat what their risk exposures predicted. A missing factor that all these stocks load on positively could produce the same pattern, though. Telling the two apart needs a point-in-time universe that includes delisted firms.</p>
+<p>The exact GRS F test rejects every model, but its F distribution assumes iid normal returns. The bootstrap drops that assumption, and its p-values are one to two orders of magnitude larger: 0.025–0.08 with 6-month blocks, and 0.048–0.11 with 12-month blocks. With 6-month blocks, the CAPM and Fama–French 3 are still rejected at 5%. With 12-month blocks they sit on the line (p = 0.054 and 0.048). The two richer models are not rejected at 5% under either. The evidence that these models misprice the sample is real but moderate, not overwhelming. <a href="#fig-pred" class="quarto-xref">Figure&nbsp;1</a> shows the shape of the failure: points sit mostly <em>above</em> the 45° line under every model. The share of positive alphas ranges from 71% to 88% across the four models, and the mean alpha is positive in each market. A common upward shift is what <strong>survivorship</strong> would produce: the sample is today’s large caps, which are large partly <em>because</em> their returns beat what their risk exposures predicted. A missing factor that all these stocks load on positively could produce the same pattern, though. Telling the two apart needs a point-in-time universe that includes delisted firms.</p>
 <p>The Sharpe-ratio columns need care. The “tangency” Sharpe ratio is the best in-sample combination of 51 stocks and the factors. With that many assets it is heavily overfitted, which is exactly why GRS is a formal test rather than a comparison of these two numbers.</p>
 <p>Adding factors changes the picture surprisingly little. The multi-factor models raise R², so they track month-to-month movements better. But their alphas are not smaller: the CAPM has the lowest root-mean-square alpha of the four. Size, value, momentum, profitability and investment exposures among these large caps do not line up with the gaps between their realised and CAPM-predicted returns.</p>
 </section>
@@ -967,13 +980,13 @@ Table&nbsp;4: Stocks (of 51) whose Newey–West alpha survives a Benjamini–Hoc
 </figure>
 </div>
 </div>
-<p>Across 0 to 12 lags, at most 4 of 51 alphas are individually significant after the correction under any model. The rejections come from the joint GRS test and the one-sided pattern of the alphas, not from a few large ones.</p>
+<p>Across 0 to 12 lags, at most 4 of 51 alphas are individually significant after the correction under any model. What evidence against the models there is comes from the joint test and the one-sided pattern of the alphas, not from a few large ones.</p>
 </section>
 </section>
 <section id="limitations" class="level2">
 <h2 class="anchored" data-anchor-id="limitations">Limitations</h2>
 <ul>
-<li><strong>Survivorship bias.</strong> The test assets are today’s large caps. This biases alphas upward for every model, so the GRS rejections overstate how badly the models price the <em>typical</em> APAC stock. A clean test needs the full historical constituent list, including delistings (a target for Module 02).</li>
+<li><strong>Survivorship bias.</strong> The test assets are today’s large caps. This biases alphas upward for every model, so the GRS statistics overstate how badly the models price the <em>typical</em> APAC stock. A clean test needs the full historical constituent list, including delistings (a target for Module 02).</li>
 <li><strong>Individual stocks as test assets.</strong> Single stocks have noisy betas and returns. Portfolios sorted on characteristics (size, value, beta) are the standard test assets and give sharper tests, but need fundamentals data for this region.</li>
 <li><strong>Regional factors, local stocks.</strong> The French factors cover the whole Asia Pacific ex-Japan region, while each stock also moves with its own market and currency. Market-specific factors (Module 05) would be a fairer comparison.</li>
 <li><strong>Sample end.</strong> The archived factor files end in December 2025, nine months before the rest of the dataset.</li>

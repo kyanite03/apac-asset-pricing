@@ -65,9 +65,15 @@ ts_res <- imap(models, function(f, nm) {
        realised = colMeans(Y))
 })
 
+# Bootstrap GRS with alphas set to zero: 6-month blocks of factors and residuals
+# resampled together (keeps serial, cross-sectional and fat-tailed dependence)
+set.seed(303)
+grs_bs <- map(models, \(f) grs_bootstrap(Y, as.matrix(Fac[, f]), n_boot = 1999, block = 6))
+grs_bs12 <- map(models, \(f) grs_bootstrap(Y, as.matrix(Fac[, f]), n_boot = 1999, block = 12))
+p_bs12 <- map_dbl(grs_bs12, "p_boot")
 grs_tbl <- imap_dfr(ts_res, function(r, nm) tibble(
   Model = nm, Factors = length(models[[nm]]),
-  `GRS F` = r$grs$stat, p = r$grs$p,
+  `GRS F` = r$grs$stat, p = r$grs$p, `p (bootstrap)` = grs_bs[[nm]]$p_boot,
   `Mean |α| (p.a.)` = 12 * mean(abs(r$alpha)),
   `RMS α (p.a.)` = 12 * sqrt(mean(r$alpha^2)),
   `Alphas sig. (BH 5%)` = sum(p.adjust(r$p_alpha, "BH") < 0.05),
@@ -119,7 +125,7 @@ hi_lo <- c(lo = mean(mu[b_capm < median(b_capm)]), hi = mean(mu[b_capm >= median
 ```
 
 ::: {.callout-tip title="Answer first"}
-- **Every model is rejected, and mostly for the same reason.** The GRS test rejects all four models jointly (p ≤ `r num(max(grs_tbl$p), 3)`). But the pricing errors are one-sided: under the CAPM, `r pct(capm_pos, 0)` of stocks have a positive alpha, averaging `r pct(capm_mean_alpha)` a year, in all three markets. That is consistent with a sample of survivors (today's large caps beat what their risk predicted). This sample cannot rule out a missing factor, though.
+- **The classic test rejects every model; a robust version only just rejects the simpler two.** The exact GRS F test rejects all four models jointly (p ≤ `r num(max(grs_tbl$p), 3)`). A bootstrap that allows for fat tails and serial dependence rejects the CAPM and Fama–French 3 at 5% (p = `r num(grs_tbl$"p (bootstrap)"[1], 3)` and `r num(grs_tbl$"p (bootstrap)"[2], 3)`), though only borderline with longer blocks. For the four- and five-factor models it gives only marginal evidence (p = `r num(grs_tbl$"p (bootstrap)"[3], 2)` and `r num(grs_tbl$"p (bootstrap)"[4], 2)`). Whatever the test, the pricing errors are one-sided: under the CAPM, `r pct(capm_pos, 0)` of stocks have a positive alpha, averaging `r pct(capm_mean_alpha)` a year, in all three markets. That is consistent with a sample of survivors (today's large caps beat what their risk predicted). This sample cannot rule out a missing factor, though.
 - **Extra factors explain more variance but price no better.** The Fama–French factors raise the average R² from `r pct(capm_row$"Mean R²", 0)` (CAPM) to `r pct(max(grs_tbl$"Mean R²"), 0)`. But the root-mean-square alpha is lowest for the CAPM itself (`r pct(capm_row$"RMS α (p.a.)")` a year, against `r pct(min(grs_tbl$"RMS α (p.a.)"[-1]))`–`r pct(max(grs_tbl$"RMS α (p.a.)"[-1]))` for the multi-factor models).
 - **Beta is rewarded in the cross-section, roughly as the CAPM says.** In Fama–MacBeth regressions the price of beta is `r pct(12 * g1$estimate)` a year, against a realised market premium of `r pct(12 * mkt_mean)`, and the zero-beta intercept of `r pct(12 * g0$estimate)` is insignificant (t = `r num(g0$t_shanken)`). The flat security market line found earlier in a 16-stock ASX sample does not survive three markets and proper factors. The test has little power, though: the beta premium itself has t = `r num(g1$t_shanken)`.
 - **So what:** for cost-of-capital work on APAC large caps, the regional Fama–French factors do not earn their extra complexity. A CAPM beta (Module 01) is as defensible as any model tested here, provided the uncertainty is stated: a 95% interval on the regional market premium over these 15 years is `r pct(12 * mkt_mean)` ± `r pct(1.96 * sqrt(12) * sd(Fac$MKT) / sqrt(T_ / 12))` a year.
@@ -166,24 +172,25 @@ $$
 \text{GRS} = \frac{T}{N}\,\frac{T-N-K}{T-K-1}\;\frac{\hat{\boldsymbol\alpha}'\hat{\boldsymbol\Sigma}^{-1}\hat{\boldsymbol\alpha}}{1 + \bar{\mathbf f}'\hat{\boldsymbol\Omega}^{-1}\bar{\mathbf f}} \;\sim\; F_{N,\;T-N-K}.
 $$
 
-It has a useful reading in terms of Sharpe ratios. GRS is large when the best portfolio of the test assets *and* the factors (the tangency portfolio) has a much higher Sharpe ratio than the factors alone.
+It has a useful reading in terms of Sharpe ratios. GRS is large when the best portfolio of the test assets *and* the factors (the tangency portfolio) has a much higher Sharpe ratio than the factors alone. The F distribution is exact only for iid normal returns. So each statistic is also compared with a bootstrap null. The model is refitted, its alphas are set to zero, and 1,999 samples are built as $\mathbf Y^* = \mathbf F^*\hat{\mathbf B}' + \mathbf E^*$. Each sample draws random 6-month blocks of months, taking the factors and all 51 residuals from the same months. This keeps fat tails, volatility clustering, short-run serial dependence and the residuals' cross-correlation. The p-value is the share of bootstrap statistics at least as large as the observed one.
 
 **Cross section.** Fama–MacBeth two-pass regressions. Pass 1 estimates each stock's betas over the full sample. Pass 2 regresses each month's excess returns on those betas, $r_{i,t} = \gamma_{0,t} + \boldsymbol\beta_i'\boldsymbol\gamma_t + \eta_{i,t}$, and averages the slopes. Standard errors use the Shanken (1992) correction for the fact that the betas are estimated. Because the monthly slopes can be serially correlated, the table also shows Shanken errors built on a Newey–West (4-lag) variance of the slopes. No conclusion changes. If a model holds, $\gamma_0 = 0$ and each premium equals its factor's mean return. A positive $\gamma_0$ with a beta premium below the market premium is the zero-beta (Black, 1972) CAPM. A GLS version of the cross-sectional regression, weighting by the inverse residual covariance, is reported for the CAPM as a check.
 
 ## Results
 
-### Time-series tests: all four models are rejected
+### Time-series tests: rejected by the F test, less clearly by the bootstrap
 
 ```{r}
 #| label: tbl-grs
-#| tbl-cap: "Time-series tests on 51 stocks. Alphas annualised. 'Alphas sig.' counts stocks whose Newey–West alpha p-value survives a Benjamini–Hochberg correction. Sharpe ratios annualised."
+#| tbl-cap: "Time-series tests on 51 stocks. Alphas annualised. 'p' is the exact F test, which assumes iid normal returns. 'p (bootstrap)' imposes zero alphas and resamples 6-month blocks of factors and residuals (1,999 draws), so it allows for fat tails, volatility clustering and serial dependence. 'Alphas sig.' counts stocks whose Newey–West alpha p-value survives a Benjamini–Hochberg correction. Sharpe ratios annualised."
 
 grs_tbl |>
   mutate(`GRS F` = num(`GRS F`), p = formatC(p, format = "g", digits = 2),
+         `p (bootstrap)` = formatC(`p (bootstrap)`, format = "g", digits = 2),
          across(c(`Mean |α| (p.a.)`, `RMS α (p.a.)`), \(x) pct(x)),
          `Mean R²` = pct(`Mean R²`, 0),
          across(starts_with("Sharpe"), \(x) num(x))) |>
-  kable(align = "lrrrrrrrrr")
+  kable(align = "lrrrrrrrrrr")
 ```
 
 ```{r}
@@ -226,7 +233,7 @@ $\bar x_i$ stock $i$'s average monthly USD excess return · $\hat{\boldsymbol\be
 :::
 :::
 
-The GRS statistics reject every model. @fig-pred shows the shape of the failure: points sit mostly *above* the 45° line under every model. The share of positive alphas ranges from `r pct(min(alpha_sign$share_pos), 0)` to `r pct(max(alpha_sign$share_pos), 0)` across the four models, and the mean alpha is positive in each market. A common upward shift is what **survivorship** would produce: the sample is today's large caps, which are large partly *because* their returns beat what their risk exposures predicted. A missing factor that all these stocks load on positively could produce the same pattern, though. Telling the two apart needs a point-in-time universe that includes delisted firms.
+The exact GRS F test rejects every model, but its F distribution assumes iid normal returns. The bootstrap drops that assumption, and its p-values are one to two orders of magnitude larger: `r num(min(grs_tbl$"p (bootstrap)"), 3)`–`r num(max(grs_tbl$"p (bootstrap)"), 2)` with 6-month blocks, and `r num(min(p_bs12), 3)`–`r num(max(p_bs12), 2)` with 12-month blocks. With 6-month blocks, the CAPM and Fama–French 3 are still rejected at 5%. With 12-month blocks they sit on the line (p = `r num(p_bs12[["CAPM"]], 3)` and `r num(p_bs12[["Fama–French 3"]], 3)`). The two richer models are not rejected at 5% under either. The evidence that these models misprice the sample is real but moderate, not overwhelming. @fig-pred shows the shape of the failure: points sit mostly *above* the 45° line under every model. The share of positive alphas ranges from `r pct(min(alpha_sign$share_pos), 0)` to `r pct(max(alpha_sign$share_pos), 0)` across the four models, and the mean alpha is positive in each market. A common upward shift is what **survivorship** would produce: the sample is today's large caps, which are large partly *because* their returns beat what their risk exposures predicted. A missing factor that all these stocks load on positively could produce the same pattern, though. Telling the two apart needs a point-in-time universe that includes delisted firms.
 
 The Sharpe-ratio columns need care. The "tangency" Sharpe ratio is the best in-sample combination of 51 stocks and the factors. With that many assets it is heavily overfitted, which is exactly why GRS is a formal test rather than a comparison of these two numbers.
 
@@ -273,11 +280,11 @@ lag_check |> pivot_wider(names_from = model, values_from = n_sig) |> rename(`NW 
   kable(align = "rrrrr")
 ```
 
-Across 0 to 12 lags, at most `r max(lag_check$n_sig)` of `r N_` alphas are individually significant after the correction under any model. The rejections come from the joint GRS test and the one-sided pattern of the alphas, not from a few large ones.
+Across 0 to 12 lags, at most `r max(lag_check$n_sig)` of `r N_` alphas are individually significant after the correction under any model. What evidence against the models there is comes from the joint test and the one-sided pattern of the alphas, not from a few large ones.
 
 ## Limitations
 
-- **Survivorship bias.** The test assets are today's large caps. This biases alphas upward for every model, so the GRS rejections overstate how badly the models price the *typical* APAC stock. A clean test needs the full historical constituent list, including delistings (a target for Module 02).
+- **Survivorship bias.** The test assets are today's large caps. This biases alphas upward for every model, so the GRS statistics overstate how badly the models price the *typical* APAC stock. A clean test needs the full historical constituent list, including delistings (a target for Module 02).
 - **Individual stocks as test assets.** Single stocks have noisy betas and returns. Portfolios sorted on characteristics (size, value, beta) are the standard test assets and give sharper tests, but need fundamentals data for this region.
 - **Regional factors, local stocks.** The French factors cover the whole Asia Pacific ex-Japan region, while each stock also moves with its own market and currency. Market-specific factors (Module 05) would be a fairer comparison.
 - **Sample end.** The archived factor files end in December 2025, nine months before the rest of the dataset.

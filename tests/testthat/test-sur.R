@@ -32,3 +32,21 @@ test_that("SUR matches systemfit (two-step FGLS, Sigma divisor T)", {
   expect_equal(unname(fit$coef), unname(coef(ref)), tolerance = 1e-8)
   expect_equal(unname(fit$vcov), unname(vcov(ref)), tolerance = 1e-8)
 })
+
+test_that("sur_hac_vcov's diagonal blocks equal each equation's own Newey-West covariance", {
+  set.seed(5)
+  T_ <- 200; x <- as.numeric(arima.sim(list(ar = 0.3), T_))
+  e <- matrix(rnorm(T_ * 3), T_, 3) %*% chol(matrix(c(1, .5, .3, .5, 1, .4, .3, .4, 1), 3))
+  X <- cbind(const = 1, x = x)
+  ys <- list(a = 0.1 + 0.8 * x + e[, 1], b = 0.9 * x + e[, 2], c = -0.1 + 1.1 * x + e[, 3])
+  Xs <- list(a = X, b = X, c = X)
+  fit <- sur_fit(ys, Xs)
+  V <- sur_hac_vcov(fit, Xs, lag = 4)
+  for (m in seq_along(ys)) {
+    ref <- sandwich::NeweyWest(lm(ys[[m]] ~ x), lag = 4, prewhite = FALSE, adjust = FALSE)
+    ix <- (2 * m - 1):(2 * m)
+    expect_equal(unname(V[ix, ix]), unname(ref), tolerance = 1e-8)
+  }
+  # Off-diagonal blocks pick up the cross-equation error correlation
+  expect_gt(V["a:x", "b:x"], 0)
+})

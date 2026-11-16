@@ -36,3 +36,16 @@ test_that("eigenportfolio weights have unit gross exposure", {
   W <- eigenportfolio_weights(pca_returns(Y), 3)
   expect_equal(unname(colSums(abs(W))), rep(1, 3))
 })
+
+test_that("block parallel analysis keeps serial dependence and recovers the factor count", {
+  set.seed(8)
+  T_ <- 240; N <- 30; K <- 2
+  F <- apply(matrix(rnorm(T_ * K), T_, K), 2, \(e) stats::filter(e, 0.5, "recursive"))
+  B <- matrix(rnorm(N * K), N, K)
+  E <- apply(matrix(rnorm(T_ * N), T_, N), 2, \(e) stats::filter(e, 0.5, "recursive"))
+  Y <- F %*% t(B) + E
+  pb <- parallel_analysis(Y, reps = 50, block = 12)
+  expect_equal(sum(pca_returns(Y)$values > pb), K)
+  # Each resampled column is a rearrangement of the original values
+  expect_length(pb, N)
+})

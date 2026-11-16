@@ -49,7 +49,7 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 
 ![Realised vs predicted average returns for 51 APAC large caps under four pricing models](modules/03-testing-pricing-models/figures/key_chart.png)
 
-- **All four models are rejected** (CAPM, Fama–French 3, FF3 + momentum, FF5; GRS p ≤ 0.005). But 88% of CAPM alphas are positive, averaging 4.6% a year. That pattern is consistent with survivorship bias, though this sample cannot separate it from a missing factor.
+- **The classic GRS F test rejects all four models** (CAPM, Fama–French 3, FF3 + momentum, FF5; p < 0.01). A block bootstrap that drops the iid-normal assumption rejects the CAPM and FF3 only narrowly (p ≈ 0.03 with 6-month blocks, ≈ 0.05 with 12-month blocks), and the four- and five-factor models not at 5% (p ≈ 0.07–0.11). But 88% of CAPM alphas are positive, averaging 4.6% a year. That pattern is consistent with survivorship bias, though this sample cannot separate it from a missing factor.
 - **Extra factors explain more variance but price no better.** R² rises from 40% to 47%, yet the CAPM has the smallest root-mean-square alpha.
 - **Beta is priced roughly as the CAPM says** (7.1% a year vs a 4.5% market premium, with an insignificant zero-beta intercept). This overturns an earlier flat-line result from a 16-stock ASX sample, though with low power (t = 0.94).
 
@@ -81,7 +81,7 @@ Statistical asset pricing and valuation across the ASX, HKEX and SGX: factor mod
 
 ## Rigour
 
-- Every estimator is written in matrix form in [`R/models_linear.R`](R/models_linear.R): OLS, Newey–West HAC, GLS, seemingly unrelated regressions (SUR), general linear hypotheses, the GRS test, and Fama–MacBeth with Shanken errors. Principal components, the Marchenko–Pastur edge, parallel analysis and eigenportfolios are in [`R/models_factor.R`](R/models_factor.R).
+- Every estimator is written in matrix form in [`R/models_linear.R`](R/models_linear.R): OLS, Newey–West HAC, GLS, seemingly unrelated regressions (SUR), general linear hypotheses, the GRS test with a block-bootstrap null, system Newey–West for SUR, and Fama–MacBeth with Shanken errors. Principal components, the Marchenko–Pastur edge, parallel analysis (permutation and block bootstrap) and eigenportfolios are in [`R/models_factor.R`](R/models_factor.R).
 - Each is unit-tested in [`tests/testthat`](tests/testthat) against `lm()`, `sandwich::NeweyWest`, `car::linearHypothesis` and `systemfit` (to 1e-8 or better), and against simulations with a known answer (GRS size and power, Fama–MacBeth premium recovery, recovery of a planted 3-factor structure).
 - Returns and risk-free rates are matched by market and currency. The risk-free rate is lagged one month, so it is known at the start of the month it applies to. p-values are corrected for multiple testing when scanning many stocks.
 

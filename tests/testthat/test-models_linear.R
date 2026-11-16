@@ -127,3 +127,29 @@ test_that("fama_macbeth Newey-West errors at lag 0 equal plain FM up to the T/(T
   fm <- fama_macbeth(s$Y, s$F, nw_lag = 0)
   expect_equal(fm$se_nw^2 * 120 / 119, fm$se_fm^2, tolerance = 1e-10)
 })
+
+test_that("block_index returns valid, contiguous circular blocks", {
+  set.seed(3)
+  i <- block_index(50, 6)
+  expect_length(i, 50); expect_true(all(i >= 1 & i <= 50))
+  d <- diff(i)[1:5]; expect_true(all(d == 1 | d == -49))
+})
+
+test_that("grs_bootstrap agrees with the exact F test on iid normal data", {
+  set.seed(21)
+  s <- sim_panel(150, 8, 1)
+  b <- grs_bootstrap(s$Y, s$F, n_boot = 499, block = 1)
+  expect_lt(abs(b$p_boot - b$p_f), 0.08)
+  s1 <- sim_panel(150, 8, 1, alpha = 0.012)
+  b1 <- grs_bootstrap(s1$Y, s1$F, n_boot = 499, block = 6)
+  expect_lt(b1$p_boot, 0.05)
+})
+
+test_that("grs_bootstrap redraws resamples with too few distinct months", {
+  set.seed(5)
+  s <- sim_panel(84, 25, 5)   # same shape as Module 04's out-of-sample test
+  b <- grs_bootstrap(s$Y, s$F, n_boot = 199, block = 6)
+  expect_length(b$stat_boot, 199)
+  expect_true(all(is.finite(b$stat_boot)))
+  expect_gte(b$n_redraw, 0)
+})

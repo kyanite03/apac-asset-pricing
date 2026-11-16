@@ -32,15 +32,23 @@ pca_returns <- function(Y, scale = TRUE) {
 #' Eigenvalues above it are unlikely to be pure noise.
 mp_upper <- function(N, T_) (1 + sqrt(N / T_))^2
 
-#' Parallel analysis: eigenvalues of correlation matrices after independently
-#' permuting each column in time (destroys cross-correlation, keeps each
-#' stock's distribution). Returns the chosen quantile of each ordered
-#' eigenvalue across `reps` permutations.
-parallel_analysis <- function(Y, reps = 200, prob = 0.95, seed = 1) {
+#' Parallel analysis: eigenvalues of correlation matrices after resampling
+#' each column in time independently of the others. That destroys the
+#' cross-correlation and keeps each stock's distribution. With `block = 1` each
+#' column is simply permuted. With `block > 1` each column gets its own circular
+#' moving-block resample, which also keeps its serial dependence and volatility
+#' clustering within blocks. Returns the chosen quantile of each ordered
+#' eigenvalue across `reps` resamples.
+parallel_analysis <- function(Y, reps = 200, prob = 0.95, seed = 1, block = 1) {
   set.seed(seed)
-  Y <- as.matrix(Y)
+  Y <- as.matrix(Y); n <- nrow(Y)
+  resample <- if (block == 1) function(y) sample(y) else function(y) {
+    starts <- sample.int(n, ceiling(n / block), replace = TRUE)
+    idx <- as.vector(outer(0:(block - 1), starts, `+`))[seq_len(n)]
+    y[(idx - 1) %% n + 1]
+  }
   ev <- replicate(reps, {
-    P <- apply(Y, 2, sample)
+    P <- apply(Y, 2, resample)
     eigen(stats::cor(P), symmetric = TRUE, only.values = TRUE)$values
   })
   apply(ev, 1, stats::quantile, probs = prob)

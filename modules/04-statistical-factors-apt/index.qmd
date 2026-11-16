@@ -47,6 +47,12 @@ pa <- parallel_analysis(Y, reps = 500, prob = 0.95)   # permutation benchmark
 n_mp <- sum(pc$values > mp); n_pa <- sum(pc$values > pa)
 k_sig <- min(n_mp, n_pa)
 stopifnot(n_mp == n_pa)                               # text reports one agreed number
+# Robustness: the permutation null also destroys each stock's serial dependence
+# and volatility clustering. Block resampling, done independently per stock, keeps
+# them within blocks while still breaking the cross-correlation.
+pa_b6 <- parallel_analysis(Y, reps = 500, prob = 0.95, seed = 2, block = 6)
+pa_b12 <- parallel_analysis(Y, reps = 500, prob = 0.95, seed = 3, block = 12)
+n_pb6 <- sum(pc$values > pa_b6); n_pb12 <- sum(pc$values > pa_b12)
 ```
 
 ```{r}
@@ -91,6 +97,12 @@ early <- months < as.Date("2019-01-01")
 fac_models <- list(CAPM = "MKT", `Fama–French 3` = c("MKT", "SMB3", "HML"),
                    `Fama–French 5` = c("MKT", "SMB", "HML", "RMW", "CMA"))
 n_splits <- 200
+# Bootstrap GRS p-value (199 draws, 6-month blocks) run on its own seed and
+# restoring the RNG state, so the random splits are unchanged
+boot_p <- function(Yb, Fb, seed) {
+  old <- .Random.seed; on.exit(assign(".Random.seed", old, envir = globalenv()))
+  set.seed(seed); grs_bootstrap(Yb, Fb, n_boot = 199, block = 6)$p_boot
+}
 set.seed(42)
 oos <- map_dfr(seq_len(n_splits), function(s) {
   # stratified random half of the stocks builds the factors; the rest are test assets
@@ -101,17 +113,18 @@ oos <- map_dfr(seq_len(n_splits), function(s) {
     Fk <- Y[!early, A] %*% eigenportfolio_weights(pA, k)
     g <- grs_test(Y[!early, B], Fk)
     tibble(model = paste0("PCA, ", k, if (k == 1) " factor" else " factors"),
-           rms = 12 * sqrt(mean(g$alpha^2)), p = g$p)
+           rms = 12 * sqrt(mean(g$alpha^2)), p = g$p, p_bs = boot_p(Y[!early, B], Fk, 1000 * s + k))
   })
   obs <- imap_dfr(fac_models, function(f, nm) {
     g <- grs_test(Y[!early, B], as.matrix(Fac[!early, f]))
-    tibble(model = nm, rms = 12 * sqrt(mean(g$alpha^2)), p = g$p)
+    tibble(model = nm, rms = 12 * sqrt(mean(g$alpha^2)), p = g$p,
+           p_bs = boot_p(Y[!early, B], as.matrix(Fac[!early, f]), 1000 * s + 10 + match(nm, names(fac_models))))
   })
   bind_rows(pcs, obs) |> mutate(split = s)
 })
 oos_sum <- oos |> group_by(model) |>
   summarise(rms_med = median(rms), rms_lo = quantile(rms, 0.1), rms_hi = quantile(rms, 0.9),
-            reject = mean(p < 0.05), .groups = "drop")
+            reject = mean(p < 0.05), reject_bs = mean(p_bs < 0.05), .groups = "drop")
 best_pca <- oos_sum |> filter(str_starts(model, "PCA")) |> slice_min(rms_med, n = 1)
 capm_oos <- oos_sum |> filter(model == "CAPM"); ff5_oos <- oos_sum |> filter(model == "Fama–French 5")
 pca_beats_capm <- oos |> filter(model %in% c(best_pca$model, "CAPM")) |>
@@ -139,6 +152,8 @@ Modules 01 and 03 started from factors chosen in advance: the market, then the F
 
 - the **Marchenko–Pastur** upper edge, $\lambda_+ = (1+\sqrt{N/T})^2 = `r num(mp)`$, the largest eigenvalue expected from $N$ uncorrelated series of length $T$;
 - **parallel analysis**: the 95th percentile of each eigenvalue across 500 data sets in which each stock's returns are shuffled in time independently. Shuffling destroys the cross-correlation but keeps each stock's fat-tailed distribution.
+
+Both benchmarks treat months as independent. The Marchenko–Pastur edge assumes it outright, and shuffling destroys the volatility clustering and serial dependence that real returns have. That can make noise look more distinct than it is. As a check, parallel analysis is repeated with 6- and 12-month blocks resampled independently for each stock, which keeps that dependence within blocks. Its count is `r n_pb6` (6-month blocks) and `r n_pb12` (12-month blocks), against `r k_sig` from the two main benchmarks.
 
 **What are they?** Components are compared with the six Fama–French factors and with five other observables (each local index and two currencies) using correlations, canonical correlation, and LASSO regressions (`glmnet`, penalty chosen by 10-fold cross-validation, one-standard-error rule).
 
@@ -280,16 +295,56 @@ $A$, $B$ the two random halves of the stocks · $v_{ij}$, $s_i$ loadings and vol
 
 ```{r}
 #| label: tbl-oos
-#| tbl-cap: "Out-of-sample pricing summary over 200 splits."
+#| tbl-cap: "Out-of-sample pricing summary over 200 splits. GRS rejection rates use the exact F test and a block bootstrap with zero alphas imposed (199 draws, 6-month blocks)."
 
 oos_sum |> arrange(rms_med) |>
   transmute(Model = model, `Median RMS α (p.a.)` = pct(rms_med),
             `10th–90th pct` = sprintf("%s–%s", pct(rms_lo), pct(rms_hi)),
-            `GRS rejects at 5%` = pct(reject, 0)) |>
-  kable(align = "lrrr")
+            `GRS rejects at 5%` = pct(reject, 0), `Bootstrap GRS rejects at 5%` = pct(reject_bs, 0)) |>
+  kable(align = "lrrrr")
 ```
 
 Out of sample, the statistical factors leave smaller pricing errors than the observable ones. The best, `r best_pca$model`, has a median RMS alpha of `r pct(best_pca$rms_med)` a year and beats the CAPM in `r pct(pca_beats_capm, 0)` of splits. The Fama–French models do no better than the CAPM here, consistent with Module 03. Most of the gain comes from the first component, though: a single statistical factor already does about as well as three to five. The intervals overlap substantially, and with only 84 test months GRS rarely rejects *any* model (power is low, so "not rejected" here is weak evidence of a good fit). Pricing errors are also larger here than in Module 03's full-sample tests, partly because alphas estimated over seven years are noisier than over fifteen.
+
+### Out of time: rolling windows
+
+```{r}
+#| label: rolling-oos
+#| code-summary: "Rolling out-of-time check: expanding estimation window, next four years as the test"
+
+origins <- as.Date(c("2016-01-01", "2018-01-01", "2020-01-01", "2022-01-01"))
+set.seed(4242)
+roll_oos <- map_dfr(origins, function(o) {
+  est <- months < o; tst <- months >= o & months < seq(o, by = "48 months", length.out = 2)[2]
+  map_dfr(seq_len(50), function(s) {
+    A <- unlist(lapply(split(seq_len(N_), stock_market), \(ix) sample(ix, floor(length(ix) / 2))))
+    B <- setdiff(seq_len(N_), A)
+    pA <- pca_returns(Y[est, A])
+    pcs <- map_dfr(c(1, k_sig), function(k) {
+      g <- grs_test(Y[tst, B], Y[tst, A] %*% eigenportfolio_weights(pA, k))
+      tibble(model = paste0("PCA, ", k, if (k == 1) " factor" else " factors"), rms = 12 * sqrt(mean(g$alpha^2)))
+    })
+    obs <- imap_dfr(fac_models, \(f, nm) tibble(model = nm,
+      rms = 12 * sqrt(mean(grs_test(Y[tst, B], as.matrix(Fac[tst, f]))$alpha^2))))
+    bind_rows(pcs, obs) |> mutate(split = s)
+  }) |> mutate(window = sprintf("%s–%s", format(o, "%Y"), format(max(months[tst]), "%Y")), n_test = sum(tst))
+})
+roll_sum <- roll_oos |> group_by(window, model) |> summarise(rms = median(rms), .groups = "drop")
+pca_k_lbl <- paste0("PCA, ", k_sig, " factors")
+roll_win <- roll_oos |> filter(model %in% c(pca_k_lbl, "CAPM")) |>
+  select(window, split, model, rms) |> pivot_wider(names_from = model, values_from = rms) |>
+  group_by(window) |> summarise(beats = mean(.data[[pca_k_lbl]] < CAPM), .groups = "drop")
+```
+
+```{r}
+#| label: tbl-rolling
+#| tbl-cap: "Median out-of-sample RMS alpha (annualised) over 50 random stock splits per window. Factors are estimated on all months before each test window, which runs four years (the last is cut short by the end of the factor data)."
+
+roll_sum |> mutate(rms = pct(rms)) |> pivot_wider(names_from = window, values_from = rms) |>
+  rename(Model = model) |> kable(align = "lrrrr")
+```
+
+The random half-split above uses one break date. Rolling it through time, the `r k_sig`-factor PCA model has a lower RMS alpha than the CAPM in `r pct(min(roll_win$beats), 0)`–`r pct(max(roll_win$beats), 0)` of splits, depending on the window (`r paste(sprintf("%s: %s", roll_win$window, pct(roll_win$beats, 0)), collapse = "; ")`).
 
 ## Limitations
 

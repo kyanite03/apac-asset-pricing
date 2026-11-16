@@ -285,9 +285,9 @@ window.Quarto = {
 <span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>nw_lag <span class="ot">&lt;-</span> <span class="dv">4</span></span>
 <span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Cross-equation Wald test H0: C b = 0 on a SUR fit (chi-square form)</span></span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>wald <span class="ot">&lt;-</span> <span class="cf">function</span>(fit, C) {</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>wald <span class="ot">&lt;-</span> <span class="cf">function</span>(fit, C, <span class="at">V =</span> fit<span class="sc">$</span>vcov) {</span>
 <span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  d <span class="ot">&lt;-</span> C <span class="sc">%*%</span> fit<span class="sc">$</span>coef</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  W <span class="ot">&lt;-</span> <span class="fu">drop</span>(<span class="fu">t</span>(d) <span class="sc">%*%</span> <span class="fu">solve</span>(C <span class="sc">%*%</span> fit<span class="sc">$</span>vcov <span class="sc">%*%</span> <span class="fu">t</span>(C)) <span class="sc">%*%</span> d)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  W <span class="ot">&lt;-</span> <span class="fu">drop</span>(<span class="fu">t</span>(d) <span class="sc">%*%</span> <span class="fu">solve</span>(C <span class="sc">%*%</span> V <span class="sc">%*%</span> <span class="fu">t</span>(C)) <span class="sc">%*%</span> d)</span>
 <span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">c</span>(<span class="at">W =</span> W, <span class="at">df =</span> <span class="fu">nrow</span>(C), <span class="at">p =</span> <span class="fu">pchisq</span>(W, <span class="fu">nrow</span>(C), <span class="at">lower.tail =</span> <span class="cn">FALSE</span>))</span>
 <span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Restriction matrix: coefficient `term` equal in all three equations</span></span>
@@ -330,16 +330,24 @@ window.Quarto = {
 <span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>resid_cor1 <span class="ot">&lt;-</span> <span class="fu">cov2cor</span>(sur1<span class="sc">$</span>Sigma)</span>
 <span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>t_beta1 <span class="ot">&lt;-</span> <span class="fu">equal_across</span>(sur1, <span class="st">"MKT"</span>); t_alpha1 <span class="ot">&lt;-</span> <span class="fu">equal_across</span>(sur1, <span class="st">"const"</span>)</span>
 <span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>w_beta1 <span class="ot">&lt;-</span> <span class="fu">wald</span>(sur1, t_beta1); w_alpha1 <span class="ot">&lt;-</span> <span class="fu">wald</span>(sur1, t_alpha1)</span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>alpha_t1 <span class="ot">&lt;-</span> sur1<span class="sc">$</span>coef[<span class="fu">paste0</span>(mk, <span class="st">":const"</span>)] <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="fu">diag</span>(sur1<span class="sc">$</span>vcov))[<span class="fu">paste0</span>(mk, <span class="st">":const"</span>)]</span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">all</span>(<span class="fu">abs</span>(alpha_t1) <span class="sc">&lt;</span> <span class="fl">1.96</span>))   <span class="co"># text: alphas individually insignificant</span></span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>f5 <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"MKT"</span>, <span class="st">"SMB"</span>, <span class="st">"HML"</span>, <span class="st">"RMW"</span>, <span class="st">"CMA"</span>)</span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>eq5 <span class="ot">&lt;-</span> <span class="fu">map_dfr</span>(f5, \(f) { x <span class="ot">&lt;-</span> <span class="fu">wald</span>(sur5, <span class="fu">equal_across</span>(sur5, f)); <span class="fu">tibble</span>(<span class="at">term =</span> f, <span class="at">W =</span> x[<span class="st">"W"</span>], <span class="at">p =</span> x[<span class="st">"p"</span>]) })</span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>load5 <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">name =</span> <span class="fu">names</span>(sur5<span class="sc">$</span>coef), <span class="at">est =</span> sur5<span class="sc">$</span>coef, <span class="at">se =</span> <span class="fu">sqrt</span>(<span class="fu">diag</span>(sur5<span class="sc">$</span>vcov))) <span class="sc">|&gt;</span></span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate</span>(name, <span class="fu">c</span>(<span class="st">"market"</span>, <span class="st">"term"</span>), <span class="at">sep =</span> <span class="st">":"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">market =</span> <span class="fu">factor</span>(market, <span class="at">levels =</span> mk))</span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>get5 <span class="ot">&lt;-</span> <span class="cf">function</span>(m, f) load5<span class="sc">$</span>est[load5<span class="sc">$</span>market <span class="sc">==</span> m <span class="sc">&amp;</span> load5<span class="sc">$</span>term <span class="sc">==</span> f]</span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>t5 <span class="ot">&lt;-</span> <span class="cf">function</span>(m, f) <span class="fu">with</span>(load5[load5<span class="sc">$</span>market <span class="sc">==</span> m <span class="sc">&amp;</span> load5<span class="sc">$</span>term <span class="sc">==</span> f, ], est <span class="sc">/</span> se)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Robust versions: system Newey-West covariance (serial, cross-equation and</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="co"># heteroskedastic dependence), valid here because the regressors are identical</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>V1_hac <span class="ot">&lt;-</span> <span class="fu">sur_hac_vcov</span>(sur1, <span class="fu">list</span>(<span class="at">ASX =</span> X1, <span class="at">HKEX =</span> X1, <span class="at">SGX =</span> X1), nw_lag)</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>V5_hac <span class="ot">&lt;-</span> <span class="fu">sur_hac_vcov</span>(sur5, <span class="fu">list</span>(<span class="at">ASX =</span> X5, <span class="at">HKEX =</span> X5, <span class="at">SGX =</span> X5), nw_lag)</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>w_beta1_h <span class="ot">&lt;-</span> <span class="fu">wald</span>(sur1, t_beta1, V1_hac); w_alpha1_h <span class="ot">&lt;-</span> <span class="fu">wald</span>(sur1, t_alpha1, V1_hac)</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>alpha_t1 <span class="ot">&lt;-</span> sur1<span class="sc">$</span>coef[<span class="fu">paste0</span>(mk, <span class="st">":const"</span>)] <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="fu">diag</span>(sur1<span class="sc">$</span>vcov))[<span class="fu">paste0</span>(mk, <span class="st">":const"</span>)]</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">all</span>(<span class="fu">abs</span>(alpha_t1) <span class="sc">&lt;</span> <span class="fl">1.96</span>))   <span class="co"># text: alphas individually insignificant</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>f5 <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"MKT"</span>, <span class="st">"SMB"</span>, <span class="st">"HML"</span>, <span class="st">"RMW"</span>, <span class="st">"CMA"</span>)</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>eq5 <span class="ot">&lt;-</span> <span class="fu">map_dfr</span>(f5, \(f) {</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">wald</span>(sur5, <span class="fu">equal_across</span>(sur5, f)); xh <span class="ot">&lt;-</span> <span class="fu">wald</span>(sur5, <span class="fu">equal_across</span>(sur5, f), V5_hac)</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(<span class="at">term =</span> f, <span class="at">W =</span> x[<span class="st">"W"</span>], <span class="at">p =</span> x[<span class="st">"p"</span>], <span class="at">W_h =</span> xh[<span class="st">"W"</span>], <span class="at">p_h =</span> xh[<span class="st">"p"</span>])</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>load5 <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">name =</span> <span class="fu">names</span>(sur5<span class="sc">$</span>coef), <span class="at">est =</span> sur5<span class="sc">$</span>coef, <span class="at">se =</span> <span class="fu">sqrt</span>(<span class="fu">diag</span>(sur5<span class="sc">$</span>vcov))) <span class="sc">|&gt;</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate</span>(name, <span class="fu">c</span>(<span class="st">"market"</span>, <span class="st">"term"</span>), <span class="at">sep =</span> <span class="st">":"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">market =</span> <span class="fu">factor</span>(market, <span class="at">levels =</span> mk))</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>get5 <span class="ot">&lt;-</span> <span class="cf">function</span>(m, f) load5<span class="sc">$</span>est[load5<span class="sc">$</span>market <span class="sc">==</span> m <span class="sc">&amp;</span> load5<span class="sc">$</span>term <span class="sc">==</span> f]</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>t5 <span class="ot">&lt;-</span> <span class="cf">function</span>(m, f) <span class="fu">with</span>(load5[load5<span class="sc">$</span>market <span class="sc">==</span> m <span class="sc">&amp;</span> load5<span class="sc">$</span>term <span class="sc">==</span> f, ], est <span class="sc">/</span> se)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <div class="cell">
@@ -349,29 +357,35 @@ window.Quarto = {
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">y =</span> R[, m], <span class="at">x =</span> w<span class="sc">$</span>MKT)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  fs <span class="ot">&lt;-</span> <span class="fu">Fstats</span>(y <span class="sc">~</span> x, <span class="at">data =</span> df, <span class="at">from =</span> <span class="fl">0.15</span>)</span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  st <span class="ot">&lt;-</span> <span class="fu">sctest</span>(fs, <span class="at">type =</span> <span class="st">"supF"</span>)</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  bp <span class="ot">&lt;-</span> <span class="fu">breakpoints</span>(y <span class="sc">~</span> x, <span class="at">data =</span> df, <span class="at">h =</span> <span class="fl">0.15</span>)</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  idx <span class="ot">&lt;-</span> bp<span class="sc">$</span>breakpoints[<span class="sc">!</span><span class="fu">is.na</span>(bp<span class="sc">$</span>breakpoints)]</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  seg <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">length</span>(idx)) <span class="fu">coef</span>(bp) <span class="cf">else</span> <span class="fu">matrix</span>(<span class="fu">coef</span>(<span class="fu">lm</span>(y <span class="sc">~</span> x, df)), <span class="dv">1</span>, <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="cn">NULL</span>, <span class="fu">c</span>(<span class="st">"(Intercept)"</span>, <span class="st">"x"</span>)))</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">market =</span> m, <span class="at">supF =</span> <span class="fu">unname</span>(st<span class="sc">$</span>statistic), <span class="at">p =</span> st<span class="sc">$</span>p.value, <span class="at">idx =</span> idx,</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">dates =</span> months[idx], <span class="at">seg_beta =</span> seg[, <span class="st">"x"</span>])</span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span> <span class="fu">set_names</span>(mk)</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>n_break_mkts <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">map_lgl</span>(brk, \(b) <span class="fu">length</span>(b<span class="sc">$</span>idx) <span class="sc">&gt;</span> <span class="dv">0</span>))</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>sg <span class="ot">&lt;-</span> brk<span class="sc">$</span>SGX</span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">length</span>(sg<span class="sc">$</span>idx) <span class="sc">==</span> <span class="dv">1</span>, <span class="fu">length</span>(brk<span class="sc">$</span>ASX<span class="sc">$</span>idx) <span class="sc">==</span> <span class="dv">0</span>, <span class="fu">length</span>(brk<span class="sc">$</span>HKEX<span class="sc">$</span>idx) <span class="sc">==</span> <span class="dv">0</span>)  <span class="co"># text assumes this pattern</span></span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Rolling 36-month correlations between the markets</span></span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>roll_cor <span class="ot">&lt;-</span> <span class="fu">map_dfr</span>(<span class="dv">36</span><span class="sc">:</span>T_, <span class="cf">function</span>(k) {</span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  i <span class="ot">&lt;-</span> (k <span class="sc">-</span> <span class="dv">35</span>)<span class="sc">:</span>k</span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(<span class="at">month =</span> months[k],</span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">ASX–HKEX</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">cor</span>(R[i, <span class="st">"ASX"</span>], R[i, <span class="st">"HKEX"</span>]),</span>
-<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">ASX–SGX</span><span class="st">`</span>  <span class="ot">=</span> <span class="fu">cor</span>(R[i, <span class="st">"ASX"</span>], R[i, <span class="st">"SGX"</span>]),</span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">HKEX–SGX</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">cor</span>(R[i, <span class="st">"HKEX"</span>], R[i, <span class="st">"SGX"</span>]))</span>
-<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Compare 36-month windows that end before the break with windows lying wholly after it</span></span>
-<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>post_start <span class="ot">&lt;-</span> <span class="fu">seq</span>(sg<span class="sc">$</span>dates, <span class="at">by =</span> <span class="st">"36 months"</span>, <span class="at">length.out =</span> <span class="dv">2</span>)[<span class="dv">2</span>]</span>
-<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>rc_pre <span class="ot">&lt;-</span> roll_cor <span class="sc">|&gt;</span> <span class="fu">filter</span>(month <span class="sc">&lt;</span> sg<span class="sc">$</span>dates) <span class="sc">|&gt;</span> <span class="fu">summarise</span>(<span class="fu">across</span>(<span class="sc">-</span>month, mean))</span>
-<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>rc_post <span class="ot">&lt;-</span> roll_cor <span class="sc">|&gt;</span> <span class="fu">filter</span>(month <span class="sc">&gt;=</span> post_start) <span class="sc">|&gt;</span> <span class="fu">summarise</span>(<span class="fu">across</span>(<span class="sc">-</span>month, mean))</span>
-<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">nrow</span>(<span class="fu">filter</span>(roll_cor, month <span class="sc">&gt;=</span> post_start)) <span class="sc">&gt;=</span> <span class="dv">12</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Robust check: sup-LM test on HAC-scaled score processes (Newey-West, nw_lag lags)</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  gf <span class="ot">&lt;-</span> <span class="fu">gefp</span>(y <span class="sc">~</span> x, <span class="at">data =</span> df, <span class="at">fit =</span> lm,</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>             <span class="at">vcov =</span> \(obj, ...) sandwich<span class="sc">::</span><span class="fu">NeweyWest</span>(obj, <span class="at">lag =</span> nw_lag, <span class="at">prewhite =</span> <span class="cn">FALSE</span>))</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  st_hac <span class="ot">&lt;-</span> <span class="fu">sctest</span>(gf, <span class="at">functional =</span> <span class="fu">supLM</span>(<span class="fl">0.15</span>))</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  bp <span class="ot">&lt;-</span> <span class="fu">breakpoints</span>(y <span class="sc">~</span> x, <span class="at">data =</span> df, <span class="at">h =</span> <span class="fl">0.15</span>)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  idx <span class="ot">&lt;-</span> bp<span class="sc">$</span>breakpoints[<span class="sc">!</span><span class="fu">is.na</span>(bp<span class="sc">$</span>breakpoints)]</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  seg <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">length</span>(idx)) <span class="fu">coef</span>(bp) <span class="cf">else</span> <span class="fu">matrix</span>(<span class="fu">coef</span>(<span class="fu">lm</span>(y <span class="sc">~</span> x, df)), <span class="dv">1</span>, <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="cn">NULL</span>, <span class="fu">c</span>(<span class="st">"(Intercept)"</span>, <span class="st">"x"</span>)))</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">market =</span> m, <span class="at">supF =</span> <span class="fu">unname</span>(st<span class="sc">$</span>statistic), <span class="at">p =</span> st<span class="sc">$</span>p.value, <span class="at">p_hac =</span> st_hac<span class="sc">$</span>p.value, <span class="at">idx =</span> idx,</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>       <span class="at">dates =</span> months[idx], <span class="at">seg_beta =</span> seg[, <span class="st">"x"</span>])</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span> <span class="fu">set_names</span>(mk)</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>n_break_mkts <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">map_lgl</span>(brk, \(b) <span class="fu">length</span>(b<span class="sc">$</span>idx) <span class="sc">&gt;</span> <span class="dv">0</span>))</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>p_holm <span class="ot">&lt;-</span> <span class="fu">p.adjust</span>(<span class="fu">map_dbl</span>(brk, <span class="st">"p"</span>), <span class="st">"holm"</span>)               <span class="co"># three markets tested</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>p_hac_holm <span class="ot">&lt;-</span> <span class="fu">p.adjust</span>(<span class="fu">map_dbl</span>(brk, <span class="st">"p_hac"</span>), <span class="st">"holm"</span>)</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>sg <span class="ot">&lt;-</span> brk<span class="sc">$</span>SGX</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">length</span>(sg<span class="sc">$</span>idx) <span class="sc">==</span> <span class="dv">1</span>, <span class="fu">length</span>(brk<span class="sc">$</span>ASX<span class="sc">$</span>idx) <span class="sc">==</span> <span class="dv">0</span>, <span class="fu">length</span>(brk<span class="sc">$</span>HKEX<span class="sc">$</span>idx) <span class="sc">==</span> <span class="dv">0</span>)  <span class="co"># text assumes this pattern</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Rolling 36-month correlations between the markets</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>roll_cor <span class="ot">&lt;-</span> <span class="fu">map_dfr</span>(<span class="dv">36</span><span class="sc">:</span>T_, <span class="cf">function</span>(k) {</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>  i <span class="ot">&lt;-</span> (k <span class="sc">-</span> <span class="dv">35</span>)<span class="sc">:</span>k</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(<span class="at">month =</span> months[k],</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">ASX–HKEX</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">cor</span>(R[i, <span class="st">"ASX"</span>], R[i, <span class="st">"HKEX"</span>]),</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">ASX–SGX</span><span class="st">`</span>  <span class="ot">=</span> <span class="fu">cor</span>(R[i, <span class="st">"ASX"</span>], R[i, <span class="st">"SGX"</span>]),</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">HKEX–SGX</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">cor</span>(R[i, <span class="st">"HKEX"</span>], R[i, <span class="st">"SGX"</span>]))</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Compare 36-month windows that end before the break with windows lying wholly after it</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>post_start <span class="ot">&lt;-</span> <span class="fu">seq</span>(sg<span class="sc">$</span>dates, <span class="at">by =</span> <span class="st">"36 months"</span>, <span class="at">length.out =</span> <span class="dv">2</span>)[<span class="dv">2</span>]</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>rc_pre <span class="ot">&lt;-</span> roll_cor <span class="sc">|&gt;</span> <span class="fu">filter</span>(month <span class="sc">&lt;</span> sg<span class="sc">$</span>dates) <span class="sc">|&gt;</span> <span class="fu">summarise</span>(<span class="fu">across</span>(<span class="sc">-</span>month, mean))</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>rc_post <span class="ot">&lt;-</span> roll_cor <span class="sc">|&gt;</span> <span class="fu">filter</span>(month <span class="sc">&gt;=</span> post_start) <span class="sc">|&gt;</span> <span class="fu">summarise</span>(<span class="fu">across</span>(<span class="sc">-</span>month, mean))</span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">nrow</span>(<span class="fu">filter</span>(roll_cor, month <span class="sc">&gt;=</span> post_start)) <span class="sc">&gt;=</span> <span class="dv">12</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <div class="callout callout-style-default callout-tip callout-titled" title="Answer first">
@@ -523,29 +537,41 @@ Figure&nbsp;1: Five-factor loadings of each market (SUR estimates, 95% intervals
 <summary>Show code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">bind_rows</span>(</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(<span class="at">System =</span> <span class="st">"CAPM"</span>, <span class="at">Coefficient =</span> <span class="fu">c</span>(<span class="st">"Alpha"</span>, <span class="st">"Market beta"</span>),</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>         <span class="at">W =</span> <span class="fu">c</span>(w_alpha1[<span class="st">"W"</span>], w_beta1[<span class="st">"W"</span>]), <span class="at">p =</span> <span class="fu">c</span>(w_alpha1[<span class="st">"p"</span>], w_beta1[<span class="st">"p"</span>])),</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  eq5 <span class="sc">|&gt;</span> <span class="fu">transmute</span>(<span class="at">System =</span> <span class="st">"Five-factor"</span>,</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>                   <span class="at">Coefficient =</span> <span class="fu">recode</span>(term, <span class="at">MKT =</span> <span class="st">"Market"</span>, <span class="at">SMB =</span> <span class="st">"Size (SMB)"</span>, <span class="at">HML =</span> <span class="st">"Value (HML)"</span>,</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">RMW =</span> <span class="st">"Profitability (RMW)"</span>, <span class="at">CMA =</span> <span class="st">"Investment (CMA)"</span>), W, p)</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="st">`</span><span class="at">Wald χ²(2)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(W), <span class="at">p =</span> <span class="fu">formatC</span>(p, <span class="at">format =</span> <span class="st">"g"</span>, <span class="at">digits =</span> <span class="dv">2</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(System, Coefficient, <span class="st">`</span><span class="at">Wald χ²(2)</span><span class="st">`</span>, p) <span class="sc">|&gt;</span></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"llrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>         <span class="at">W =</span> <span class="fu">c</span>(w_alpha1[<span class="st">"W"</span>], w_beta1[<span class="st">"W"</span>]), <span class="at">p =</span> <span class="fu">c</span>(w_alpha1[<span class="st">"p"</span>], w_beta1[<span class="st">"p"</span>]),</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>         <span class="at">W_h =</span> <span class="fu">c</span>(w_alpha1_h[<span class="st">"W"</span>], w_beta1_h[<span class="st">"W"</span>]), <span class="at">p_h =</span> <span class="fu">c</span>(w_alpha1_h[<span class="st">"p"</span>], w_beta1_h[<span class="st">"p"</span>])),</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  eq5 <span class="sc">|&gt;</span> <span class="fu">transmute</span>(<span class="at">System =</span> <span class="st">"Five-factor"</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>                   <span class="at">Coefficient =</span> <span class="fu">recode</span>(term, <span class="at">MKT =</span> <span class="st">"Market"</span>, <span class="at">SMB =</span> <span class="st">"Size (SMB)"</span>, <span class="at">HML =</span> <span class="st">"Value (HML)"</span>,</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">RMW =</span> <span class="st">"Profitability (RMW)"</span>, <span class="at">CMA =</span> <span class="st">"Investment (CMA)"</span>), W, p, W_h, p_h)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="st">`</span><span class="at">Wald χ²(2)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(W), <span class="at">p =</span> <span class="fu">formatC</span>(p, <span class="at">format =</span> <span class="st">"g"</span>, <span class="at">digits =</span> <span class="dv">2</span>),</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">Wald χ²(2), HAC</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(W_h), <span class="st">`</span><span class="at">p, HAC</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">formatC</span>(p_h, <span class="at">format =</span> <span class="st">"g"</span>, <span class="at">digits =</span> <span class="dv">2</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(System, Coefficient, <span class="st">`</span><span class="at">Wald χ²(2)</span><span class="st">`</span>, p, <span class="st">`</span><span class="at">Wald χ²(2), HAC</span><span class="st">`</span>, <span class="st">`</span><span class="at">p, HAC</span><span class="st">`</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"llrrrr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div id="tbl-equal" class="cell quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
 <figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-equal-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Table&nbsp;2: Cross-market tests in the SUR systems: H₀ that a coefficient is equal in all three markets (Wald χ² with 2 degrees of freedom).
+Table&nbsp;2: Cross-market tests in the SUR systems: H₀ that a coefficient is equal in all three markets (Wald χ² with 2 degrees of freedom). The first pair uses the SUR covariance, which allows only for contemporaneous error correlation. The HAC pair uses a system Newey–West covariance (4 lags) that also allows for heteroskedasticity and serial correlation within and across markets.
 </figcaption>
 <div aria-describedby="tbl-equal-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <div class="cell-output-display">
 <table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 26%">
+<col style="width: 14%">
+<col style="width: 10%">
+<col style="width: 21%">
+<col style="width: 10%">
+</colgroup>
 <thead>
 <tr class="header">
 <th style="text-align: left;">System</th>
 <th style="text-align: left;">Coefficient</th>
 <th style="text-align: right;">Wald χ²(2)</th>
 <th style="text-align: right;">p</th>
+<th style="text-align: right;">Wald χ²(2), HAC</th>
+<th style="text-align: right;">p, HAC</th>
 </tr>
 </thead>
 <tbody>
@@ -554,42 +580,56 @@ Table&nbsp;2: Cross-market tests in the SUR systems: H₀ that a coefficient is 
 <td style="text-align: left;">Alpha</td>
 <td style="text-align: right;">0.32</td>
 <td style="text-align: right;">0.85</td>
+<td style="text-align: right;">0.42</td>
+<td style="text-align: right;">0.81</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">CAPM</td>
 <td style="text-align: left;">Market beta</td>
 <td style="text-align: right;">17.22</td>
 <td style="text-align: right;">0.00018</td>
+<td style="text-align: right;">16.00</td>
+<td style="text-align: right;">0.00033</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Five-factor</td>
 <td style="text-align: left;">Market</td>
 <td style="text-align: right;">11.01</td>
 <td style="text-align: right;">0.0041</td>
+<td style="text-align: right;">12.90</td>
+<td style="text-align: right;">0.0016</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Five-factor</td>
 <td style="text-align: left;">Size (SMB)</td>
 <td style="text-align: right;">1.53</td>
 <td style="text-align: right;">0.47</td>
+<td style="text-align: right;">1.97</td>
+<td style="text-align: right;">0.37</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Five-factor</td>
 <td style="text-align: left;">Value (HML)</td>
 <td style="text-align: right;">47.90</td>
 <td style="text-align: right;">4e-11</td>
+<td style="text-align: right;">58.69</td>
+<td style="text-align: right;">1.8e-13</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Five-factor</td>
 <td style="text-align: left;">Profitability (RMW)</td>
 <td style="text-align: right;">29.70</td>
 <td style="text-align: right;">3.5e-07</td>
+<td style="text-align: right;">41.90</td>
+<td style="text-align: right;">8e-10</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Five-factor</td>
 <td style="text-align: left;">Investment (CMA)</td>
 <td style="text-align: right;">4.84</td>
 <td style="text-align: right;">0.089</td>
+<td style="text-align: right;">8.14</td>
+<td style="text-align: right;">0.017</td>
 </tr>
 </tbody>
 </table>
@@ -662,24 +702,37 @@ Table&nbsp;3: Correlation of the SUR residuals (after removing each market’s e
 <details class="code-fold">
 <summary>Show code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">map_dfr</span>(brk, \(b) <span class="fu">tibble</span>(<span class="at">Market =</span> b<span class="sc">$</span>market, <span class="st">`</span><span class="at">sup-F</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(b<span class="sc">$</span>supF), <span class="at">p =</span> <span class="fu">num</span>(b<span class="sc">$</span>p, <span class="dv">3</span>),</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>                         <span class="st">`</span><span class="at">Breaks (BIC)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">length</span>(b<span class="sc">$</span>idx),</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>                         <span class="st">`</span><span class="at">Break date</span><span class="st">`</span> <span class="ot">=</span> <span class="cf">if</span> (<span class="fu">length</span>(b<span class="sc">$</span>idx)) <span class="fu">format</span>(b<span class="sc">$</span>dates, <span class="st">"%b %Y"</span>) <span class="cf">else</span> <span class="st">"–"</span>,</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>                         <span class="st">`</span><span class="at">Beta by segment</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">paste</span>(<span class="fu">num</span>(b<span class="sc">$</span>seg_beta), <span class="at">collapse =</span> <span class="st">" → "</span>))) <span class="sc">|&gt;</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"lrrrll"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>                         <span class="st">`</span><span class="at">p (Holm)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(p_holm[[b<span class="sc">$</span>market]], <span class="dv">3</span>), <span class="st">`</span><span class="at">p, HAC sup-LM (Holm)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">num</span>(p_hac_holm[[b<span class="sc">$</span>market]], <span class="dv">3</span>),</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>                         <span class="st">`</span><span class="at">Breaks (BIC)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">length</span>(b<span class="sc">$</span>idx),</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>                         <span class="st">`</span><span class="at">Break date</span><span class="st">`</span> <span class="ot">=</span> <span class="cf">if</span> (<span class="fu">length</span>(b<span class="sc">$</span>idx)) <span class="fu">format</span>(b<span class="sc">$</span>dates, <span class="st">"%b %Y"</span>) <span class="cf">else</span> <span class="st">"–"</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>                         <span class="st">`</span><span class="at">Beta by segment</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">paste</span>(<span class="fu">num</span>(b<span class="sc">$</span>seg_beta), <span class="at">collapse =</span> <span class="st">" → "</span>))) <span class="sc">|&gt;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">align =</span> <span class="st">"lrrrrrll"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div id="tbl-breaks" class="cell quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
 <figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-breaks-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Table&nbsp;4: Structural-break tests on each market’s regression on the regional market factor. sup-F: Andrews test for a single break at an unknown date (15% trimming). Breaks: Bai–Perron, number chosen by BIC.
+Table&nbsp;4: Structural-break tests on each market’s regression on the regional market factor. sup-F: Andrews test for a single break at an unknown date (15% trimming). Holm: adjusted for testing three markets. HAC sup-LM: the same single-break test built on Newey–West-scaled score processes, robust to heteroskedasticity and serial correlation. Breaks: Bai–Perron, number chosen by BIC.
 </figcaption>
 <div aria-describedby="tbl-breaks-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <div class="cell-output-display">
 <table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<colgroup>
+<col style="width: 7%">
+<col style="width: 6%">
+<col style="width: 6%">
+<col style="width: 10%">
+<col style="width: 23%">
+<col style="width: 14%">
+<col style="width: 12%">
+<col style="width: 17%">
+</colgroup>
 <thead>
 <tr class="header">
 <th style="text-align: left;">Market</th>
 <th style="text-align: right;">sup-F</th>
 <th style="text-align: right;">p</th>
+<th style="text-align: right;">p (Holm)</th>
+<th style="text-align: right;">p, HAC sup-LM (Holm)</th>
 <th style="text-align: right;">Breaks (BIC)</th>
 <th style="text-align: left;">Break date</th>
 <th style="text-align: left;">Beta by segment</th>
@@ -690,6 +743,8 @@ Table&nbsp;4: Structural-break tests on each market’s regression on the region
 <td style="text-align: left;">ASX</td>
 <td style="text-align: right;">3.78</td>
 <td style="text-align: right;">0.770</td>
+<td style="text-align: right;">0.770</td>
+<td style="text-align: right;">1.000</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: left;">–</td>
 <td style="text-align: left;">1.08</td>
@@ -698,6 +753,8 @@ Table&nbsp;4: Structural-break tests on each market’s regression on the region
 <td style="text-align: left;">HKEX</td>
 <td style="text-align: right;">7.45</td>
 <td style="text-align: right;">0.255</td>
+<td style="text-align: right;">0.510</td>
+<td style="text-align: right;">1.000</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: left;">–</td>
 <td style="text-align: left;">0.91</td>
@@ -706,6 +763,8 @@ Table&nbsp;4: Structural-break tests on each market’s regression on the region
 <td style="text-align: left;">SGX</td>
 <td style="text-align: right;">24.50</td>
 <td style="text-align: right;">0.000</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">0.040</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: left;">Jun 2021</td>
 <td style="text-align: left;">0.94 → 0.64</td>
@@ -752,7 +811,7 @@ Figure&nbsp;2: Rolling 36-month correlations between the three markets’ USD ex
 </div>
 </div>
 <p>The rolling correlations add context. Comparing 36-month windows ending before Jun 2021 with windows lying entirely after it, Hong Kong’s correlation with the ASX fell from 0.67 to 0.37 and with Singapore from 0.82 to 0.63, while ASX–SGX moved from 0.72 to 0.80. Hong Kong drifted away from the other two.</p>
-<p>Only Singapore shows a statistically significant break (sup-F p = 0.00015). The break is dated to June 2021, and Singapore’s beta on the regional market falls from 0.94 to 0.64 after it. Its timing coincides with the start of the Chinese tech and property sell-off from mid-2021, which weighed on Hong Kong and therefore on the regional factor. Because the regional factor contains Hong Kong, a Hong Kong-specific shock can show up as a change in <em>Singapore’s</em> beta. That reading fits the correlations above but is not formally tested here. The ASX and Hong Kong relationships show no significant break, even though individual stocks within them shifted (Module 01): the index-level betas are more stable than their constituents.</p>
+<p>Only Singapore shows a statistically significant break (sup-F p = 0.00015). It survives the HAC sup-LM test, though less decisively (Holm p = 0.040). The break is dated to June 2021, and Singapore’s beta on the regional market falls from 0.94 to 0.64 after it. Its timing coincides with the start of the Chinese tech and property sell-off from mid-2021, which weighed on Hong Kong and therefore on the regional factor. Because the regional factor contains Hong Kong, a Hong Kong-specific shock can show up as a change in <em>Singapore’s</em> beta. That reading fits the correlations above but is not formally tested here. The ASX and Hong Kong relationships show no significant break, even though individual stocks within them shifted (Module 01): the index-level betas are more stable than their constituents.</p>
 </section>
 </section>
 <section id="limitations" class="level2">

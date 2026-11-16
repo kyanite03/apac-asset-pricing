@@ -28,9 +28,9 @@ R <- as.matrix(w[, mk]); T_ <- nrow(R); months <- w$month
 nw_lag <- 4
 
 # Cross-equation Wald test H0: C b = 0 on a SUR fit (chi-square form)
-wald <- function(fit, C) {
+wald <- function(fit, C, V = fit$vcov) {
   d <- C %*% fit$coef
-  W <- drop(t(d) %*% solve(C %*% fit$vcov %*% t(C)) %*% d)
+  W <- drop(t(d) %*% solve(C %*% V %*% t(C)) %*% d)
   c(W = W, df = nrow(C), p = pchisq(W, nrow(C), lower.tail = FALSE))
 }
 # Restriction matrix: coefficient `term` equal in all three equations
@@ -75,11 +75,19 @@ stopifnot(isTRUE(all.equal(unname(sur1$coef[c("ASX:const", "ASX:MKT")]),
 resid_cor1 <- cov2cor(sur1$Sigma)
 t_beta1 <- equal_across(sur1, "MKT"); t_alpha1 <- equal_across(sur1, "const")
 w_beta1 <- wald(sur1, t_beta1); w_alpha1 <- wald(sur1, t_alpha1)
+# Robust versions: system Newey-West covariance (serial, cross-equation and
+# heteroskedastic dependence), valid here because the regressors are identical
+V1_hac <- sur_hac_vcov(sur1, list(ASX = X1, HKEX = X1, SGX = X1), nw_lag)
+V5_hac <- sur_hac_vcov(sur5, list(ASX = X5, HKEX = X5, SGX = X5), nw_lag)
+w_beta1_h <- wald(sur1, t_beta1, V1_hac); w_alpha1_h <- wald(sur1, t_alpha1, V1_hac)
 alpha_t1 <- sur1$coef[paste0(mk, ":const")] / sqrt(diag(sur1$vcov))[paste0(mk, ":const")]
 stopifnot(all(abs(alpha_t1) < 1.96))   # text: alphas individually insignificant
 
 f5 <- c("MKT", "SMB", "HML", "RMW", "CMA")
-eq5 <- map_dfr(f5, \(f) { x <- wald(sur5, equal_across(sur5, f)); tibble(term = f, W = x["W"], p = x["p"]) })
+eq5 <- map_dfr(f5, \(f) {
+  x <- wald(sur5, equal_across(sur5, f)); xh <- wald(sur5, equal_across(sur5, f), V5_hac)
+  tibble(term = f, W = x["W"], p = x["p"], W_h = xh["W"], p_h = xh["p"])
+})
 load5 <- tibble(name = names(sur5$coef), est = sur5$coef, se = sqrt(diag(sur5$vcov))) |>
   separate(name, c("market", "term"), sep = ":") |>
   mutate(market = factor(market, levels = mk))
@@ -95,13 +103,19 @@ brk <- map(mk, function(m) {
   df <- data.frame(y = R[, m], x = w$MKT)
   fs <- Fstats(y ~ x, data = df, from = 0.15)
   st <- sctest(fs, type = "supF")
+  # Robust check: sup-LM test on HAC-scaled score processes (Newey-West, nw_lag lags)
+  gf <- gefp(y ~ x, data = df, fit = lm,
+             vcov = \(obj, ...) sandwich::NeweyWest(obj, lag = nw_lag, prewhite = FALSE))
+  st_hac <- sctest(gf, functional = supLM(0.15))
   bp <- breakpoints(y ~ x, data = df, h = 0.15)
   idx <- bp$breakpoints[!is.na(bp$breakpoints)]
   seg <- if (length(idx)) coef(bp) else matrix(coef(lm(y ~ x, df)), 1, dimnames = list(NULL, c("(Intercept)", "x")))
-  list(market = m, supF = unname(st$statistic), p = st$p.value, idx = idx,
+  list(market = m, supF = unname(st$statistic), p = st$p.value, p_hac = st_hac$p.value, idx = idx,
        dates = months[idx], seg_beta = seg[, "x"])
 }) |> set_names(mk)
 n_break_mkts <- sum(map_lgl(brk, \(b) length(b$idx) > 0))
+p_holm <- p.adjust(map_dbl(brk, "p"), "holm")               # three markets tested
+p_hac_holm <- p.adjust(map_dbl(brk, "p_hac"), "holm")
 sg <- brk$SGX
 stopifnot(length(sg$idx) == 1, length(brk$ASX$idx) == 0, length(brk$HKEX$idx) == 0)  # text assumes this pattern
 
@@ -211,18 +225,20 @@ $x_{m,t}$ USD excess return of market $m$ (ASX, HKEX, SGX) · $R_{m,t}$ local-cu
 
 ```{r}
 #| label: tbl-equal
-#| tbl-cap: "Cross-market tests in the SUR systems: H₀ that a coefficient is equal in all three markets (Wald χ² with 2 degrees of freedom)."
+#| tbl-cap: "Cross-market tests in the SUR systems: H₀ that a coefficient is equal in all three markets (Wald χ² with 2 degrees of freedom). The first pair uses the SUR covariance, which allows only for contemporaneous error correlation. The HAC pair uses a system Newey–West covariance (4 lags) that also allows for heteroskedasticity and serial correlation within and across markets."
 
 bind_rows(
   tibble(System = "CAPM", Coefficient = c("Alpha", "Market beta"),
-         W = c(w_alpha1["W"], w_beta1["W"]), p = c(w_alpha1["p"], w_beta1["p"])),
+         W = c(w_alpha1["W"], w_beta1["W"]), p = c(w_alpha1["p"], w_beta1["p"]),
+         W_h = c(w_alpha1_h["W"], w_beta1_h["W"]), p_h = c(w_alpha1_h["p"], w_beta1_h["p"])),
   eq5 |> transmute(System = "Five-factor",
                    Coefficient = recode(term, MKT = "Market", SMB = "Size (SMB)", HML = "Value (HML)",
-                                        RMW = "Profitability (RMW)", CMA = "Investment (CMA)"), W, p)
+                                        RMW = "Profitability (RMW)", CMA = "Investment (CMA)"), W, p, W_h, p_h)
 ) |>
-  mutate(`Wald χ²(2)` = num(W), p = formatC(p, format = "g", digits = 2)) |>
-  select(System, Coefficient, `Wald χ²(2)`, p) |>
-  kable(align = "llrr")
+  mutate(`Wald χ²(2)` = num(W), p = formatC(p, format = "g", digits = 2),
+         `Wald χ²(2), HAC` = num(W_h), `p, HAC` = formatC(p_h, format = "g", digits = 2)) |>
+  select(System, Coefficient, `Wald χ²(2)`, p, `Wald χ²(2), HAC`, `p, HAC`) |>
+  kable(align = "llrrrr")
 ```
 
 - **Alphas** are equal across markets (p = `r num(w_alpha1["p"])`), and each is indistinguishable from zero (|t| ≤ `r num(max(abs(alpha_t1)))`). The regional market factor prices all three indices equally well.
@@ -246,13 +262,14 @@ After each market's exposure to the regional market is removed, the ASX and HKEX
 
 ```{r}
 #| label: tbl-breaks
-#| tbl-cap: "Structural-break tests on each market's regression on the regional market factor. sup-F: Andrews test for a single break at an unknown date (15% trimming). Breaks: Bai–Perron, number chosen by BIC."
+#| tbl-cap: "Structural-break tests on each market's regression on the regional market factor. sup-F: Andrews test for a single break at an unknown date (15% trimming). Holm: adjusted for testing three markets. HAC sup-LM: the same single-break test built on Newey–West-scaled score processes, robust to heteroskedasticity and serial correlation. Breaks: Bai–Perron, number chosen by BIC."
 
 map_dfr(brk, \(b) tibble(Market = b$market, `sup-F` = num(b$supF), p = num(b$p, 3),
+                         `p (Holm)` = num(p_holm[[b$market]], 3), `p, HAC sup-LM (Holm)` = num(p_hac_holm[[b$market]], 3),
                          `Breaks (BIC)` = length(b$idx),
                          `Break date` = if (length(b$idx)) format(b$dates, "%b %Y") else "–",
                          `Beta by segment` = paste(num(b$seg_beta), collapse = " → "))) |>
-  kable(align = "lrrrll")
+  kable(align = "lrrrrrll")
 ```
 
 ```{r}
@@ -285,7 +302,7 @@ $\rho^{(36)}_{mn,t}$ correlation between markets $m$ and $n$ over the 36 months 
 
 The rolling correlations add context. Comparing 36-month windows ending before `r format(sg$dates, "%b %Y")` with windows lying entirely after it, Hong Kong's correlation with the ASX fell from `r num(rc_pre$"ASX–HKEX")` to `r num(rc_post$"ASX–HKEX")` and with Singapore from `r num(rc_pre$"HKEX–SGX")` to `r num(rc_post$"HKEX–SGX")`, while ASX–SGX moved from `r num(rc_pre$"ASX–SGX")` to `r num(rc_post$"ASX–SGX")`. Hong Kong drifted away from the other two.
 
-Only Singapore shows a statistically significant break (sup-F p = `r formatC(sg$p, format = "g", digits = 2)`). The break is dated to `r format(sg$dates, "%B %Y")`, and Singapore's beta on the regional market falls from `r num(sg$seg_beta[1])` to `r num(sg$seg_beta[2])` after it. Its timing coincides with the start of the Chinese tech and property sell-off from mid-2021, which weighed on Hong Kong and therefore on the regional factor. Because the regional factor contains Hong Kong, a Hong Kong-specific shock can show up as a change in *Singapore's* beta. That reading fits the correlations above but is not formally tested here. The ASX and Hong Kong relationships show no significant break, even though individual stocks within them shifted (Module 01): the index-level betas are more stable than their constituents.
+Only Singapore shows a statistically significant break (sup-F p = `r formatC(sg$p, format = "g", digits = 2)`). It survives the HAC sup-LM test`r if (p_hac_holm[["SGX"]] < 0.05) "" else " only at 10%"`, though less decisively (Holm p = `r num(p_hac_holm[["SGX"]], 3)`). The break is dated to `r format(sg$dates, "%B %Y")`, and Singapore's beta on the regional market falls from `r num(sg$seg_beta[1])` to `r num(sg$seg_beta[2])` after it. Its timing coincides with the start of the Chinese tech and property sell-off from mid-2021, which weighed on Hong Kong and therefore on the regional factor. Because the regional factor contains Hong Kong, a Hong Kong-specific shock can show up as a change in *Singapore's* beta. That reading fits the correlations above but is not formally tested here. The ASX and Hong Kong relationships show no significant break, even though individual stocks within them shifted (Module 01): the index-level betas are more stable than their constituents.
 
 ## Limitations
 
